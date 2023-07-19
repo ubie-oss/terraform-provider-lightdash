@@ -116,7 +116,7 @@ func (p *lightdashProvider) Configure(ctx context.Context, req provider.Configur
 func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewOrganizationRoleMemberResource,
-		NewProjectMemberResource,
+		NewProjectRoleMemberResource,
 		NewSpaceResource,
 		NewSpaceMemberResource,
 	}

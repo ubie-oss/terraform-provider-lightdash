@@ -17,8 +17,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -162,7 +164,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set resource ID
-	state_id := fmt.Sprintf("projects/%s/space/%s", created_space.ProjectUUID, created_space.SpaceUUID)
+	state_id := fmt.Sprintf("projects/%s/spaces/%s", created_space.ProjectUUID, created_space.SpaceUUID)
 	plan.ID = types.StringValue(state_id)
 
 	// Set state to fully populated data
@@ -174,6 +176,12 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Declare variables to import from state
+	var projectUuid string
+	var spaceUuid string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &spaceUuid)...)
+
 	// Get current state
 	var state spaceResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -183,9 +191,9 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get space
-	project_uuid := state.ProjectUUID.ValueString()
-	space_uuid := state.SpaceUUID.ValueString()
-	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
+	projectUuid = state.ProjectUUID.ValueString()
+	spaceUuid = state.SpaceUUID.ValueString()
+	space, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading space",
@@ -273,4 +281,41 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Extract the resource ID
+	groups, err := extractSpaceResourceId(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error extracting resource ID",
+			"Could not extract resource ID, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	projectUuid := groups[0]
+	spaceUuid := groups[1]
+
+	// Set the resource attributes
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), spaceUuid)...)
+}
+
+func extractSpaceResourceId(input string) ([]string, error) {
+	// Define the regular expression pattern
+	pattern := `^projects/([^/]+)/spaces/([^/]+)$`
+
+	// Compile the regular expression
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the matches in the input string
+	matches := regex.FindStringSubmatch(input)
+	if len(matches) != 3 {
+		return nil, fmt.Errorf("input does not match the expected pattern")
+	}
+
+	// Extract the captured groups
+	groups := matches[1:]
+
+	return groups, nil
 }
