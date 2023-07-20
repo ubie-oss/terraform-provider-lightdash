@@ -11,7 +11,7 @@ Here is an example to grant the editor role at project level to a user.
 terraform {
   required_providers {
     lightdash = {
-      source = "registory.terraform.io/ubie-oss/lightdash"
+      source = "ubie-oss/lightdash"
       version = "0.0.1"
     }
   }
