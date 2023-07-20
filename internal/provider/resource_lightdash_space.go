@@ -257,7 +257,7 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 
 	// Check if deletion protection is enabled
-	if state.DeleteProtection.ValueBool() == true {
+	if state.DeleteProtection.ValueBool() {
 		resp.Diagnostics.AddError(
 			"Error Deleting space",
 			"Could not delete space, deletion protection is enabled",

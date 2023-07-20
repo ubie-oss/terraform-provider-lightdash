@@ -24,16 +24,16 @@ import (
 func TestIsIntegrationTestMode(t *testing.T) {
 	original_value := os.Getenv(integrationTestModeEnvVar)
 
-	os.Setenv(integrationTestModeEnvVar, "1")
+	t.Setenv(integrationTestModeEnvVar, "1")
 	if !isIntegrationTestMode() {
 		t.Errorf(fmt.Sprintf("Expected: true, Got: %t", isIntegrationTestMode()))
 	}
-	os.Setenv(integrationTestModeEnvVar, "0")
+	t.Setenv(integrationTestModeEnvVar, "0")
 	if isIntegrationTestMode() {
 		t.Errorf(fmt.Sprintf("Expected: false, Got: %t", isIntegrationTestMode()))
 	}
 
-	os.Setenv(integrationTestModeEnvVar, original_value)
+	t.Setenv(integrationTestModeEnvVar, original_value)
 }
 
 func TestExtractStrings(t *testing.T) {

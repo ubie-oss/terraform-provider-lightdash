@@ -24,7 +24,7 @@ data "lightdash_organization_members" "test" {
 
 - `id` (String) Data source identifier
 - `members` (Attributes List) List of projects. (see [below for nested schema](#nestedatt--members))
-- `organization_uuid` (String) Lightdash organiztion UUID
+- `organization_uuid` (String) Lightdash organization UUID
 
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`

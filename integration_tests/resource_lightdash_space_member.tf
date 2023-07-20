@@ -11,7 +11,7 @@ resource "lightdash_space_member" "test" {
 
   depends_on = [
     # Members must be project members a head.
-    lightdash_project_member.test
+    lightdash_project_role_member.test,
   ]
 }
 

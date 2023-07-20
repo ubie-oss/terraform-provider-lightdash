@@ -205,7 +205,6 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 	// Set the state values
 	state.UserUUID = types.StringValue(projectMember.UserUUID)
 	state.Email = types.StringValue(projectMember.Email)
-	state.ProjectRole = models.ProjectMemberRole(state.ProjectRole)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -227,7 +226,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 	// Update existing order
 	project_uuid := plan.ProjectUUID.ValueString()
 	user_uuid := plan.UserUUID.ValueString()
-	role := models.ProjectMemberRole(plan.ProjectRole)
+	role := plan.ProjectRole
 	err := r.client.UpdateProjectAccessToUserV1(project_uuid, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -238,7 +237,6 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Update the state
-	plan.ProjectRole = models.ProjectMemberRole(plan.ProjectRole)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set state

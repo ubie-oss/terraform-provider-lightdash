@@ -45,7 +45,7 @@ type UpdateOrganizationMemberV1Response struct {
 func (c *Client) UpdateOrganizationMemberV1(userUuid string, role models.OrganizationMemberRole) (*UpdateOrganizationMemberV1Results, error) {
 	// Create the request body
 	data := UpdateOrganizationMemberV1Request{
-		OrganizationRole: models.OrganizationMemberRole(role),
+		OrganizationRole: role,
 	}
 	marshalled, err := json.Marshal(data)
 	if err != nil {

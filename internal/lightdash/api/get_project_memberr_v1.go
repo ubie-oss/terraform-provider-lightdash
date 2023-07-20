@@ -42,7 +42,9 @@ func (c *Client) GetProjectMemberByUuidV1(projectUuid string, userUuid string) (
 	var searchedMember *GetProjectAccessListV1Results
 	for _, member := range members {
 		if member.UserUUID == userUuid {
-			searchedMember = &member
+			// To avoid the exportloopref violation
+			matched := member
+			searchedMember = &matched
 		}
 	}
 	if searchedMember == nil {
