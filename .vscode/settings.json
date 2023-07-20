@@ -6,5 +6,6 @@
     "editor.fontSize": 14,
     "editor.accessibilityPageSize": 10,
     "window.autoDetectColorScheme": false,
-    "go.diagnostic.vulncheck": "Off"
+    "go.diagnostic.vulncheck": "Off",
+    "go.formatTool": "default"
 }

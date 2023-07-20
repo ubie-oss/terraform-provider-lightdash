@@ -5,8 +5,9 @@ resource "lightdash_organization_role_member" "test" {
     if member.role != "admin"
   }
 
-  user_uuid = each.value.user_uuid
-  role      = each.value.role
+  organization_uuid = data.lightdash_organization.test.organization_uuid
+  user_uuid         = each.value.user_uuid
+  role              = each.value.role
 }
 
 output "lightdash_organization_role_member__test" {

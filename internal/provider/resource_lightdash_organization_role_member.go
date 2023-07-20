@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -73,7 +74,7 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 			},
 			"organization_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash organization UUID",
-				Computed:            true,
+				Required:            true,
 			},
 			"user_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash user UUID",
@@ -145,7 +146,7 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set resource ID
-	state_id := fmt.Sprintf("organizations/%s/users/%s", user.OrganizationUUID, user.UserUUID)
+	state_id := getOrganizationRoleMemberResourceId(user.OrganizationUUID, user.UserUUID)
 	plan.ID = types.StringValue(state_id)
 
 	// Set state
@@ -157,6 +158,12 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 }
 
 func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Declare variables to import from state
+	var organization_uuid string
+	var user_uuid string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organization_uuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &user_uuid)...)
+
 	// Get current state
 	var state organizationRoleMemberResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -166,7 +173,7 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 	}
 
 	// Get space
-	user_uuid := state.UserUUID.ValueString()
+	user_uuid = state.UserUUID.ValueString()
 	user, err := r.client.GetOrganizationMemberByUuidV1(user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -256,4 +263,38 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 }
 
 func (r *organizationRoleMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Extract the resource ID
+	extracted_strings, err := extractOrganizationRoleMemberResourceId(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error extracting resource ID",
+			"Could not extract resource ID, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	project_uuid := extracted_strings[0]
+	user_uuid := extracted_strings[1]
+
+	// Set the resource attributes
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), project_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), user_uuid)...)
+}
+
+func getOrganizationRoleMemberResourceId(organization_uuid string, user_uuid string) string {
+	// Return the resource ID
+	return fmt.Sprintf("organizations/%s/users/%s", organization_uuid, user_uuid)
+}
+
+func extractOrganizationRoleMemberResourceId(input string) ([]string, error) {
+	// Extract the captured groups
+	pattern := `^organizations/([^/]+)/users/([^/]+)$`
+	groups, err := extractStrings(input, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract resource ID: %w", err)
+	}
+
+	// Return the captured strings
+	organization_uuid := groups[0]
+	user_uuid := groups[1]
+	return []string{organization_uuid, user_uuid}, nil
 }
