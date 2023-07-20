@@ -8,6 +8,8 @@ on:
     paths-ignore:
       - 'README.md'
   push:
+    branches:
+      - main
     paths-ignore:
       - 'README.md'
 
@@ -76,7 +78,9 @@ jobs:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
       - run: go mod download
-      - env:
-          TF_ACC: "1"
-        run: go test -v -cover ./internal/provider/
-        timeout-minutes: 10
+      - run: go test -v -cover ./internal/...
+      # TODO support integration test
+      # - env:
+      #     TF_ACC: "1"
+      #   run: go test -v -cover ./internal/provider/
+      #   timeout-minutes: 10

@@ -28,6 +28,6 @@ data "lightdash_organization_member" "example" {
 ### Read-Only
 
 - `id` (String) Data source identifier
-- `organization_uuid` (String) Lightdash organiztion UUID.
+- `organization_uuid` (String) Lightdash organization UUID.
 - `role` (String) Lightdash organization role of the user.
 - `user_uuid` (String) Lightdash user UUID.
