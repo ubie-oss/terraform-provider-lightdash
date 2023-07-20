@@ -142,6 +142,13 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
+	if !projectMember.IsActive {
+		resp.Diagnostics.AddError(
+			"Error Reading organization member",
+			"Organization member ID "+user_uuid+" is not active",
+		)
+		return
+	}
 
 	// Grant the project role to the user
 	project_uuid := plan.ProjectUUID.ValueString()

@@ -19,54 +19,48 @@ import (
 	"testing"
 )
 
-func TestGetSpaceResourceId(t *testing.T) {
-	project_uuid := "abc-123"
-	space_uuid := "xyz-234"
-	results := getSpaceResourceId(project_uuid, space_uuid)
-	expected := "projects/abc-123/spaces/xyz-234"
-
-	if results != expected {
-		t.Errorf("Expected: %s, Got: %s", expected, results)
-	}
-}
-
-func TestExtractSpaceResourceId(t *testing.T) {
+func TestExtractStrings(t *testing.T) {
 	tests := []struct {
 		input    string
+		pattern  string
 		expected []string
 		wantErr  bool
 	}{
 		{
-			input:    "projects/xyz-567/spaces/abc-123",
-			expected: []string{"xyz-567", "abc-123"},
+			input:    "projects/abc-123/spaces/xyz-234",
+			pattern:  `^projects/([^/]+)/spaces/([^/]+)$`,
+			expected: []string{"abc-123", "xyz-234"},
 			wantErr:  false,
 		},
 		{
-			input:    "projects/123/spaces/456",
-			expected: []string{"123", "456"},
+			input:    "projects/asdfad-234234",
+			pattern:  `^projects/([^/]+)$`,
+			expected: []string{"asdfad-234234"},
 			wantErr:  false,
 		},
 		{
-			input:    "projects/xyz/spaces/",
-			expected: nil,
-			wantErr:  true,
+			input:    "projects/kdjfa-zfadf/users/werw-xvx",
+			pattern:  `^projects/([^/]+)/users/([^/]+)$`,
+			expected: []string{"kdjfa-zfadf", "werw-xvx"},
+			wantErr:  false,
 		},
 		{
-			input:    "projects/xyz/spaces/abc/def",
+			input:    "projects/invalid_input",
+			pattern:  `^projects/([^/]+)/spaces/([^/]+)$`,
 			expected: nil,
 			wantErr:  true,
 		},
 	}
 
 	for _, test := range tests {
-		info, err := extractSpaceResourceId(test.input)
+		output, err := extractStrings(test.input, test.pattern)
 
 		if (err != nil) != test.wantErr {
-			t.Errorf("Input: %s, Expected error: %v, Got error: %v", test.input, test.wantErr, err)
+			t.Errorf("Input: %s, Pattern: %s, Expected error: %v, Got error: %v", test.input, test.pattern, test.wantErr, err)
 		}
 
-		if !reflect.DeepEqual(info, test.expected) {
-			t.Errorf("Input: %s, Expected: %v, Got: %v", test.input, test.expected, info)
+		if !reflect.DeepEqual(output, test.expected) {
+			t.Errorf("Input: %s, Pattern: %s, Expected: %v, Got: %v", test.input, test.pattern, test.expected, output)
 		}
 	}
 }

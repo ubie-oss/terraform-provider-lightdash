@@ -17,7 +17,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -164,7 +163,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set resource ID
-	state_id := fmt.Sprintf("projects/%s/spaces/%s", created_space.ProjectUUID, created_space.SpaceUUID)
+	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
 	plan.ID = types.StringValue(state_id)
 
 	// Set state to fully populated data
@@ -282,7 +281,7 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Extract the resource ID
-	groups, err := extractSpaceResourceId(req.ID)
+	extracted_strings, err := extractSpaceResourceId(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error extracting resource ID",
@@ -290,32 +289,29 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 		)
 		return
 	}
-	projectUuid := groups[0]
-	spaceUuid := groups[1]
+	project_uuid := extracted_strings[0]
+	space_uuid := extracted_strings[1]
 
 	// Set the resource attributes
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUuid)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), spaceUuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), project_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), space_uuid)...)
+}
+
+func getSpaceResourceId(project_uuid string, space_uuid string) string {
+	// Return the resource ID
+	return fmt.Sprintf("projects/%s/spaces/%s", project_uuid, space_uuid)
 }
 
 func extractSpaceResourceId(input string) ([]string, error) {
-	// Define the regular expression pattern
-	pattern := `^projects/([^/]+)/spaces/([^/]+)$`
-
-	// Compile the regular expression
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, err
-	}
-
-	// Find the matches in the input string
-	matches := regex.FindStringSubmatch(input)
-	if len(matches) != 3 {
-		return nil, fmt.Errorf("input does not match the expected pattern")
-	}
-
 	// Extract the captured groups
-	groups := matches[1:]
+	pattern := `^projects/([^/]+)/spaces/([^/]+)$`
+	groups, err := extractStrings(input, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract resource ID: %w", err)
+	}
 
-	return groups, nil
+	// Return the captured strings
+	project_uuid := groups[0]
+	space_uuid := groups[1]
+	return []string{project_uuid, space_uuid}, nil
 }
