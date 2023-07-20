@@ -68,7 +68,7 @@ func (d *organizationMembersDataSource) Schema(ctx context.Context, req datasour
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organiztion UUID",
+				MarkdownDescription: "Lightdash organization UUID",
 				Computed:            true,
 			},
 			"members": schema.ListNestedAttribute{
@@ -141,7 +141,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 		fetchedMember := organizationMemberModel{
 			UserUuid:         types.StringValue(member.UserUUID),
 			Email:            types.StringValue(member.Email),
-			OrganizationRole: models.OrganizationMemberRole(member.OrganizationRole),
+			OrganizationRole: member.OrganizationRole,
 		}
 		state.Members = append(state.Members, fetchedMember)
 	}

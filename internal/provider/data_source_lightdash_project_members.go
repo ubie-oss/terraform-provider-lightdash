@@ -133,7 +133,7 @@ func (d *projectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		projectState := projectMemberModel{
 			UserUUID:    types.StringValue(member.UserUUID),
 			Email:       types.StringValue(member.Email),
-			ProjectRole: models.ProjectMemberRole(member.ProjectRole),
+			ProjectRole: member.ProjectRole,
 		}
 		state.Members = append(state.Members, projectState)
 	}

@@ -62,7 +62,7 @@ func (d *organizationMemberDataSource) Schema(ctx context.Context, req datasourc
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organiztion UUID.",
+				MarkdownDescription: "Lightdash organization UUID.",
 				Computed:            true,
 			},
 			"user_uuid": schema.StringAttribute{

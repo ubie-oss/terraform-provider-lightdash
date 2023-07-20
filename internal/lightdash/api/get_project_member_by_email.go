@@ -42,7 +42,9 @@ func (c *Client) FindProjectMemberByEmail(projectUuid string, email string) (*Ge
 	var matchedMember *GetProjectAccessListV1Results
 	for _, member := range members {
 		if member.Email == email {
-			matchedMember = &member
+			// To avoid the exportloopref violation
+			matched := member
+			matchedMember = &matched
 		}
 	}
 	if matchedMember == nil {
