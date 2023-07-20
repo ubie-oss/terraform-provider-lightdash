@@ -176,10 +176,10 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Declare variables to import from state
-	var projectUuid string
-	var spaceUuid string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &spaceUuid)...)
+	var project_uuid string
+	var space_uuid string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &project_uuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &space_uuid)...)
 
 	// Get current state
 	var state spaceResourceModel
@@ -190,9 +190,9 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get space
-	projectUuid = state.ProjectUUID.ValueString()
-	spaceUuid = state.SpaceUUID.ValueString()
-	space, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
+	project_uuid = state.ProjectUUID.ValueString()
+	space_uuid = state.SpaceUUID.ValueString()
+	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading space",

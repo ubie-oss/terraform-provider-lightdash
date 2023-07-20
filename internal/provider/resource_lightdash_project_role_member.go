@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -171,8 +172,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set resource ID
-	state_id := fmt.Sprintf("projects/%s/access/%s",
-		plan.ProjectUUID.ValueString(), plan.UserUUID.ValueString())
+	state_id := getProjectRoleMemberResourceId(plan.ProjectUUID.ValueString(), plan.UserUUID.ValueString())
 	plan.ID = types.StringValue(state_id)
 
 	// Set state to fully populated data
@@ -184,6 +184,12 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 }
 
 func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Declare variables to import from state
+	var projectUuid string
+	var user_uuid string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &user_uuid)...)
+
 	// Get current state
 	var state projectMemberResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -193,7 +199,7 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	// Get a member from the API
-	user_uuid := state.UserUUID.ValueString()
+	user_uuid = state.UserUUID.ValueString()
 	projectMember, err := r.client.GetOrganizationMemberByUuidV1(user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -271,4 +277,38 @@ func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.Del
 }
 
 func (r *projectRoleMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Extract the resource ID
+	extracted_strings, err := extractProjectRoleMemberResourceId(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error extracting resource ID",
+			"Could not extract resource ID, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	project_uuid := extracted_strings[0]
+	user_uuid := extracted_strings[1]
+
+	// Set the resource attributes
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), project_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), user_uuid)...)
+}
+
+func getProjectRoleMemberResourceId(project_uuid string, user_uuid string) string {
+	// Return the resource ID
+	return fmt.Sprintf("projects/%s/access/%s", project_uuid, user_uuid)
+}
+
+func extractProjectRoleMemberResourceId(input string) ([]string, error) {
+	// Extract the captured groups
+	pattern := `^projects/([^/]+)/access/([^/]+)$`
+	groups, err := extractStrings(input, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract resource ID: %w", err)
+	}
+
+	// Return the captured strings
+	project_uuid := groups[0]
+	user_uuid := groups[1]
+	return []string{project_uuid, user_uuid}, nil
 }
