@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -162,7 +163,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set resource ID
-	state_id := fmt.Sprintf("projects/%s/space/%s", created_space.ProjectUUID, created_space.SpaceUUID)
+	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
 	plan.ID = types.StringValue(state_id)
 
 	// Set state to fully populated data
@@ -174,6 +175,12 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Declare variables to import from state
+	var projectUuid string
+	var spaceUuid string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &spaceUuid)...)
+
 	// Get current state
 	var state spaceResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -183,9 +190,9 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get space
-	project_uuid := state.ProjectUUID.ValueString()
-	space_uuid := state.SpaceUUID.ValueString()
-	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
+	projectUuid = state.ProjectUUID.ValueString()
+	spaceUuid = state.SpaceUUID.ValueString()
+	space, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading space",
@@ -273,4 +280,38 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Extract the resource ID
+	extracted_strings, err := extractSpaceResourceId(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error extracting resource ID",
+			"Could not extract resource ID, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	project_uuid := extracted_strings[0]
+	space_uuid := extracted_strings[1]
+
+	// Set the resource attributes
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), project_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), space_uuid)...)
+}
+
+func getSpaceResourceId(project_uuid string, space_uuid string) string {
+	// Return the resource ID
+	return fmt.Sprintf("projects/%s/spaces/%s", project_uuid, space_uuid)
+}
+
+func extractSpaceResourceId(input string) ([]string, error) {
+	// Extract the captured groups
+	pattern := `^projects/([^/]+)/spaces/([^/]+)$`
+	groups, err := extractStrings(input, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract resource ID: %w", err)
+	}
+
+	// Return the captured strings
+	project_uuid := groups[0]
+	space_uuid := groups[1]
+	return []string{project_uuid, space_uuid}, nil
 }

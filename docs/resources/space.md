@@ -50,3 +50,12 @@ resource "lightdash_space" "test_public" {
 - `id` (String) Resource identifier
 - `last_updated` (String) Timestamp of the last Terraform update of the order.
 - `space_uuid` (String) Lightdash space UUID
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Space can be impported by specifing the resource identifier.
+terraform import lightdash_space.example "projects/${project-uuid}/spaces/${space-uuid}"
+```

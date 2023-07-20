@@ -34,6 +34,7 @@ repos:
     rev: v0.9.0.2
     hooks:
       - id: shellcheck
+        exclude: ^examples/
   - repo: https://github.com/dnephin/pre-commit-golang
     rev: master
     hooks:

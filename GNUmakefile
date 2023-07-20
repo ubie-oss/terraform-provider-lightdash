@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 default: testacc
 
 # Run acceptance tests
 .PHONY: testacc
 testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+
+test:
+	# TF_ACC mustn't be set, otherwise acceptance tests will run
+	unset TF_ACC && cd "internal/" && go test -count=1 -v ./...
 
 build:
 	go build -v ./
@@ -28,9 +31,6 @@ format:
 
 install:
 	go build -v ./ && go install .
-
-test:
-	cd "internal/" && TF_ACC=1 go test -count=1 -v ./...
 
 gen-docs:
 	go generate ./...
@@ -45,3 +45,12 @@ setup-pre-commit:
 
 run-pre-commit:
 	pre-commit run --all-files
+
+plan-integration-tests:
+	cd ./integration_tests/ && TF_LOG=1 terraform plan 2>&1
+
+apply-integration-tests:
+	cd ./integration_tests/ && TF_LOG=1 terraform apply -auto-approve 2>&1
+
+destroy-integration-tests:
+	cd ./integration_tests/ && TF_LOG=1 terraform destroy -auto-approve 2>&1

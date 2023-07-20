@@ -31,15 +31,15 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &projectMemberResource{}
-var _ resource.ResourceWithImportState = &projectMemberResource{}
+var _ resource.Resource = &projectRoleMemberResource{}
+var _ resource.ResourceWithImportState = &projectRoleMemberResource{}
 
-func NewProjectMemberResource() resource.Resource {
-	return &projectMemberResource{}
+func NewProjectRoleMemberResource() resource.Resource {
+	return &projectRoleMemberResource{}
 }
 
 // LightdashProjectResource defines the resource implementation.
-type projectMemberResource struct {
+type projectRoleMemberResource struct {
 	client *api.Client
 }
 
@@ -54,15 +54,15 @@ type projectMemberResourceModel struct {
 	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
-func (r *projectMemberResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_member"
+func (r *projectRoleMemberResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_role_member"
 }
 
-func (r *projectMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *projectRoleMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash project member",
-		Description:         "Lightash project member",
+		MarkdownDescription: "Lightash project role member",
+		Description:         "Lightash project role member",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -105,7 +105,7 @@ func (r *projectMemberResource) Schema(ctx context.Context, req resource.SchemaR
 	}
 }
 
-func (r *projectMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *projectRoleMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -123,7 +123,7 @@ func (r *projectMemberResource) Configure(ctx context.Context, req resource.Conf
 	r.client = client
 }
 
-func (r *projectMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
 	var plan projectMemberResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -139,6 +139,13 @@ func (r *projectMemberResource) Create(ctx context.Context, req resource.CreateR
 		resp.Diagnostics.AddError(
 			"Error Reading organization member",
 			"Could not find organization member ID "+user_uuid+": "+err.Error(),
+		)
+		return
+	}
+	if !projectMember.IsActive {
+		resp.Diagnostics.AddError(
+			"Error Reading organization member",
+			"Organization member ID "+user_uuid+" is not active",
 		)
 		return
 	}
@@ -176,7 +183,7 @@ func (r *projectMemberResource) Create(ctx context.Context, req resource.CreateR
 	}
 }
 
-func (r *projectMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
 	var state projectMemberResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -208,7 +215,7 @@ func (r *projectMemberResource) Read(ctx context.Context, req resource.ReadReque
 	}
 }
 
-func (r *projectMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
 	var plan projectMemberResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -242,7 +249,7 @@ func (r *projectMemberResource) Update(ctx context.Context, req resource.UpdateR
 	}
 }
 
-func (r *projectMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
 	var state projectMemberResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -265,5 +272,5 @@ func (r *projectMemberResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 }
 
-func (r *projectMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *projectRoleMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 }
