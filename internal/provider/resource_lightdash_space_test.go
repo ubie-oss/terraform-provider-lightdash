@@ -15,8 +15,11 @@
 package provider
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestGetSpaceResourceId(t *testing.T) {
@@ -69,4 +72,39 @@ func TestExtractSpaceResourceId(t *testing.T) {
 			t.Errorf("Input: %s, Expected: %v, Got: %v", test.input, test.expected, info)
 		}
 	}
+}
+
+func TestAccLightdashSpaceResource(t *testing.T) {
+	api_key, err := getLightdashApiKey()
+	if isIntegrationTestMode() && err != nil {
+		t.Errorf("Error retrieving LIGHTDASH_API_KEY environment variable: %v", err)
+	}
+	providerConfig := getTestProviderConfig(api_key)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: providerConfig + testAccLightdashSpaceResourceConfig("xxx-xxx-xxx", "test-space", true, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("lightdash_project.test", "project_uuid", "example-id"),
+					resource.TestCheckResourceAttr("lightdash_project.test", "name", "one"),
+				),
+			},
+			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func testAccLightdashSpaceResourceConfig(
+	projectUuid string, name string, is_private bool, delete_protection bool) string {
+	resource_template := `
+resource "lightdash_space" "test" {
+  project_uuid = "%[1]s"
+  name = "%[2]s"
+  is_private = %[3]t
+  deletion_protection = %[4]t
+}`
+	return fmt.Sprintf(resource_template, projectUuid, name, is_private, delete_protection)
 }

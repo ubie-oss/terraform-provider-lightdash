@@ -16,8 +16,30 @@ package provider
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"strings"
 )
+
+const (
+	integrationTestModeEnvVar = "TF_ACC"
+	lightdashApiKeyEnvVar     = "LIGHTDASH_API_KEY"
+)
+
+func isIntegrationTestMode() bool {
+	// If the environment variable is set to 1, then we are in test mode
+	test_mode := os.Getenv(integrationTestModeEnvVar)
+	return test_mode == "1"
+}
+
+func getLightdashApiKey() (*string, error) {
+	// If the environment variable is set to 1, then we are in test mode
+	api_key := os.Getenv(lightdashApiKeyEnvVar)
+	if strings.TrimSpace(api_key) == "" {
+		return nil, fmt.Errorf("LIGHTDASH_API_KEY environment variable is not set")
+	}
+	return &api_key, nil
+}
 
 func extractStrings(input, pattern string) ([]string, error) {
 	// Compile the regular expression

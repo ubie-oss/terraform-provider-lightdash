@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 default: testacc
 
 # Run acceptance tests
 .PHONY: testacc
 testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+
+test:
+	# TF_ACC mustn't be set, otherwise acceptance tests will run
+	unset TF_ACC && cd "internal/" && go test -count=1 -v ./...
 
 build:
 	go build -v ./
@@ -28,9 +31,6 @@ format:
 
 install:
 	go build -v ./ && go install .
-
-test:
-	cd "internal/" && TF_ACC=1 go test -count=1 -v ./...
 
 gen-docs:
 	go generate ./...

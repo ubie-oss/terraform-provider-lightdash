@@ -98,15 +98,17 @@ func (p *lightdashProvider) Configure(ctx context.Context, req provider.Configur
 	token := config.Token.ValueString()
 	client, _ := api.NewClient(&host, &token)
 
-	// Check if the token is valid
-	_, err := client.GetMyOrganizationV1()
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("token"),
-			"Invalid Lightdash API Token",
-			"Please set the valid `token` attribute to the Lightdash API Token.",
-		)
-		return
+	// Check if the token is valid as long as the test mode is not disabled
+	if !isIntegrationTestMode() {
+		_, err := client.GetMyOrganizationV1()
+		if err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("token"),
+				"Invalid Lightdash API Token",
+				"Please set the valid `token` attribute to the Lightdash API Token.",
+			)
+			return
+		}
 	}
 
 	resp.DataSourceData = client
