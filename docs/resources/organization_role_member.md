@@ -24,6 +24,7 @@ resource "lightdash_organization_role_member" "test" {
 
 ### Required
 
+- `organization_uuid` (String) Lightdash organization UUID
 - `role` (String) Lightdash organization role
 - `user_uuid` (String) Lightdash user UUID
 
@@ -32,4 +33,3 @@ resource "lightdash_organization_role_member" "test" {
 - `email` (String) Lightdash user UUID
 - `id` (String) Resource identifier
 - `last_updated` (String) Timestamp of the last Terraform update of the order.
-- `organization_uuid` (String) Lightdash organization UUID
