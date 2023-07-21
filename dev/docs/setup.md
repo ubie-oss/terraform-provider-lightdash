@@ -16,3 +16,16 @@ provider_installation {
   direct {}
 }
 ```
+
+## Publish the provider to the Terraform Registry
+
+We need some steps to publish the provider to the Terraform Registry using GitHub Actions.
+The original creator manually set them up.
+For instance, we need to:
+
+- Register a PGP key to the Terraform Registry
+- Register GtiHub Actions' secrets
+
+The ofitial tutorials describes the steps in detail.
+
+- [Release and Publish a Provider to the Terraform Registry](https://developer.hashicorp.com/terraform/tutorials/providers/provider-release-publish)
