@@ -33,3 +33,12 @@ resource "lightdash_organization_role_member" "test" {
 - `email` (String) Lightdash user UUID
 - `id` (String) Resource identifier
 - `last_updated` (String) Timestamp of the last Terraform update of the order.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Space can be impported by specifing the resource identifier.
+terraform import lightdash_organization_role_member.example "organizations/${organization_uuid}/users/${space-uuid}"
+```
