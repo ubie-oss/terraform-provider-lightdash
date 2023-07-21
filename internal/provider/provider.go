@@ -132,6 +132,7 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 		NewProjectsDataSource,
 		NewProjectDataSource,
 		NewProjectMembersDataSource,
+		NewSpacesDataSource,
 	}
 }
 
