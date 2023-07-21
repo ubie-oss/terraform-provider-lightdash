@@ -23,7 +23,7 @@ import (
 
 const (
 	integrationTestModeEnvVar = "TF_ACC"
-	lightdashApiKeyEnvVar     = "LIGHTDASH_API_KEY"
+	lightdashApiKeyEnvVar     = "LIGHTDASH_API_KEY" // #nosec G101
 )
 
 func isIntegrationTestMode() bool {

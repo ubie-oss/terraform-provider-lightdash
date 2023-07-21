@@ -84,3 +84,21 @@ jobs:
       #     TF_ACC: "1"
       #   run: go test -v -cover ./internal/provider/
       #   timeout-minutes: 10
+
+  # Run gosec security scanner
+  gosec:
+    name: Gosec
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9  # v3.5.3
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753  # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - run: go mod download
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@v2.16.0
+        with:
+          args: ./...
