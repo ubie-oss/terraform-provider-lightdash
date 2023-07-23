@@ -58,7 +58,7 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() // #nosec G307
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
