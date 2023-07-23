@@ -120,7 +120,7 @@ func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Res
 		NewOrganizationRoleMemberResource,
 		NewProjectRoleMemberResource,
 		NewSpaceResource,
-		NewSpaceMemberResource,
+		NewSpaceAccessMemberResource,
 	}
 }
 

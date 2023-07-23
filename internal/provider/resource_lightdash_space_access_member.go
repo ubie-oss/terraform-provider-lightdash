@@ -30,22 +30,22 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ resource.Resource                = &spaceMemberResource{}
-	_ resource.ResourceWithConfigure   = &spaceMemberResource{}
-	_ resource.ResourceWithImportState = &spaceMemberResource{}
+	_ resource.Resource                = &spaceAccessMemberResource{}
+	_ resource.ResourceWithConfigure   = &spaceAccessMemberResource{}
+	_ resource.ResourceWithImportState = &spaceAccessMemberResource{}
 )
 
-func NewSpaceMemberResource() resource.Resource {
-	return &spaceMemberResource{}
+func NewSpaceAccessMemberResource() resource.Resource {
+	return &spaceAccessMemberResource{}
 }
 
 // spaceResource defines the resource implementation.
-type spaceMemberResource struct {
+type spaceAccessMemberResource struct {
 	client *api.Client
 }
 
 // spaceResourceModel describes the resource data model.
-type spaceMemberResourceModel struct {
+type spaceAccessMemberResourceModel struct {
 	ID types.String `tfsdk:"id"`
 	// The response from the API does not contain the organization UUID right now.
 	// OrganizationUUID types.String `tfsdk:"organization_uuid"`
@@ -55,15 +55,15 @@ type spaceMemberResourceModel struct {
 	LastUpdated types.String `tfsdk:"last_updated"`
 }
 
-func (r *spaceMemberResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_space_member"
+func (r *spaceAccessMemberResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_space_access_member"
 }
 
-func (r *spaceMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *spaceAccessMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash space",
-		Description:         "Lightash space",
+		MarkdownDescription: "Lightash space access member",
+		Description:         "Lightash space access member",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -100,7 +100,7 @@ func (r *spaceMemberResource) Schema(ctx context.Context, req resource.SchemaReq
 	}
 }
 
-func (r *spaceMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *spaceAccessMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -118,9 +118,9 @@ func (r *spaceMemberResource) Configure(ctx context.Context, req resource.Config
 	r.client = client
 }
 
-func (r *spaceMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *spaceAccessMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
-	var plan spaceMemberResourceModel
+	var plan spaceAccessMemberResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -155,7 +155,7 @@ func (r *spaceMemberResource) Create(ctx context.Context, req resource.CreateReq
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set resource ID
-	state_id := getSpaceMemberResourceId(
+	state_id := getSpaceAccessMemberResourceId(
 		plan.ProjectUUID.ValueString(),
 		plan.SpaceUUID.ValueString(),
 		plan.UserUUID.ValueString())
@@ -169,7 +169,7 @@ func (r *spaceMemberResource) Create(ctx context.Context, req resource.CreateReq
 	}
 }
 
-func (r *spaceMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *spaceAccessMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Declare variables to import from state
 	var project_uuid string
 	var space_uuid string
@@ -179,7 +179,7 @@ func (r *spaceMemberResource) Read(ctx context.Context, req resource.ReadRequest
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &user_uuid)...)
 
 	// Get current state
-	var state spaceMemberResourceModel
+	var state spaceAccessMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -210,10 +210,10 @@ func (r *spaceMemberResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 }
 
-func (r *spaceMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *spaceAccessMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// We don't have to implement this because we don't support updates
 	// Get current state
-	var state spaceMemberResourceModel
+	var state spaceAccessMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -221,9 +221,9 @@ func (r *spaceMemberResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 }
 
-func (r *spaceMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *spaceAccessMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
-	var state spaceMemberResourceModel
+	var state spaceAccessMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -244,9 +244,9 @@ func (r *spaceMemberResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-func (r *spaceMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *spaceAccessMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Extract the resource ID
-	extracted_strings, err := extractSpaceMemberResourceId(req.ID)
+	extracted_strings, err := extractSpaceAccessMemberResourceId(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error extracting resource ID",
@@ -264,12 +264,12 @@ func (r *spaceMemberResource) ImportState(ctx context.Context, req resource.Impo
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), user_uuid)...)
 }
 
-func getSpaceMemberResourceId(project_uuid string, space_uuid string, user_uuid string) string {
+func getSpaceAccessMemberResourceId(project_uuid string, space_uuid string, user_uuid string) string {
 	// Return the resource ID
 	return fmt.Sprintf("projects/%s/spaces/%s/access/%s", project_uuid, space_uuid, user_uuid)
 }
 
-func extractSpaceMemberResourceId(input string) ([]string, error) {
+func extractSpaceAccessMemberResourceId(input string) ([]string, error) {
 	// Extract the captured groups
 	pattern := `^projects/([^/]+)/spaces/([^/]+)/access/([^/]+)$`
 	groups, err := extractStrings(input, pattern)

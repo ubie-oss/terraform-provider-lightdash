@@ -1,4 +1,4 @@
-resource "lightdash_space_member" "test" {
+resource "lightdash_space_access_member" "test" {
   for_each = {
     for member in data.lightdash_project_members.test.members
     : member.user_uuid => member
@@ -15,6 +15,6 @@ resource "lightdash_space_member" "test" {
   ]
 }
 
-output "lightdash_space_member__test" {
-  value = lightdash_space_member.test
+output "lightdash_space_access_member__test" {
+  value = lightdash_space_access_member.test
 }
