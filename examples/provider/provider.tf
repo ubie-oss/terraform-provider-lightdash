@@ -1,4 +1,4 @@
 provider "lightdash" {
-  host                  = "https://app.lightdash.cloud"
-  personal_access_token = "xxx-xxx-xxx"
+  host  = "https://app.lightdash.cloud"
+  token = "xxx-xxx-xxx"
 }
