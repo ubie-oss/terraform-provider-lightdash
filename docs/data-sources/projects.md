@@ -14,7 +14,7 @@ Lightdash projects data source
 
 ```terraform
 data "lightdash_projects" "test" {
-  organization_uuid = data.lightdash_organization.test.organization_uuid
+  organization_uuid = "xxxxx-xxxxxx-xxxx"
 }
 ```
 

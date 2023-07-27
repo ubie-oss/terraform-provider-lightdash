@@ -60,8 +60,8 @@ func (d *organizationMembersDataSource) Metadata(ctx context.Context, req dataso
 
 func (d *organizationMembersDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash organization member data source",
-		Description:         "Lightdash organization member data source",
+		MarkdownDescription: "Lightdash organization members data source",
+		Description:         "Lightdash organization members data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Data source identifier",

@@ -3,12 +3,12 @@
 page_title: "lightdash_project_members Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash projects data source
+  Lightdash project member data source
 ---
 
 # lightdash_project_members (Data Source)
 
-Lightdash projects data source
+Lightdash project member data source
 
 
 

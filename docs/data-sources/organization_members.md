@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_members Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash organization member data source
+  Lightdash organization members data source
 ---
 
 # lightdash_organization_members (Data Source)
 
-Lightdash organization member data source
+Lightdash organization members data source
 
 ## Example Usage
 

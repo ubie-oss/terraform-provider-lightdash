@@ -62,8 +62,8 @@ func (r *organizationRoleMemberResource) Metadata(ctx context.Context, req resou
 func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash project member",
-		Description:         "Lightash project member",
+		MarkdownDescription: "Lightash the role of a member at organization level",
+		Description:         "Lightash the role of a member at organization level",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
