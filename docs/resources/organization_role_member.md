@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_role_member Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightash project member
+  Lightash the role of a member at organization level
 ---
 
 # lightdash_organization_role_member (Resource)
 
-Lightash project member
+Lightash the role of a member at organization level
 
 ## Example Usage
 
