@@ -45,17 +45,13 @@ func (c *Client) FindProjectMemberByEmail(projectUuid string, email string) (*Ge
 			// To avoid the exportloopref violation
 			matched := member
 			matchedMember = &matched
+			// Parse the response
+			response := FindProjectMemberByEmailResponse{
+				Results: *matchedMember,
+				Status:  "ok",
+			}
+			return &response.Results, nil
 		}
 	}
-	if matchedMember == nil {
-		return nil, fmt.Errorf("no member found")
-	}
-
-	// Parse the response
-	response := FindProjectMemberByEmailResponse{
-		Results: *matchedMember,
-		Status:  "ok",
-	}
-
-	return &response.Results, nil
+	return nil, fmt.Errorf("no member found")
 }
