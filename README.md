@@ -1,5 +1,7 @@
 # Terraform Provider Lightdash
 
+[![Release](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/release.yml/badge.svg)](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/release.yml)
+
 A terraform provider for Lightdash.
 
 ## How to use
