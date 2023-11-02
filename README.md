@@ -89,8 +89,13 @@ To generate or update documentation, run `go generate`.
 
 In order to run the full suite of Acceptance tests, run `make testacc`.
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
+_Note:_ Acceptance tests create real resources, and often cost money to run.
 
 ```shell
 make testacc
 ```
+
+## Contributing to `terraform-provider-lightdash`
+
+`terraform-provider-lightdash` is an open source project and contributions are welcome!
+Please see [CONTRIBUTING.md](CONTRIBUTING.md).
