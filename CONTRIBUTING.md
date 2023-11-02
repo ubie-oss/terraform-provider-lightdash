@@ -1,4 +1,12 @@
-# Set up environment to develop the provider locally
+# Contributing to `terraform-provider-lightdash`
+
+`terraform-provider-lightdash` is an open source project and contributions are welcome!
+
+This provider is implemented with the Terraform Plugin SDK.
+[Call APIs with Custom Framework Providers](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework), which is the official tutorial to lean how to implement a provider with the SDK, describes how to implement a provider with the SDK.
+That would be a good starting point to understand the SDK to contribute to this provider.
+
+## Set up environment to develop the provider locally
 
 ## Add the provider to your terraform configuration
 We have to acc the configuration to install the local provider at `~/.terraformrc`.
