@@ -3,5 +3,5 @@ data "lightdash_projects" "test" {
 }
 
 output "lightdash_projects_test" {
-  value = tolist(data.lightdash_projects.test.projects)[0]
+  value = data.lightdash_projects.test.projects
 }

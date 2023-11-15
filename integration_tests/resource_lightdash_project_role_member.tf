@@ -1,10 +1,12 @@
-resource "lightdash_project_role_member" "test" {
-  project_uuid = "866d0073-b79e-4100-a8ff-7f371289609b"
-  user_uuid    = "ed4b34e3-390a-4456-9188-f8947f8e600a"
+resource "lightdash_project_role_member" "test_member_user" {
+  count = (length(data.lightdash_organization_member.test_member_user) > 0 ? 1 : 0)
+
+  project_uuid = var.test_lightdash_project_uuid
+  user_uuid    = data.lightdash_organization_member.test_member_user[0].user_uuid
   role         = "editor"
 }
 
 output "lightdash_project_role_member__test" {
-  value     = lightdash_project_role_member.test
+  value     = lightdash_project_role_member.test_member_user
   sensitive = true
 }

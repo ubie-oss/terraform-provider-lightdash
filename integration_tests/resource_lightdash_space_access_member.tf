@@ -1,20 +1,9 @@
-resource "lightdash_space_access_member" "test" {
-  for_each = {
-    for member in data.lightdash_project_members.test.members
-    : member.user_uuid => member
-    if member.role != "admin"
-  }
-
-  project_uuid = lightdash_space.test_private[0].project_uuid
-  space_uuid   = lightdash_space.test_private[0].space_uuid
-  user_uuid    = each.value.user_uuid
-
-  depends_on = [
-    # Members must be project members a head.
-    lightdash_project_role_member.test,
-  ]
+resource "lightdash_space_access_member" "test_private" {
+  project_uuid = var.test_lightdash_project_uuid
+  space_uuid   = lightdash_space.test_private.space_uuid
+  user_uuid    = data.lightdash_organization_member.test_admin_user.user_uuid
 }
 
 output "lightdash_space_access_member__test" {
-  value = lightdash_space_access_member.test
+  value = lightdash_space_access_member.test_private
 }

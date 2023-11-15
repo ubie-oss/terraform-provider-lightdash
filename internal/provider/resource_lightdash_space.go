@@ -93,7 +93,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				MarkdownDescription: "Lightdash project is private or not",
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				Default:             booldefault.StaticBool(true),
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Lightdash project name",

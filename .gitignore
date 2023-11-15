@@ -54,3 +54,6 @@ terraform-provider-lightdash
 
 # Test shell
 test*.sh
+
+# Integration tests
+integration_tests/testing.tfvars

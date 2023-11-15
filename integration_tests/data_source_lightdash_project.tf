@@ -1,7 +1,5 @@
 data "lightdash_project" "test" {
-  for_each = { for project in data.lightdash_projects.test.projects : project.project_uuid => project }
-
-  project_uuid = each.key
+  project_uuid = var.test_lightdash_project_uuid
 }
 
 output "lightdash_project_test" {
