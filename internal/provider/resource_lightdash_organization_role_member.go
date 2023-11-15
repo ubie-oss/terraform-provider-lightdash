@@ -89,7 +89,7 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 				Required:            true,
 			},
 			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the order.",
+				Description: "Timestamp of the last Terraform update of the space.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

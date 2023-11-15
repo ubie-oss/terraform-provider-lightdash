@@ -15,4 +15,12 @@ resource "lightdash_space" "test_privacte" {
   is_private = true
 
   deletion_protection = false
+
+  access {
+    user_uuid = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+  }
+
+  access {
+    user_uuid = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+  }
 }

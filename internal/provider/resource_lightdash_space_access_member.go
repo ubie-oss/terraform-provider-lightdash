@@ -64,6 +64,8 @@ func (r *spaceAccessMemberResource) Schema(ctx context.Context, req resource.Sch
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "Lightash space access member",
 		Description:         "Lightash space access member",
+		DeprecationMessage: "Deprecated in favor of the `lightdash_space_access_member` resource. " +
+			"Instead, please use the `access` block of the `lightdash_space` resource. ",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -90,7 +92,7 @@ func (r *spaceAccessMemberResource) Schema(ctx context.Context, req resource.Sch
 				Required:            true,
 			},
 			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the order.",
+				Description: "Timestamp of the last Terraform update of the space access member.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -140,7 +142,7 @@ func (r *spaceAccessMemberResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	// Create new space
+	// Add space access
 	err = r.client.AddSpaceShareToUserV1(project_uuid, space_uuid, user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -238,7 +240,7 @@ func (r *spaceAccessMemberResource) Delete(ctx context.Context, req resource.Del
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting space",
-			"Could not delete order, unexpected error: "+err.Error(),
+			"Could not delete space access member, unexpected error: "+err.Error(),
 		)
 		return
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -51,12 +52,20 @@ type spaceResourceModel struct {
 	ID types.String `tfsdk:"id"`
 	// The response from the API does not contain the organization UUID right now.
 	// OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String `tfsdk:"project_uuid"`
-	SpaceUUID        types.String `tfsdk:"space_uuid"`
-	IsPrivate        types.Bool   `tfsdk:"is_private"`
-	SpaceName        types.String `tfsdk:"name"`
-	DeleteProtection types.Bool   `tfsdk:"deletion_protection"`
-	LastUpdated      types.String `tfsdk:"last_updated"`
+	ProjectUUID      types.String                    `tfsdk:"project_uuid"`
+	SpaceUUID        types.String                    `tfsdk:"space_uuid"`
+	IsPrivate        types.Bool                      `tfsdk:"is_private"`
+	SpaceName        types.String                    `tfsdk:"name"`
+	DeleteProtection types.Bool                      `tfsdk:"deletion_protection"`
+	CreatedAt        types.String                    `tfsdk:"created_at"`
+	LastUpdated      types.String                    `tfsdk:"last_updated"`
+	AccessList       []spaceResourceAccessBlockModel `tfsdk:"access"`
+}
+
+type spaceResourceAccessBlockModel struct {
+	UserUUID types.String `tfsdk:"user_uuid"`
+	// TODO support last_updated
+	// LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 func (r *spaceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -88,6 +97,9 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"space_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash space UUID",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"is_private": schema.BoolAttribute{
 				MarkdownDescription: "Lightdash project is private or not",
@@ -103,11 +115,30 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				MarkdownDescription: "Whether or not to allow Terraform to destroy the instance. Unless this field is set to false in Terraform state, a terraform destroy or terraform apply that would delete the instance will fail.",
 				Required:            true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the order.",
+			"created_at": schema.StringAttribute{
+				Description: "Timestamp of the creation of the space",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"last_updated": schema.StringAttribute{
+				Description: "Timestamp of the last Terraform update of the space.",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"access": schema.SetNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"user_uuid": schema.StringAttribute{
+							MarkdownDescription: "User UUID",
+							Required:            true,
+						},
+					},
 				},
 			},
 		},
@@ -154,17 +185,41 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Set resources
 	// plan.OrganizationUUID = types.StringValue(created_space.OrganizationUUID)
 	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
 	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
 	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
 	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
+	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+	// Add space access
+	accessList := []spaceResourceAccessBlockModel{}
+	var errors []error
+	for _, access := range plan.AccessList {
+		err := services.GrantSpaceAccess(
+			r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString())
+		if err != nil {
+			errors = append(errors, err)
+		} else {
+			accessList = append(accessList, spaceResourceAccessBlockModel{
+				UserUUID: access.UserUUID,
+			})
+		}
+	}
+	if len(errors) > 0 {
+		for _, err := range errors {
+			resp.Diagnostics.AddError(
+				"Error adding space access",
+				"Could not add space access, unexpected error: "+err.Error(),
+			)
+		}
+	}
 
 	// Set resource ID
 	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
 	plan.ID = types.StringValue(state_id)
+	plan.AccessList = accessList
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
@@ -178,8 +233,14 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Declare variables to import from state
 	var project_uuid string
 	var space_uuid string
+	var access []spaceResourceAccessBlockModel
+	var created_at string
+	var last_updated string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &project_uuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &space_uuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("access"), &access)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("created_at"), &created_at)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("last_updated"), &last_updated)...)
 
 	// Get current state
 	var state spaceResourceModel
@@ -201,9 +262,18 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	// Get space members
+	members := make([]spaceResourceAccessBlockModel, len(state.AccessList))
+	for i, access := range state.AccessList {
+		members[i] = spaceResourceAccessBlockModel{
+			UserUUID: access.UserUUID,
+		}
+	}
+
 	// Set the state values
 	state.ProjectUUID = types.StringValue(space.ProjectUUID)
 	state.SpaceUUID = types.StringValue(space.SpaceUUID)
+	state.AccessList = members
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -214,6 +284,13 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// Get current state
+	var currentState spaceResourceModel
+	currentStateDiags := req.State.Get(ctx, &currentState)
+	resp.Diagnostics.Append(currentStateDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	// Retrieve values from plan
 	var plan spaceResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -222,11 +299,12 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Update existing order
+	// Update existing space
 	project_uuid := plan.ProjectUUID.ValueString()
 	space_uuid := plan.SpaceUUID.ValueString()
 	space_name := plan.SpaceName.ValueString()
 	is_private := plan.IsPrivate.ValueBool()
+	tflog.Info(ctx, fmt.Sprintf("Updating space %s", space_uuid))
 	space, err := r.client.UpdateSpaceV1(project_uuid, space_uuid, space_name, is_private)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -235,10 +313,61 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		)
 		return
 	}
+
+	// Revoke access from removed users
+	for _, access := range currentState.AccessList {
+		found := false
+		for _, accessNew := range plan.AccessList {
+			if access.UserUUID.ValueString() == accessNew.UserUUID.ValueString() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err := r.client.RevokeSpaceAccessV1(
+				project_uuid, currentState.SpaceUUID.ValueString(), access.UserUUID.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error Revoking space access",
+					"Could not revoke space access, unexpected error: "+err.Error(),
+				)
+				return
+			}
+		}
+	}
+
+	// Grant access to new users
+	for _, access := range plan.AccessList {
+		found := false
+		for _, accessCurrent := range currentState.AccessList {
+			if access.UserUUID.ValueString() == accessCurrent.UserUUID.ValueString() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err := services.GrantSpaceAccess(
+				r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error Granting space access",
+					"Could not grant space access, unexpected error: "+err.Error(),
+				)
+				return
+			}
+		}
+	}
+
 	// Update the state
 	plan.SpaceName = types.StringValue(space.SpaceName)
 	plan.IsPrivate = types.BoolValue(space.IsPrivate)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	// TODO Update the last_updated field
+	//
+	// We can't update the last_updated field because of the following error:
+	// When applying changes to lightdash_space.test_private, provider "provider[\"github.com/ubie-oss/lightdash\"]" produced an unexpected new
+	// value: .last_updated: was cty.StringVal("Wednesday, 15-Nov-23 13:08:36 JST"), but now cty.StringVal("Wednesday, 15-Nov-23 13:09:43 JST").
+	// plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
 	// Set state
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -273,7 +402,7 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting space",
-			"Could not delete order, unexpected error: "+err.Error(),
+			"Could not delete space, unexpected error: "+err.Error(),
 		)
 		return
 	}
