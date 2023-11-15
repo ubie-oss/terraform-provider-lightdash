@@ -1,15 +1,14 @@
+# NOTE We don't recommend using this resource in production. It's only for testing purposes,
+#      because you as an admin potentailly lose access to the project.
+
 resource "lightdash_organization_role_member" "test" {
-  for_each = {
-    for member in data.lightdash_organization_members.test.members
-    : member.user_uuid => member
-    if member.role != "admin"
-  }
+  count = (length(data.lightdash_organization_member.test_member_user) > 0 ? 1 : 0)
 
   organization_uuid = data.lightdash_organization.test.organization_uuid
-  user_uuid         = each.value.user_uuid
-  role              = each.value.role
+  user_uuid         = data.lightdash_organization_member.test_member_user[0].user_uuid
+  role              = "interactive_viewer"
 }
 
 output "lightdash_organization_role_member__test" {
-  value = lightdash_organization_role_member.test
+  value = (length(lightdash_organization_role_member.test) > 0 ? lightdash_organization_role_member.test : null)
 }

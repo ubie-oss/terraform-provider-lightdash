@@ -1,22 +1,14 @@
-locals {
-  test_projects = tolist(data.lightdash_projects.test.projects)
-}
-
 resource "lightdash_space" "test_public" {
-  count = (length(local.test_projects) > 0) ? 1 : 0
-
-  project_uuid = local.test_projects[0].project_uuid
+  project_uuid = var.test_lightdash_project_uuid
   name         = "zzz_test_public_space"
-  // The visibility is public by default.
-  // is_private   = false
+  // The visibility is private by default.
+  is_private = false
 
   deletion_protection = false
 }
 
 resource "lightdash_space" "test_private" {
-  count = (length(local.test_projects) > 0) ? 1 : 0
-
-  project_uuid = local.test_projects[0].project_uuid
+  project_uuid = var.test_lightdash_project_uuid
   name         = "zzz_test_private_space"
   is_private   = true
 

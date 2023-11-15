@@ -1,17 +1,18 @@
 resource "lightdash_space" "test_public" {
   project_uuid = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
   name         = "zzz_test_private_space"
-  // The visibility is public by default.
-  // is_private   = false
+  // The visibility is private by default.
+  is_private = true
 
   deletion_protection = false
 }
 
 
-resource "lightdash_space" "test_public" {
+resource "lightdash_space" "test_privacte" {
   project_uuid = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
   name         = "zzz_test_private_space"
-  is_private   = true
+  // The visibility is private by default.
+  is_private = true
 
   deletion_protection = false
 }
