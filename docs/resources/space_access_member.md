@@ -13,6 +13,10 @@ Lightash space access member
 ## Example Usage
 
 ```terraform
+# CAUTION:
+# The resource "lightdash_space_access_member" is deprecated.
+# Use the resource "lightdash_space" instead.
+
 resource "lightdash_space_access_member" "example" {
   project_uuid = "xxxxx-xxxxx-xxxx"
   space_uuid   = "yyyy-yyyy-yyy"
@@ -32,7 +36,7 @@ resource "lightdash_space_access_member" "example" {
 ### Read-Only
 
 - `id` (String) Resource identifier
-- `last_updated` (String) Timestamp of the last Terraform update of the order.
+- `last_updated` (String) Timestamp of the last Terraform update of the space access member.
 
 ## Import
 

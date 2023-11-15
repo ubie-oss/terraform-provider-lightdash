@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  test_private_spaces_access_members = (length(data.lightdash_organization_member.test_member_user) > 0
+    ? [
+      data.lightdash_organization_member.test_admin_user.user_uuid,
+      data.lightdash_organization_member.test_member_user[0].user_uuid,
+      ] : [
+      data.lightdash_organization_member.test_admin_user.user_uuid,
+  ])
+}
+
 resource "lightdash_space" "test_public" {
   project_uuid = var.test_lightdash_project_uuid
   name         = "zzz_test_public_space"
@@ -27,6 +37,18 @@ resource "lightdash_space" "test_private" {
   is_private   = true
 
   deletion_protection = false
+
+  dynamic "access" {
+    for_each = toset(local.test_private_spaces_access_members)
+    content {
+      user_uuid = access.key
+    }
+  }
+
+  depends_on = [
+    lightdash_project_role_member.test_admin_user,
+    lightdash_project_role_member.test_member_user,
+  ]
 }
 
 output "lightdash_space__test_public_space" {

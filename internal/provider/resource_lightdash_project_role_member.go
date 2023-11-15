@@ -229,7 +229,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	// Update existing order
+	// Update existing organization member role
 	project_uuid := plan.ProjectUUID.ValueString()
 	user_uuid := plan.UserUUID.ValueString()
 	role := plan.ProjectRole
@@ -262,7 +262,7 @@ func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	// Delete existing order
+	// Delete existing organization member role
 	project_uuid := state.ProjectUUID.ValueString()
 	user_uuid := state.UserUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Revoking project role of %s", user_uuid))

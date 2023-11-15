@@ -23,7 +23,7 @@ test:
 	# TF_ACC mustn't be set, otherwise acceptance tests will run
 	unset TF_ACC && cd "internal/" && go test -count=1 -v ./...
 
-build:
+build: gen-docs
 	go build -v ./
 
 format:

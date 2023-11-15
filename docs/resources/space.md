@@ -30,6 +30,14 @@ resource "lightdash_space" "test_privacte" {
   is_private = true
 
   deletion_protection = false
+
+  access {
+    user_uuid = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+  }
+
+  access {
+    user_uuid = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+  }
 }
 ```
 
@@ -44,13 +52,22 @@ resource "lightdash_space" "test_privacte" {
 
 ### Optional
 
+- `access` (Block Set) (see [below for nested schema](#nestedblock--access))
 - `is_private` (Boolean) Lightdash project is private or not
 
 ### Read-Only
 
+- `created_at` (String) Timestamp of the creation of the space
 - `id` (String) Resource identifier
-- `last_updated` (String) Timestamp of the last Terraform update of the order.
+- `last_updated` (String) Timestamp of the last Terraform update of the space.
 - `space_uuid` (String) Lightdash space UUID
+
+<a id="nestedblock--access"></a>
+### Nested Schema for `access`
+
+Required:
+
+- `user_uuid` (String) User UUID
 
 ## Import
 

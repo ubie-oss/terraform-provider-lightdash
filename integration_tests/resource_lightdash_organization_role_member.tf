@@ -17,7 +17,7 @@ resource "lightdash_organization_role_member" "test" {
 
   organization_uuid = data.lightdash_organization.test.organization_uuid
   user_uuid         = data.lightdash_organization_member.test_member_user[0].user_uuid
-  role              = "interactive_viewer"
+  role              = "member"
 }
 
 output "lightdash_organization_role_member__test" {

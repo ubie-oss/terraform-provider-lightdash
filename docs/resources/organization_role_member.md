@@ -32,7 +32,7 @@ resource "lightdash_organization_role_member" "test" {
 
 - `email` (String) Lightdash user UUID
 - `id` (String) Resource identifier
-- `last_updated` (String) Timestamp of the last Terraform update of the order.
+- `last_updated` (String) Timestamp of the last Terraform update of the space.
 
 ## Import
 
