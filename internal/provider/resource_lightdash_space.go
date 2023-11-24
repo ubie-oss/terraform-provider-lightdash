@@ -196,23 +196,14 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Assign the paln values to the state
-	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
-	plan.ID = types.StringValue(state_id)
-	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
-	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
-	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
-	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
-	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-
 	// Add space access
 	accessList := []spaceResourceAccessBlockModel{}
 	var errors []error
 	for _, access := range plan.AccessList {
 		err := services.GrantSpaceAccess(
-			r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString())
+			r.client, project_uuid, created_space.SpaceUUID, access.UserUUID.ValueString())
 		if err != nil {
+			tflog.Debug(ctx, fmt.Sprintf("Error adding space access %s: %s", access.UserUUID, err.Error()))
 			errors = append(errors, err)
 		} else {
 			accessList = append(accessList, spaceResourceAccessBlockModel{
@@ -228,6 +219,17 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 			)
 		}
 	}
+
+	// Assign the paln values to the state
+	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
+	plan.ID = types.StringValue(state_id)
+	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
+	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
+	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
+	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
+	plan.AccessList = accessList
+	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)

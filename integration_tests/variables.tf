@@ -34,7 +34,7 @@ variable "test_organization_admin_user_email" {
 }
 
 variable "test_organization_member_user_emails" {
-  description = "The email of the Lightdash organization member user to test."
+  description = "The email of the Lightdash organization member user to test in the testing project."
   type        = list(string)
   default     = []
 }

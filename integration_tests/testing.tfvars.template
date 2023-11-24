@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-lightdash_url = ""
-personal_access_token = ""
-test_lightdash_project_uuid = ""
+lightdash_url                      = ""
+personal_access_token              = ""
+test_lightdash_project_uuid        = ""
 test_organization_admin_user_email = ""
-# test_organization_member_user_email = ""
+test_organization_member_user_emails = []
