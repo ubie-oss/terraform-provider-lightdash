@@ -14,10 +14,11 @@
 
 locals {
   test_private_spaces_access_members = (length(data.lightdash_organization_member.test_member_user) > 0
-    ? [
-      data.lightdash_organization_member.test_admin_user.user_uuid,
-      data.lightdash_organization_member.test_member_user[0].user_uuid,
-      ] : [
+    ? concat(
+      [data.lightdash_organization_member.test_admin_user.user_uuid],
+      [for user in data.lightdash_organization_member.test_member_user : user.user_uuid],
+    )
+    : [
       data.lightdash_organization_member.test_admin_user.user_uuid,
   ])
 }

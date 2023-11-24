@@ -13,13 +13,14 @@
 # limitations under the License.
 
 resource "lightdash_organization_role_member" "test" {
-  count = (length(data.lightdash_organization_member.test_member_user) > 0 ? 1 : 0)
+  for_each = data.lightdash_organization_member.test_member_user
 
   organization_uuid = data.lightdash_organization.test.organization_uuid
-  user_uuid         = data.lightdash_organization_member.test_member_user[0].user_uuid
+  user_uuid         = each.value.user_uuid
   role              = "member"
 }
 
 output "lightdash_organization_role_member__test" {
-  value = (length(lightdash_organization_role_member.test) > 0 ? lightdash_organization_role_member.test : null)
+  value = (length(lightdash_organization_role_member.test) > 0
+  ? lightdash_organization_role_member.test : null)
 }

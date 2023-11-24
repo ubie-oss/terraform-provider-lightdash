@@ -20,14 +20,13 @@ output "lightdash_organization_member_test_admin_user" {
   value = data.lightdash_organization_member.test_admin_user
 }
 
-
 data "lightdash_organization_member" "test_member_user" {
-  count = (var.test_organization_member_user_email != null ? 1 : 0)
+  for_each = toset(var.test_organization_member_user_emails)
 
-  email = var.test_organization_member_user_email
+  email = each.key
 }
 
 output "lightdash_organization_member_test_member_user" {
   value = (length(data.lightdash_organization_member.test_member_user) > 0
-  ? element(data.lightdash_organization_member.test_member_user, 0) : null)
+  ? data.lightdash_organization_member.test_member_user : null)
 }

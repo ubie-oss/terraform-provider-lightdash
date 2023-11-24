@@ -34,6 +34,7 @@ type GetSpaceV1Results struct {
 	ProjectUUID string              `json:"projectUuid"`
 	SpaceUUID   string              `json:"uuid"`
 	SpaceName   string              `json:"name"`
+	IsPrivate   bool                `json:"isPrivate"`
 	SpaceAccess []SpaceAccessMember `json:"access"`
 }
 

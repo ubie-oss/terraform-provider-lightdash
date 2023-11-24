@@ -185,14 +185,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// plan.OrganizationUUID = types.StringValue(created_space.OrganizationUUID)
-	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
-	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
-	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
-	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
-	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-
 	// Add space access
 	accessList := []spaceResourceAccessBlockModel{}
 	var errors []error
@@ -216,10 +208,16 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
-	// Set resource ID
+	// Assign the paln values to the state
 	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
 	plan.ID = types.StringValue(state_id)
 	plan.AccessList = accessList
+	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
+	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
+	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
+	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
+	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
@@ -284,13 +282,6 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Get current state
-	var currentState spaceResourceModel
-	currentStateDiags := req.State.Get(ctx, &currentState)
-	resp.Diagnostics.Append(currentStateDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	// Retrieve values from plan
 	var plan spaceResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -305,7 +296,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	space_name := plan.SpaceName.ValueString()
 	is_private := plan.IsPrivate.ValueBool()
 	tflog.Info(ctx, fmt.Sprintf("Updating space %s", space_uuid))
-	space, err := r.client.UpdateSpaceV1(project_uuid, space_uuid, space_name, is_private)
+	updated_space, err := r.client.UpdateSpaceV1(project_uuid, space_uuid, space_name, is_private)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating space",
@@ -314,18 +305,28 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Revoke access from removed users
-	for _, access := range currentState.AccessList {
+	// Get the space to get the access members
+	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting space",
+			"Could not get space, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	// Revoke access from users not managed by Terraform
+	for _, existingAccess := range space.SpaceAccess {
 		found := false
-		for _, accessNew := range plan.AccessList {
-			if access.UserUUID.ValueString() == accessNew.UserUUID.ValueString() {
+		for _, access := range plan.AccessList {
+			if access.UserUUID.ValueString() == existingAccess.UserUUID {
 				found = true
 				break
 			}
 		}
 		if !found {
 			err := r.client.RevokeSpaceAccessV1(
-				project_uuid, currentState.SpaceUUID.ValueString(), access.UserUUID.ValueString())
+				project_uuid, plan.SpaceUUID.ValueString(), existingAccess.UserUUID)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Error Revoking space access",
@@ -339,8 +340,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Grant access to new users
 	for _, access := range plan.AccessList {
 		found := false
-		for _, accessCurrent := range currentState.AccessList {
-			if access.UserUUID.ValueString() == accessCurrent.UserUUID.ValueString() {
+		for _, existingAccess := range space.SpaceAccess {
+			if access.UserUUID.ValueString() == existingAccess.UserUUID {
 				found = true
 				break
 			}
@@ -358,9 +359,28 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 	}
 
+	// Get the space to get the updated access members
+	space, err = r.client.GetSpaceV1(project_uuid, space_uuid)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting space",
+			"Could not get space, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	var updatedAccessList []spaceResourceAccessBlockModel
+	for _, access := range space.SpaceAccess {
+		updatedAccessList = append(
+			updatedAccessList,
+			spaceResourceAccessBlockModel{
+				UserUUID: types.StringValue(access.UserUUID),
+			})
+	}
+
 	// Update the state
-	plan.SpaceName = types.StringValue(space.SpaceName)
-	plan.IsPrivate = types.BoolValue(space.IsPrivate)
+	plan.SpaceName = types.StringValue(updated_space.SpaceName)
+	plan.IsPrivate = types.BoolValue(updated_space.IsPrivate)
+	plan.AccessList = updatedAccessList
 	// TODO Update the last_updated field
 	//
 	// We can't update the last_updated field because of the following error:
@@ -421,9 +441,39 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	project_uuid := extracted_strings[0]
 	space_uuid := extracted_strings[1]
 
+	// Get the importedSpace
+	importedSpace, err := r.client.GetSpaceV1(project_uuid, space_uuid)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting space",
+			fmt.Sprintf("Could not get space with project UUID %s and space UUID %s, unexpected error: %s", project_uuid, space_uuid, err.Error()),
+		)
+		return
+	}
+
+	// Get the space members
+	accessList := make([]spaceResourceAccessBlockModel, len(importedSpace.SpaceAccess))
+	for i, access := range importedSpace.SpaceAccess {
+		// Update each element in the slice
+		accessList[i] = spaceResourceAccessBlockModel{
+			UserUUID: types.StringValue(access.UserUUID),
+		}
+	}
+
 	// Set the resource attributes
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), project_uuid)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), space_uuid)...)
+	stateId := getSpaceResourceId(importedSpace.ProjectUUID, importedSpace.SpaceUUID)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), stateId)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), importedSpace.ProjectUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), importedSpace.SpaceUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), importedSpace.SpaceName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("is_private"), importedSpace.IsPrivate)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), accessList)...)
+
+	// resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), accessList)...)
+	// Note We put the current time as the last updated time because we don't know when the space was last updated.
+	currentTime := types.StringValue(time.Now().Format(time.RFC850))
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), currentTime)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("last_updated"), currentTime)...)
 }
 
 func getSpaceResourceId(project_uuid string, space_uuid string) string {
