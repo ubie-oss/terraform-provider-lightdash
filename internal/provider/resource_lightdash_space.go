@@ -75,8 +75,16 @@ func (r *spaceResource) Metadata(ctx context.Context, req resource.MetadataReque
 func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash space",
-		Description:         "Lightash space",
+		MarkdownDescription: "Lightash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. " +
+			"With Lightash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. " +
+			"Each space has a unique identifier (UUID) and can be associated with a project. " +
+			"You can specify whether a space is private or not, allowing you to control who can access the space. " +
+			"Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. " +
+			"The created_at and last_updated attributes provide timestamps for the creation and last update of the space, respectively. " +
+			"The access block allows you to define the users who have access to the space by specifying their user UUIDs. " +
+			"Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. " +
+			"Lightash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.",
+		Description: "Lightash space",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -132,6 +140,9 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 		},
 		Blocks: map[string]schema.Block{
 			"access": schema.SetNestedBlock{
+				MarkdownDescription: "This block represents the access settings for the Lightdash space. " +
+					"It allows you to define the users who have access to the space by specifying their user UUIDs. " +
+					"Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
@@ -185,6 +196,16 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Assign the paln values to the state
+	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
+	plan.ID = types.StringValue(state_id)
+	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
+	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
+	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
+	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
+	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
 	// Add space access
 	accessList := []spaceResourceAccessBlockModel{}
 	var errors []error
@@ -207,17 +228,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 			)
 		}
 	}
-
-	// Assign the paln values to the state
-	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
-	plan.ID = types.StringValue(state_id)
-	plan.AccessList = accessList
-	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
-	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
-	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
-	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
-	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
@@ -316,6 +326,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Revoke access from users not managed by Terraform
+	// So, mannually added users will be removed
 	for _, existingAccess := range space.SpaceAccess {
 		found := false
 		for _, access := range plan.AccessList {
