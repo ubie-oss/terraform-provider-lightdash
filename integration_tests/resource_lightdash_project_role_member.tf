@@ -24,14 +24,21 @@ output "lightdash_project_role_member__test_admin_user" {
 }
 
 resource "lightdash_project_role_member" "test_member_user" {
-  count = (length(data.lightdash_organization_member.test_member_user) > 0 ? 1 : 0)
+  for_each = data.lightdash_organization_member.test_member_user
 
   project_uuid = var.test_lightdash_project_uuid
-  user_uuid    = data.lightdash_organization_member.test_member_user[0].user_uuid
-  role         = "editor"
+  user_uuid    = each.value.user_uuid
+  role         = "viewer"
 }
 
 output "lightdash_project_role_member__test_member_user" {
   value     = lightdash_project_role_member.test_member_user
   sensitive = true
+}
+
+# TODO remove
+resource "lightdash_project_role_member" "test_member_user_2" {
+  project_uuid = var.test_lightdash_project_uuid
+  user_uuid    = "841dacb8-d0dd-4f4e-a304-dd309b35ec22"
+  role         = "viewer"
 }
