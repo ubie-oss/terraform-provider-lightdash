@@ -48,7 +48,7 @@ func (c *Client) GetProjectMemberByUuidV1(projectUuid string, userUuid string) (
 		}
 	}
 	if searchedMember == nil {
-		return nil, fmt.Errorf("member not found")
+		return nil, fmt.Errorf("user UUID %s not found in %s", userUuid, projectUuid)
 	}
 
 	// Parse the response

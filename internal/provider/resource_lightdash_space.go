@@ -353,12 +353,14 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Grant access to new users
 	for _, access := range plan.AccessList {
 		found := false
+		// Skip if the user is already in the access list
 		for _, existingAccess := range space.SpaceAccess {
 			if access.UserUUID.ValueString() == existingAccess.UserUUID {
 				found = true
 				break
 			}
 		}
+		// Grant access if the user is not in the access list
 		if !found {
 			err := services.GrantSpaceAccess(
 				r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString())
