@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "lightdash_project_group" "test" {
-  for_each = { for group in data.lightdash_project_groups.test.groups : group.group_uuid => group }
-
-  organization_uuid = data.lightdash_projects.test.organization_uuid
-  project_uuid      = var.test_lightdash_project_uuid
-  group_uuid        = each.value.group_uuid
+data "lightdash_organization_groups" "test" {
+  organization_uuid = data.lightdash_organization.test.organization_uuid
 }
 
-output "lightdash_project_group__test" {
-  value = data.lightdash_project_group.test
+output "lightdash_organization_groups__test" {
+  value = data.lightdash_organization_groups.test
 }

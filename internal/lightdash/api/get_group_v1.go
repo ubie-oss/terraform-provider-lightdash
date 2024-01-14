@@ -21,19 +21,19 @@ import (
 	"strings"
 )
 
-type GetProjectGroupV1Result struct {
+type GetGroupV1Results struct {
 	OrganizationUUID string `json:"organizationUuid"`
 	GroupUUID        string `json:"uuid"`
 	CreatedAt        string `json:"createdAt"`
 	Name             string `json:"name"`
 }
 
-type GetProjectGroupV1Response struct {
-	Results GetProjectGroupV1Result `json:"results,omitempty"`
-	Status  string                  `json:"status"`
+type GetGroupV1Response struct {
+	Results GetGroupV1Results `json:"results,omitempty"`
+	Status  string            `json:"status"`
 }
 
-func (c *Client) GetProjectGroupV1(groupUuid string) (*GetProjectGroupV1Result, error) {
+func (c *Client) GetGroupV1(groupUuid string) (*GetGroupV1Results, error) {
 	// Validate the arguments
 	if strings.TrimSpace(groupUuid) == "" {
 		return nil, fmt.Errorf("group UUID is empty")
@@ -51,7 +51,7 @@ func (c *Client) GetProjectGroupV1(groupUuid string) (*GetProjectGroupV1Result, 
 		return nil, err
 	}
 	// Parse the response
-	response := GetProjectGroupV1Response{}
+	response := GetGroupV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
