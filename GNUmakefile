@@ -38,10 +38,14 @@ gen-docs:
 tidy:
 	go mod tidy
 
+# Set up the development environment
 setup-dev: setup-pre-commit
 
 setup-pre-commit:
 	pre-commit install
+
+update-pre-commit:
+	pre-commit autoupdate
 
 run-pre-commit:
 	pre-commit run --all-files
