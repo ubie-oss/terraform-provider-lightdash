@@ -27,38 +27,38 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ datasource.DataSource              = &projectGroupsDataSource{}
-	_ datasource.DataSourceWithConfigure = &projectGroupsDataSource{}
+	_ datasource.DataSource              = &projectGroupAccessesDataSource{}
+	_ datasource.DataSourceWithConfigure = &projectGroupAccessesDataSource{}
 )
 
-func NewProjectGroupsDataSource() datasource.DataSource {
-	return &projectGroupsDataSource{}
+func NewProjectGroupAccessesDataSource() datasource.DataSource {
+	return &projectGroupAccessesDataSource{}
 }
 
-// projectGroupsDataSource defines the data source implementation.
-type projectGroupsDataSource struct {
+// projectGroupAccessesDataSource defines the data source implementation.
+type projectGroupAccessesDataSource struct {
 	client *api.Client
 }
 
-type nestedProjectGroupsModel struct {
+type nestedProjectGroupAccessesModel struct {
 	ProjectUUID types.String             `tfsdk:"project_uuid"`
 	GroupUUID   types.String             `tfsdk:"group_uuid"`
 	Role        models.ProjectMemberRole `tfsdk:"role"`
 }
 
-// projectGroupsDataSourceModel describes the data source data model.
-type projectGroupsDataSourceModel struct {
-	ID               types.String               `tfsdk:"id"`
-	OrganizationUUID types.String               `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String               `tfsdk:"project_uuid"`
-	Groups           []nestedProjectGroupsModel `tfsdk:"groups"`
+// projectGroupAccessesDataSourceModel describes the data source data model.
+type projectGroupAccessesDataSourceModel struct {
+	ID               types.String                      `tfsdk:"id"`
+	OrganizationUUID types.String                      `tfsdk:"organization_uuid"`
+	ProjectUUID      types.String                      `tfsdk:"project_uuid"`
+	Groups           []nestedProjectGroupAccessesModel `tfsdk:"groups"`
 }
 
-func (d *projectGroupsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_groups"
+func (d *projectGroupAccessesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_group_accesses"
 }
 
-func (d *projectGroupsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *projectGroupAccessesDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Lightdash project group accesses data source",
 		Description:         "Lightdash project group accesses data source",
@@ -99,7 +99,7 @@ func (d *projectGroupsDataSource) Schema(ctx context.Context, req datasource.Sch
 	}
 }
 
-func (d *projectGroupsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *projectGroupAccessesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -117,8 +117,8 @@ func (d *projectGroupsDataSource) Configure(ctx context.Context, req datasource.
 	d.client = client
 }
 
-func (d *projectGroupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state projectGroupsDataSourceModel
+func (d *projectGroupAccessesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state projectGroupAccessesDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -135,9 +135,9 @@ func (d *projectGroupsDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	// Map response body to model
-	var groupAccessesList = []nestedProjectGroupsModel{}
+	var groupAccessesList = []nestedProjectGroupAccessesModel{}
 	for _, groupAccess := range groupAccesses {
-		accessState := nestedProjectGroupsModel{
+		accessState := nestedProjectGroupAccessesModel{
 			ProjectUUID: types.StringValue(groupAccess.ProjectUUID),
 			GroupUUID:   types.StringValue(groupAccess.GroupUUID),
 			Role:        groupAccess.Role,
@@ -147,9 +147,9 @@ func (d *projectGroupsDataSource) Read(ctx context.Context, req datasource.ReadR
 	state.Groups = groupAccessesList
 
 	// Set resource ID
-	state_id := fmt.Sprintf("organizations/%s/projects/%s/groups",
+	stateId := fmt.Sprintf("organizations/%s/projects/%s/groups",
 		state.OrganizationUUID.ValueString(), state.ProjectUUID.ValueString())
-	state.ID = types.StringValue(state_id)
+	state.ID = types.StringValue(stateId)
 
 	// Set state
 	diags := resp.State.Set(ctx, &state)

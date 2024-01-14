@@ -26,21 +26,21 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ datasource.DataSource              = &projectGroupDataSource{}
-	_ datasource.DataSourceWithConfigure = &projectGroupDataSource{}
+	_ datasource.DataSource              = &groupDataSource{}
+	_ datasource.DataSourceWithConfigure = &groupDataSource{}
 )
 
-func NewProjectGroupDataSource() datasource.DataSource {
-	return &projectGroupDataSource{}
+func NewGroupDataSource() datasource.DataSource {
+	return &groupDataSource{}
 }
 
-// projectGroupDataSource defines the data source implementation.
-type projectGroupDataSource struct {
+// groupDataSource defines the data source implementation.
+type groupDataSource struct {
 	client *api.Client
 }
 
-// projectGroupDataSourceModel describes the data source data model.
-type projectGroupDataSourceModel struct {
+// groupDataSourceModel describes the data source data model.
+type groupDataSourceModel struct {
 	ID               types.String `tfsdk:"id"`
 	OrganizationUUID types.String `tfsdk:"organization_uuid"`
 	ProjectUUID      types.String `tfsdk:"project_uuid"`
@@ -49,44 +49,44 @@ type projectGroupDataSourceModel struct {
 	CreatedAt        types.String `tfsdk:"created_at"`
 }
 
-func (d *projectGroupDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_group"
+func (d *groupDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_group"
 }
 
-func (d *projectGroupDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *groupDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash project group data source",
-		Description:         "Data source for a Lightdash project group",
+		MarkdownDescription: "Lightdash group data source",
+		Description:         "Data source for a Lightdash group",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Data source identifier",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash project group.",
+				Description: "Organization UUID of the Lightdash group.",
 				Required:    true,
 			},
 			"project_uuid": schema.StringAttribute{
-				Description: "Project UUID of the Lightdash project group.",
+				Description: "UUID of the Lightdash project.",
 				Required:    true,
 			},
 			"group_uuid": schema.StringAttribute{
-				Description: "UUID of the Lightdash project group.",
+				Description: "UUID of the Lightdash group.",
 				Required:    true,
 			},
 			"name": schema.StringAttribute{
-				Description: "Name of the Lightdash project group.",
+				Description: "Name of the Lightdash group.",
 				Computed:    true,
 			},
 			"created_at": schema.StringAttribute{
-				Description: "Creation timestamp of the Lightdash project group.",
+				Description: "Creation timestamp of the Lightdash group.",
 				Computed:    true,
 			},
 		},
 	}
 }
 
-func (d *projectGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *groupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -104,18 +104,18 @@ func (d *projectGroupDataSource) Configure(ctx context.Context, req datasource.C
 	d.client = client
 }
 
-func (d *projectGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state projectGroupDataSourceModel
+func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state groupDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	groupUuid := state.GroupUUID.ValueString()
-	group, err := d.client.GetProjectGroupV1(groupUuid)
+	group, err := d.client.GetGroupV1(groupUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to read Lightdash project group",
+			"Unable to read Lightdash group",
 			"Error: "+err.Error(),
 		)
 		return
