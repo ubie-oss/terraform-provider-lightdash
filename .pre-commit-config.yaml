@@ -26,7 +26,7 @@ repos:
     hooks:
       - id: actionlint-docker
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.32.0
+    rev: v1.33.0
     hooks:
       - id: yamllint
         args: [--strict, -c=.yamllint]
@@ -49,10 +49,10 @@ repos:
       # - id: go-critic
       - id: go-mod-tidy
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.55.1
+    rev: v1.55.2
     hooks:
       - id: golangci-lint
-  # Run `go generate ./...` locall
+  # Run `go generate ./...` local
   - repo: local
     hooks:
       - id: go-generate
@@ -62,6 +62,6 @@ repos:
         language: system
         types: [go]
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: "v1.83.5"
+    rev: "v1.86.0"
     hooks:
       - id: terraform_fmt
