@@ -121,6 +121,7 @@ func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectRoleMemberResource,
 		NewSpaceResource,
 		NewSpaceAccessMemberResource,
+		NewGroupResource,
 	}
 }
 
@@ -137,7 +138,7 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 		NewOrganizationGroupsDataSource,
 		NewProjectGroupAccessesDataSource,
 		NewGroupDataSource,
-		NewProjectGroupMembersDataSource,
+		NewGroupMembersDataSource,
 	}
 }
 
