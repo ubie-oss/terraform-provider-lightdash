@@ -140,7 +140,7 @@ func (d *projectGroupAccessesDataSource) Read(ctx context.Context, req datasourc
 		accessState := nestedProjectGroupAccessesModel{
 			ProjectUUID: types.StringValue(groupAccess.ProjectUUID),
 			GroupUUID:   types.StringValue(groupAccess.GroupUUID),
-			Role:        groupAccess.Role,
+			Role:        groupAccess.ProjectRole,
 		}
 		groupAccessesList = append(groupAccessesList, accessState)
 	}
