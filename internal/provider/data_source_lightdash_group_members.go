@@ -30,7 +30,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &groupMembersDataSource{}
 )
 
-func NewProjectGroupMembersDataSource() datasource.DataSource {
+func NewGroupMembersDataSource() datasource.DataSource {
 	return &groupMembersDataSource{}
 }
 
@@ -39,7 +39,7 @@ type groupMembersDataSource struct {
 	client *api.Client
 }
 
-type proupMemberModel struct {
+type groupMemberModelForGroupMembers struct {
 	// NOTE Those aren't exposed, as they are sensitive data.
 	// LastName  types.String `tfsdk:"last_name"`
 	// FirstName types.String `tfsdk:"first_name"`
@@ -49,11 +49,11 @@ type proupMemberModel struct {
 
 // groupMembersDataSourceModel describes the data source data model.
 type groupMembersDataSourceModel struct {
-	ID               types.String       `tfsdk:"id"`
-	OrganizationUUID types.String       `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String       `tfsdk:"project_uuid"`
-	GroupUUID        types.String       `tfsdk:"group_uuid"`
-	Members          []proupMemberModel `tfsdk:"members"`
+	ID               types.String                      `tfsdk:"id"`
+	OrganizationUUID types.String                      `tfsdk:"organization_uuid"`
+	ProjectUUID      types.String                      `tfsdk:"project_uuid"`
+	GroupUUID        types.String                      `tfsdk:"group_uuid"`
+	Members          []groupMemberModelForGroupMembers `tfsdk:"members"`
 }
 
 func (d *groupMembersDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -132,7 +132,7 @@ func (d *groupMembersDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 	for _, member := range members {
-		member := proupMemberModel{
+		member := groupMemberModelForGroupMembers{
 			UserUUID: types.StringValue(member.UserUUID),
 		}
 		state.Members = append(state.Members, member)

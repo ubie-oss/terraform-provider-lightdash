@@ -56,18 +56,29 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making request: %v", err)
 	}
 	defer res.Body.Close() // #nosec G307
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading response body: %v", err)
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status: %d, body: %s", res.StatusCode, body)
+	// Successful response codes
+	if res.StatusCode == http.StatusOK ||
+		res.StatusCode == http.StatusCreated ||
+		res.StatusCode == http.StatusAccepted ||
+		res.StatusCode == http.StatusNonAuthoritativeInfo ||
+		res.StatusCode == http.StatusNoContent ||
+		res.StatusCode == http.StatusResetContent ||
+		res.StatusCode == http.StatusPartialContent ||
+		res.StatusCode == http.StatusMultiStatus ||
+		res.StatusCode == http.StatusAlreadyReported ||
+		res.StatusCode == http.StatusIMUsed {
+		return body, nil
 	}
 
-	return body, err
+	// Error response codes
+	return nil, fmt.Errorf("unexpected status code: %d, body: %s", res.StatusCode, body)
 }
