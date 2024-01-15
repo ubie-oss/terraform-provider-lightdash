@@ -26,7 +26,7 @@ import (
 type GetProjectGroupAccessesV1Results struct {
 	ProjectUUID string                   `json:"projectUuid"`
 	GroupUUID   string                   `json:"groupUuid"`
-	Role        models.ProjectMemberRole `json:"role"`
+	ProjectRole models.ProjectMemberRole `json:"role"`
 }
 
 type GetProjectGroupAccessesV1Response struct {
