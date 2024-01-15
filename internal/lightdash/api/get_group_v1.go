@@ -24,8 +24,8 @@ import (
 type GetGroupV1Results struct {
 	OrganizationUUID string `json:"organizationUuid"`
 	GroupUUID        string `json:"uuid"`
-	Name             string `json:"name"`
 	CreatedAt        string `json:"createdAt"`
+	Name             string `json:"name"`
 }
 
 type GetGroupV1Response struct {
@@ -43,18 +43,18 @@ func (c *Client) GetGroupV1(groupUuid string) (*GetGroupV1Results, error) {
 	path := fmt.Sprintf("%s/api/v1/groups/%s", c.HostUrl, groupUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for group UUID '%s': %w", groupUuid, err)
+		return nil, err
 	}
 	// Do the request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, fmt.Errorf("request for group UUID '%s' failed: %w", groupUuid, err)
+		return nil, err
 	}
 	// Parse the response
 	response := GetGroupV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response for group UUID '%s': %w", groupUuid, err)
+		return nil, err
 	}
 
 	return &response.Results, nil
