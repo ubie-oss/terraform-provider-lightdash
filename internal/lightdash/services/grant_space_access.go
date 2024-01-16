@@ -15,6 +15,8 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
