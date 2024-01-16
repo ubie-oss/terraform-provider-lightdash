@@ -35,7 +35,7 @@ func (c *Client) FindProjectMemberByEmail(projectUuid string, email string) (*Ge
 	// Get all members
 	members, err := c.GetProjectAccessListV1(projectUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving project access list for UUID %s: %w", projectUuid, err)
 	}
 
 	// Find the matchedMember

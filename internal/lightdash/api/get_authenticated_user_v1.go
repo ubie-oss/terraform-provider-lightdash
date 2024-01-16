@@ -35,18 +35,18 @@ type GetAuthenticatedUserV1Response struct {
 func (c *Client) GetAuthenticatedUserV1() (*GetAuthenticatedUserV1Results, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/user", c.HostUrl), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating GET request for authenticated user: %v", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing GET request for authenticated user: %v", err)
 	}
 
 	response := GetAuthenticatedUserV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshalling response for authenticated user: %v", err)
 	}
 
 	// Make sure if the organization is not nil

@@ -36,18 +36,18 @@ func (c *Client) GetProjectV1(projectUuid string) (*GetProjectV1Results, error) 
 	path := fmt.Sprintf("%s/api/v1/projects/%s", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for project: %w", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for project: %w", err)
 	}
 
 	response := GetProjectV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling project response: %w", err)
 	}
 
 	// Make sure if the organization is not nil

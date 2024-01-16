@@ -31,12 +31,12 @@ func (c *Client) DeleteSpaceV1(projectUUID string, spaceUUID string) error {
 	print(path)
 	req, err := http.NewRequest("DELETE", path, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating DELETE request for space: %v", err)
 	}
 	// Do request
 	_, err = c.doRequest(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("error performing DELETE request for space: %v", err)
 	}
 
 	return nil

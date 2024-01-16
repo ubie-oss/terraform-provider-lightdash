@@ -54,18 +54,18 @@ func (c *Client) CreateSpaceV1(projectUuid string, spaceName string, isPrivate b
 	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("POST", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request: %v", err)
 	}
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request: %v", err)
 	}
 	// Marshal the response
 	response := CreateSpaceV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshalling response: %v", err)
 	}
 	// Make sure if the organization is not nil
 	if response.Results.SpaceUUID == "" {

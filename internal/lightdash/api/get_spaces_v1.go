@@ -37,18 +37,18 @@ func (c *Client) ListSpacesInProjectV1(projectUuid string) ([]ListSpacesInProjec
 	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for spaces: %w", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for spaces: %w", err)
 	}
 
 	response := ListSpacesInProjectV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling spaces response: %w", err)
 	}
 
 	return response.Results, nil

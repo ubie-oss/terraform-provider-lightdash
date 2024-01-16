@@ -22,13 +22,13 @@ func GrantSpaceAccess(client *api.Client, project_uuid string, space_uuid string
 	// Check if the member is a member of the project.
 	_, err := client.GetProjectMemberByUuidV1(project_uuid, user_uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get project member by UUID: %w", err)
 	}
 
 	// Add space access
 	err = client.AddSpaceShareToUserV1(project_uuid, space_uuid, user_uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to add space share to user: %w", err)
 	}
 
 	return nil

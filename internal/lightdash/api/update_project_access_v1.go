@@ -41,12 +41,12 @@ func (c *Client) UpdateProjectAccessToUserV1(projectUuid string, userUuid string
 	path := fmt.Sprintf("%s/api/v1/projects/%s/access/%s", c.HostUrl, projectUuid, userUuid)
 	req, err := http.NewRequest("PATCH", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new request for updating project access: %w", err)
 	}
 	// Do request
 	_, err = c.doRequest(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("request to update project access failed: %w", err)
 	}
 
 	return nil

@@ -24,12 +24,12 @@ func (c *Client) RevokeProjectAccessV1(projectUuid string, userUuid string) erro
 	path := fmt.Sprintf("%s/api/v1/projects/%s/access/%s", c.HostUrl, projectUuid, userUuid)
 	req, err := http.NewRequest("DELETE", path, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new request for revoking project access: %w", err)
 	}
 	// Do request
 	_, err = c.doRequest(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("request to revoke project access failed: %w", err)
 	}
 
 	return nil

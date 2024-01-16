@@ -44,18 +44,18 @@ func (c *Client) GetProjectGroupAccessesV1(projectUuid string) ([]GetProjectGrou
 	path := fmt.Sprintf("%s/api/v1/projects/%s/groupAccesses", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for project group accesses: %w", err)
 	}
 	// Do the request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for project group accesses: %w", err)
 	}
 	// Parse the response
 	response := GetProjectGroupAccessesV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshalling project group accesses response: %w", err)
 	}
 
 	return response.Results, nil

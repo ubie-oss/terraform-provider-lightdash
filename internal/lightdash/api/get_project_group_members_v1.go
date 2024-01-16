@@ -43,18 +43,18 @@ func (c *Client) GetGroupMembersV1(groupUuid string) ([]GetGroupMembersV1Result,
 	path := fmt.Sprintf("%s/api/v1/groups/%s/members", c.HostUrl, groupUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for group members: %w", err)
 	}
 	// Do the request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for group members: %w", err)
 	}
 	// Parse the response
 	response := GetGroupMembersV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshalling group members response: %w", err)
 	}
 
 	return response.Results, nil

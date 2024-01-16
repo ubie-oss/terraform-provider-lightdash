@@ -54,18 +54,18 @@ func (c *Client) UpdateSpaceV1(projectUuid string, spaceUuid string, spaceName s
 	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces/%s", c.HostUrl, projectUuid, spaceUuid)
 	req, err := http.NewRequest("PATCH", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new request: %w", err)
 	}
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	// Marshal the response
 	response := UpdateSpaceV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 	// Make sure if the organization is not nil
 	if response.Results.SpaceUUID == "" {

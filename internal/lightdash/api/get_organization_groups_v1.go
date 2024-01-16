@@ -35,18 +35,18 @@ type GetOrganizationGroupsV1Response struct {
 func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org/groups", c.HostUrl), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating GET request for organization groups: %v", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing GET request for organization groups: %v", err)
 	}
 
 	response := GetOrganizationGroupsV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshalling response for organization groups: %v", err)
 	}
 
 	// Validate the response results
