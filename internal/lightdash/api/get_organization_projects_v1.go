@@ -35,18 +35,18 @@ func (c *Client) ListOrganizationProjectsV1() ([]ListOrganizationProjectsV1Resul
 	path := fmt.Sprintf("%s/api/v1/org/projects", c.HostUrl)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for organization projects: %w", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for organization projects: %w", err)
 	}
 
 	response := ListOrganizationProjectsV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling response for organization projects: %w", err)
 	}
 
 	return response.Results, nil

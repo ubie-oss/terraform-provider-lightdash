@@ -39,12 +39,12 @@ func (c *Client) AddSpaceShareToUserV1(projectUuid string, spaceUuid string, use
 	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces/%s/share", c.HostUrl, projectUuid, spaceUuid)
 	req, err := http.NewRequest("POST", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new request for space share: %w", err)
 	}
 	// Do request
 	_, err = c.doRequest(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("request to share space failed: %w", err)
 	}
 
 	return nil

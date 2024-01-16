@@ -28,18 +28,18 @@ type GetOrganizationMemberByUuidV1Response struct {
 func (c *Client) GetOrganizationMemberByUuidV1(userUuid string) (*GetOrganizationMembersV1Results, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org/users/%s", c.HostUrl, userUuid), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new HTTP request: %w", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error executing request to get organization member: %w", err)
 	}
 
 	response := GetOrganizationMemberByUuidV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling response body: %w", err)
 	}
 
 	// Check if each member is valid

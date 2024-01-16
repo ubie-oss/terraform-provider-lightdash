@@ -55,18 +55,18 @@ func (c *Client) UpdateOrganizationMemberV1(userUuid string, role models.Organiz
 	path := fmt.Sprintf("%s/api/v1/org/users/%s", c.HostUrl, userUuid)
 	req, err := http.NewRequest("PATCH", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new request: %w", err)
 	}
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	// Marshal the response
 	response := UpdateOrganizationMemberV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 	return &response.Results, nil
 }

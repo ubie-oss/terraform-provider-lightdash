@@ -45,20 +45,20 @@ func (c *Client) GetProjectAccessListV1(projectUuid string) ([]GetProjectAccessL
 	path := fmt.Sprintf("%s/api/v1/projects/%s/access", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for project access list: %w", err)
 	}
 	// Do the request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for project access list: %w", err)
 	}
 	// Parse the response
 	response := GetProjectAccessListV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshalling project access list response: %w", err)
 	}
-	// Mske sure if all of the user UUIDs are not empty
+	// Make sure if all of the user UUIDs are not empty
 	for _, projectMember := range response.Results {
 		if len(strings.TrimSpace(projectMember.UserUUID)) == 0 {
 			return nil, fmt.Errorf("user UUID is empty")

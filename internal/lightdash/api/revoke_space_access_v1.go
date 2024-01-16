@@ -25,12 +25,12 @@ func (c *Client) RevokeSpaceAccessV1(projectUuid string, spaceUuid string, userU
 		c.HostUrl, projectUuid, spaceUuid, userUuid)
 	req, err := http.NewRequest("DELETE", path, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new request for revoking space access: %w", err)
 	}
 	// Do request
 	_, err = c.doRequest(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("request to revoke space access failed: %w", err)
 	}
 
 	return nil

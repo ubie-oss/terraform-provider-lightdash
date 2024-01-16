@@ -39,18 +39,18 @@ type GetOrganizationMembersV1Response struct {
 func (c *Client) GetOrganizationMembersV1() ([]GetOrganizationMembersV1Results, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org/users", c.HostUrl), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for organization members: %w", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for organization members: %w", err)
 	}
 
 	response := GetOrganizationMembersV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling response for organization members: %w", err)
 	}
 
 	// Check if each member is valid

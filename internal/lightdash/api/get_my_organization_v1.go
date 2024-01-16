@@ -33,18 +33,18 @@ type GetMyOrganizationV1Response struct {
 func (c *Client) GetMyOrganizationV1() (*GetMyOrganizationV1Results, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org", c.HostUrl), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request for organization: %w", err)
 	}
 
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request to get organization failed: %w", err)
 	}
 
 	response := GetMyOrganizationV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal organization response: %w", err)
 	}
 
 	// Make sure if the organization is not nil

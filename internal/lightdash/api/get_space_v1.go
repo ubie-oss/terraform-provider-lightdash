@@ -56,18 +56,18 @@ func (c *Client) GetSpaceV1(projectUuid string, spaceUuid string) (*GetSpaceV1Re
 	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces/%s", c.HostUrl, projectUuid, spaceUuid)
 	req, err := http.NewRequest("GET", path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new request for space: %w", err)
 	}
 	// Do the request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error performing request for space: %w", err)
 	}
 	// Parse the response
 	response := GetSpaceV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling space response: %w", err)
 	}
 	// Make sure if the organization is not nil
 	if len(strings.TrimSpace(response.Results.SpaceUUID)) == 0 {
