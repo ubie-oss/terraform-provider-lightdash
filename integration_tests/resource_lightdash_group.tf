@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-locals {
-  test_group_members = { for user in data.lightdash_organization_member.test_member_user : user.user_uuid => user }
-}
-
 resource "lightdash_group" "test1" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "zzz_test_group_01"
@@ -25,11 +21,8 @@ resource "lightdash_group" "test2" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "zzz_test_group_02"
 
-  dynamic "member" {
-    for_each = local.test_group_members
-    content {
-      user_uuid = member.key
-    }
+  member {
+    user_uuid = data.lightdash_authenticated_user.test.user_uuid
   }
 }
 

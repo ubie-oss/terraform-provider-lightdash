@@ -18,6 +18,11 @@ data "lightdash_group_members" "test" {
   organization_uuid = data.lightdash_projects.test.organization_uuid
   project_uuid      = var.test_lightdash_project_uuid
   group_uuid        = each.key
+
+  depends_on = [
+    lightdash_group.test1,
+    lightdash_group.test2,
+  ]
 }
 
 output "lightdash_group_members__test" {
