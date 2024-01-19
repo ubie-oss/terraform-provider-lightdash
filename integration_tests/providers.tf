@@ -15,6 +15,8 @@
 terraform {
   required_version = "1.1.0"
 
+  # TODO Configure the GCS backend
+
   required_providers {
     lightdash = {
       source = "github.com/ubie-oss/lightdash"

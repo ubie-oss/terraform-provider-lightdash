@@ -51,10 +51,13 @@ run-pre-commit:
 	pre-commit run --all-files
 
 plan-integration-tests:
-	cd ./integration_tests/ && TF_LOG=1 terraform plan 2>&1
+	cd ./integration_tests/ \
+		&& TF_LOG=1 terraform plan -var-file="testing.tfvars" 2>&1
 
 apply-integration-tests:
-	cd ./integration_tests/ && TF_LOG=1 terraform apply -auto-approve 2>&1
+	cd ./integration_tests/ \
+		&& TF_LOG=1 terraform apply -var-file="testing.tfvars" 2>&1
 
 destroy-integration-tests:
-	cd ./integration_tests/ && TF_LOG=1 terraform destroy -auto-approve 2>&1
+	cd ./integration_tests/ \
+		&& TF_LOG=1 terraform destroy -var-file="testing.tfvars" 2>&1

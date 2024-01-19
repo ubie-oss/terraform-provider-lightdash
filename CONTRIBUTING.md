@@ -78,6 +78,10 @@ terraform destroy -var-file="testing.tfvars"
 
 ## Publishing the Provider to the Terraform Registry
 
+### Account Setup for Terraform Registry
+
+Before you can publish your provider, you must set up an account on the Terraform Registry. This is a prerequisite for the subsequent steps in the publishing process.
+
 To publish the provider to the Terraform Registry, a series of steps must be followed using GitHub Actions. These steps were initially configured manually by the original author.
 For instance, we need to:
 
@@ -87,3 +91,8 @@ For instance, we need to:
 The official tutorials describes the steps in detail.
 
 - [Release and Publish a Provider to the Terraform Registry](https://developer.hashicorp.com/terraform/tutorials/providers/provider-release-publish)
+
+### Publish a New Release
+
+All we have to do is to create a new release on GitHub.
+The GitHub Actions will automatically publish the provider to the Terraform Registry.
