@@ -13,7 +13,11 @@
 # limitations under the License.
 
 data "lightdash_group_members" "test" {
-  for_each = { for group in data.lightdash_organization_groups.test.groups : group.group_uuid => group }
+  for_each = (
+    data.lightdash_organization_groups.test.groups != null
+    ? { for group in data.lightdash_organization_groups.test.groups
+    : group.group_uuid => group } : {}
+  )
 
   organization_uuid = data.lightdash_projects.test.organization_uuid
   project_uuid      = var.test_lightdash_project_uuid
