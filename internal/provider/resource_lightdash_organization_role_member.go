@@ -243,7 +243,7 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 
 	// Update the role of the user to "member"
 	user_uuid := state.UserUUID.ValueString()
-	role := models.MEMBER_OrganizationMemberRole
+	role := models.ORGANIZATION_MEMBER_ROLE
 	user, err := r.client.UpdateOrganizationMemberV1(user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -253,7 +253,7 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 		return
 	}
 	// Check if the updated role is "member"
-	if user.OrganizationRole != models.MEMBER_OrganizationMemberRole {
+	if user.OrganizationRole != models.ORGANIZATION_MEMBER_ROLE {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
 			"Could not update organization member, unexpected error: "+err.Error(),

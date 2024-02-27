@@ -18,12 +18,12 @@ type OrganizationMemberRole string
 
 // List of OrganizationMemberRole
 const (
-	MEMBER_OrganizationMemberRole             OrganizationMemberRole = "member"
-	VIEWER_OrganizationMemberRole             OrganizationMemberRole = "viewer"
-	INTERACTIVE_VIEWER_OrganizationMemberRole OrganizationMemberRole = "interactive_viewer"
-	EDITOR_OrganizationMemberRole             OrganizationMemberRole = "editor"
-	DEVELOPER_OrganizationMemberRole          OrganizationMemberRole = "developer"
-	ADMIN_OrganizationMemberRole              OrganizationMemberRole = "admin"
+	ORGANIZATION_MEMBER_ROLE             OrganizationMemberRole = "member"
+	ORGANIZATION_VIEWER_ROLE             OrganizationMemberRole = "viewer"
+	ORGANIZATION_INTERACTIVE_VIEWER_ROLE OrganizationMemberRole = "interactive_viewer"
+	ORGANIZATION_EDITOR_ROLE             OrganizationMemberRole = "editor"
+	ORGANIZATION_DEVELOPER_ROLE          OrganizationMemberRole = "developer"
+	ORGANIZATION_ADMIN_ROLE              OrganizationMemberRole = "admin"
 )
 
 // default string
@@ -34,12 +34,12 @@ func (e OrganizationMemberRole) String() string {
 // Check if a given string is a valid OrganizationMemberRole
 func IsValidOrganizationMemberRole(s string) bool {
 	switch OrganizationMemberRole(s) {
-	case MEMBER_OrganizationMemberRole,
-		VIEWER_OrganizationMemberRole,
-		INTERACTIVE_VIEWER_OrganizationMemberRole,
-		EDITOR_OrganizationMemberRole,
-		DEVELOPER_OrganizationMemberRole,
-		ADMIN_OrganizationMemberRole:
+	case ORGANIZATION_MEMBER_ROLE,
+		ORGANIZATION_VIEWER_ROLE,
+		ORGANIZATION_INTERACTIVE_VIEWER_ROLE,
+		ORGANIZATION_EDITOR_ROLE,
+		ORGANIZATION_DEVELOPER_ROLE,
+		ORGANIZATION_ADMIN_ROLE:
 		return true
 	}
 	return false

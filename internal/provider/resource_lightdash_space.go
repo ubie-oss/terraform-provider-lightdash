@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
@@ -317,6 +318,16 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	// Get the organization organizationMembers
+	organizationMembers, err := r.client.GetOrganizationMembersV1()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting space members",
+			"Could not get space members, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
 	// Get the space to get the access members
 	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
 	if err != nil {
@@ -328,7 +339,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Revoke access from users not managed by Terraform
-	// So, mannually added users will be removed
+	// NOTE: Manually added users will be removed
 	for _, existingAccess := range space.SpaceAccess {
 		found := false
 		for _, access := range plan.AccessList {
@@ -337,7 +348,19 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				break
 			}
 		}
-		if !found {
+		// Check if the user is an organization admin
+		// It is not possible to revoke space access from organization admins
+		is_organization_admin := false
+		for _, organizationMember := range organizationMembers {
+			if organizationMember.UserUUID == existingAccess.UserUUID &&
+				organizationMember.OrganizationRole == models.ORGANIZATION_ADMIN_ROLE {
+				is_organization_admin = true
+				tflog.Info(ctx, fmt.Sprintf("Skipping revocation for organization admin user: %s", existingAccess.UserUUID))
+				break
+			}
+		}
+		// Revoke access if the user is not in the access list and not an organization admin
+		if !found && !is_organization_admin {
 			err := r.client.RevokeSpaceAccessV1(
 				project_uuid, plan.SpaceUUID.ValueString(), existingAccess.UserUUID)
 			if err != nil {
