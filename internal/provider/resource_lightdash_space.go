@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
-	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
@@ -64,7 +63,8 @@ type spaceResourceModel struct {
 }
 
 type spaceResourceAccessBlockModel struct {
-	UserUUID types.String `tfsdk:"user_uuid"`
+	UserUUID            types.String `tfsdk:"user_uuid"`
+	IsOrganizationAdmin types.Bool   `tfsdk:"is_organization_admin"`
 	// TODO support last_updated
 	// LastUpdated types.String `tfsdk:"last_updated"`
 }
@@ -76,16 +76,16 @@ func (r *spaceResource) Metadata(ctx context.Context, req resource.MetadataReque
 func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. " +
-			"With Lightash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. " +
+		MarkdownDescription: "Lightdash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. " +
+			"With Lightdash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. " +
 			"Each space has a unique identifier (UUID) and can be associated with a project. " +
 			"You can specify whether a space is private or not, allowing you to control who can access the space. " +
 			"Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. " +
 			"The created_at and last_updated attributes provide timestamps for the creation and last update of the space, respectively. " +
 			"The access block allows you to define the users who have access to the space by specifying their user UUIDs. " +
 			"Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. " +
-			"Lightash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.",
-		Description: "Lightash space",
+			"Lightdash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.",
+		Description: "Lightdash space",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -150,6 +150,11 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 							MarkdownDescription: "User UUID",
 							Required:            true,
 						},
+						"is_organization_admin": schema.BoolAttribute{
+							MarkdownDescription: "Indicates if the user's access is managed by Terraform." +
+								"Note: It is not possible to manage space access for organization admins through Terraform because they inherently have access to all spaces within the organization by default.",
+							Computed: true,
+						},
 					},
 				},
 			},
@@ -200,15 +205,30 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Add space access
 	accessList := []spaceResourceAccessBlockModel{}
 	var errors []error
+	organizationMembersService := services.NewOrganizationMembersService(r.client)
 	for _, access := range plan.AccessList {
-		err := services.GrantSpaceAccess(
+		// Organization admins shouldn't be managed in Terraform states,
+		// because they have access to all spaces in the organization by default.
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID.ValueString())
+		if err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("Error checking if user %s is an organization admin: %s", access.UserUUID, err.Error()))
+			errors = append(errors, err)
+			continue
+		}
+		if isOrganizationAdmin {
+			tflog.Info(ctx, fmt.Sprintf("Skipping adding access for organization admin user: %s", access.UserUUID))
+		}
+
+		// Add space access
+		err = services.GrantSpaceAccess(
 			r.client, project_uuid, created_space.SpaceUUID, access.UserUUID.ValueString())
 		if err != nil {
 			tflog.Debug(ctx, fmt.Sprintf("Error adding space access %s: %s", access.UserUUID, err.Error()))
 			errors = append(errors, err)
 		} else {
 			accessList = append(accessList, spaceResourceAccessBlockModel{
-				UserUUID: access.UserUUID,
+				UserUUID:            access.UserUUID,
+				IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 			})
 		}
 	}
@@ -221,7 +241,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
-	// Assign the paln values to the state
+	// Assign the plan values to the state
 	state_id := getSpaceResourceId(created_space.ProjectUUID, created_space.SpaceUUID)
 	plan.ID = types.StringValue(state_id)
 	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
@@ -242,13 +262,13 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Declare variables to import from state
-	var project_uuid string
-	var space_uuid string
+	var projectUuid string
+	var spaceUuid string
 	var access []spaceResourceAccessBlockModel
 	var created_at string
 	var last_updated string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &project_uuid)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &space_uuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &spaceUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("access"), &access)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("created_at"), &created_at)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("last_updated"), &last_updated)...)
@@ -262,9 +282,9 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get space
-	project_uuid = state.ProjectUUID.ValueString()
-	space_uuid = state.SpaceUUID.ValueString()
-	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
+	projectUuid = state.ProjectUUID.ValueString()
+	spaceUuid = state.SpaceUUID.ValueString()
+	space, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading space",
@@ -274,11 +294,26 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get space members
-	members := make([]spaceResourceAccessBlockModel, len(state.AccessList))
-	for i, access := range state.AccessList {
-		members[i] = spaceResourceAccessBlockModel{
-			UserUUID: access.UserUUID,
+	organizationMembersService := services.NewOrganizationMembersService(r.client)
+	var members []spaceResourceAccessBlockModel
+	for _, access := range state.AccessList {
+		// Check if the user who isn't is an organization admin
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error checking if user is an organization admin",
+				"Could not check if user is an organization admin: "+err.Error(),
+			)
 		}
+		// Skip if the user who isn't in the state is an organization admin
+		if isOrganizationAdmin {
+			tflog.Info(ctx, fmt.Sprintf("Skipping user %s who is an organization admin", access.UserUUID))
+		}
+		// Append the user to the members list
+		members = append(members, spaceResourceAccessBlockModel{
+			UserUUID:            access.UserUUID,
+			IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
+		})
 	}
 
 	// Set the state values
@@ -309,21 +344,11 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	space_name := plan.SpaceName.ValueString()
 	is_private := plan.IsPrivate.ValueBool()
 	tflog.Info(ctx, fmt.Sprintf("Updating space %s", space_uuid))
-	updated_space, err := r.client.UpdateSpaceV1(project_uuid, space_uuid, space_name, is_private)
+	updatedSpace, err := r.client.UpdateSpaceV1(project_uuid, space_uuid, space_name, is_private)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating space",
 			"Could not update space, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	// Get the organization organizationMembers
-	organizationMembers, err := r.client.GetOrganizationMembersV1()
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Getting space members",
-			"Could not get space members, unexpected error: "+err.Error(),
 		)
 		return
 	}
@@ -340,7 +365,22 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Revoke access from users not managed by Terraform
 	// NOTE: Manually added users will be removed
+	organizationMembersService := services.NewOrganizationMembersService(r.client)
 	for _, existingAccess := range space.SpaceAccess {
+		// Check if the user is an organization admin
+		// It is not possible to revoke space access from organization admins
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(existingAccess.UserUUID)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error checking if user is an organization admin",
+				"Could not check if user is an organization admin: "+err.Error(),
+			)
+		}
+		if isOrganizationAdmin {
+			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin", existingAccess.UserUUID))
+			continue
+		}
+		// Check if the user is managed by Terraform
 		found := false
 		for _, access := range plan.AccessList {
 			if access.UserUUID.ValueString() == existingAccess.UserUUID {
@@ -348,19 +388,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				break
 			}
 		}
-		// Check if the user is an organization admin
-		// It is not possible to revoke space access from organization admins
-		is_organization_admin := false
-		for _, organizationMember := range organizationMembers {
-			if organizationMember.UserUUID == existingAccess.UserUUID &&
-				organizationMember.OrganizationRole == models.ORGANIZATION_ADMIN_ROLE {
-				is_organization_admin = true
-				tflog.Info(ctx, fmt.Sprintf("Skipping revocation for organization admin user: %s", existingAccess.UserUUID))
-				break
-			}
-		}
-		// Revoke access if the user is not in the access list and not an organization admin
-		if !found && !is_organization_admin {
+		// Revoke access if the user is not in the access list
+		if !found {
 			err := r.client.RevokeSpaceAccessV1(
 				project_uuid, plan.SpaceUUID.ValueString(), existingAccess.UserUUID)
 			if err != nil {
@@ -374,9 +403,23 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Grant access to new users
+	var updatedAccessList []spaceResourceAccessBlockModel
 	for _, access := range plan.AccessList {
-		found := false
+		// Check if the user is an organization admin
+		// It is not possible to revoke space access from organization admins
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error checking if user is an organization admin",
+				"Could not check if user is an organization admin: "+err.Error(),
+			)
+		}
+		// Skip if the user is an organization admin
+		if isOrganizationAdmin {
+			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin", access.UserUUID))
+		}
 		// Skip if the user is already in the access list
+		found := false
 		for _, existingAccess := range space.SpaceAccess {
 			if access.UserUUID.ValueString() == existingAccess.UserUUID {
 				found = true
@@ -395,29 +438,18 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				return
 			}
 		}
-	}
-
-	// Get the space to get the updated access members
-	space, err = r.client.GetSpaceV1(project_uuid, space_uuid)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Getting space",
-			"Could not get space, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	var updatedAccessList []spaceResourceAccessBlockModel
-	for _, access := range space.SpaceAccess {
+		// Append the user to the managed members list
 		updatedAccessList = append(
 			updatedAccessList,
 			spaceResourceAccessBlockModel{
-				UserUUID: types.StringValue(access.UserUUID),
+				UserUUID:            access.UserUUID,
+				IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 			})
 	}
 
 	// Update the state
-	plan.SpaceName = types.StringValue(updated_space.SpaceName)
-	plan.IsPrivate = types.BoolValue(updated_space.IsPrivate)
+	plan.SpaceName = types.StringValue(updatedSpace.SpaceName)
+	plan.IsPrivate = types.BoolValue(updatedSpace.IsPrivate)
 	plan.AccessList = updatedAccessList
 	// TODO Update the last_updated field
 	//
@@ -490,12 +522,21 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Get the space members
-	accessList := make([]spaceResourceAccessBlockModel, len(importedSpace.SpaceAccess))
-	for i, access := range importedSpace.SpaceAccess {
-		// Update each element in the slice
-		accessList[i] = spaceResourceAccessBlockModel{
-			UserUUID: types.StringValue(access.UserUUID),
+	accessList := []spaceResourceAccessBlockModel{}
+	organizationMembersService := services.NewOrganizationMembersService(r.client)
+	for _, access := range importedSpace.SpaceAccess {
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error checking if user is an organization admin",
+				"Could not check if user is an organization admin: "+err.Error(),
+			)
 		}
+		// Append each element to the slice
+		accessList = append(accessList, spaceResourceAccessBlockModel{
+			UserUUID:            types.StringValue(access.UserUUID),
+			IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
+		})
 	}
 
 	// Set the resource attributes

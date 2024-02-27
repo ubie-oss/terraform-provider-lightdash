@@ -3,12 +3,12 @@
 page_title: "lightdash_space Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. With Lightash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. Each space has a unique identifier (UUID) and can be associated with a project. You can specify whether a space is private or not, allowing you to control who can access the space. Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. The createdat and lastupdated attributes provide timestamps for the creation and last update of the space, respectively. The access block allows you to define the users who have access to the space by specifying their user UUIDs. Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. Lightash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.
+  Lightdash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. With Lightdash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. Each space has a unique identifier (UUID) and can be associated with a project. You can specify whether a space is private or not, allowing you to control who can access the space. Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. The createdat and lastupdated attributes provide timestamps for the creation and last update of the space, respectively. The access block allows you to define the users who have access to the space by specifying their user UUIDs. Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. Lightdash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.
 ---
 
 # lightdash_space (Resource)
 
-Lightash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. With Lightash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. Each space has a unique identifier (UUID) and can be associated with a project. You can specify whether a space is private or not, allowing you to control who can access the space. Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. The created_at and last_updated attributes provide timestamps for the creation and last update of the space, respectively. The access block allows you to define the users who have access to the space by specifying their user UUIDs. Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. Lightash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.
+Lightdash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. With Lightdash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. Each space has a unique identifier (UUID) and can be associated with a project. You can specify whether a space is private or not, allowing you to control who can access the space. Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. The created_at and last_updated attributes provide timestamps for the creation and last update of the space, respectively. The access block allows you to define the users who have access to the space by specifying their user UUIDs. Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. Lightdash space is a flexible and scalable solution for managing your analytics projects and ensuring data security and access control.
 
 ## Example Usage
 
@@ -68,6 +68,10 @@ resource "lightdash_space" "test_privacte" {
 Required:
 
 - `user_uuid` (String) User UUID
+
+Read-Only:
+
+- `is_organization_admin` (Boolean) Indicates if the user's access is managed by Terraform.Note: It is not possible to manage space access for organization admins through Terraform because they inherently have access to all spaces within the organization by default.
 
 ## Import
 
