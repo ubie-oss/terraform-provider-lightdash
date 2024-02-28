@@ -209,14 +209,14 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	for _, access := range plan.AccessList {
 		// Organization admins shouldn't be managed in Terraform states,
 		// because they have access to all spaces in the organization by default.
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID.ValueString())
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
 		if err != nil {
 			tflog.Warn(ctx, fmt.Sprintf("Error checking if user %s is an organization admin: %s", access.UserUUID, err.Error()))
 			errors = append(errors, err)
 			continue
 		}
 		if isOrganizationAdmin {
-			tflog.Info(ctx, fmt.Sprintf("Skipping adding access for organization admin user: %s", access.UserUUID))
+			tflog.Info(ctx, fmt.Sprintf("Skipping adding access for organization admin user: %s because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
 		}
 
 		// Add space access
@@ -298,7 +298,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	var members []spaceResourceAccessBlockModel
 	for _, access := range state.AccessList {
 		// Check if the user who isn't is an organization admin
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID.ValueString())
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error checking if user is an organization admin",
@@ -307,7 +307,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		}
 		// Skip if the user who isn't in the state is an organization admin
 		if isOrganizationAdmin {
-			tflog.Info(ctx, fmt.Sprintf("Skipping user %s who is an organization admin", access.UserUUID))
+			tflog.Info(ctx, fmt.Sprintf("Organization admin %s is registered in Terraform states. However, granting and revoking operations for organization admins are not executed because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
 		}
 		// Append the user to the members list
 		members = append(members, spaceResourceAccessBlockModel{
@@ -369,7 +369,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	for _, existingAccess := range space.SpaceAccess {
 		// Check if the user is an organization admin
 		// It is not possible to revoke space access from organization admins
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(existingAccess.UserUUID)
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(existingAccess.UserUUID)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error checking if user is an organization admin",
@@ -377,7 +377,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			)
 		}
 		if isOrganizationAdmin {
-			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin", existingAccess.UserUUID))
+			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin. Organization admins have space access to all spaces by default and cannot be managed individually.", existingAccess.UserUUID))
 			continue
 		}
 		// Check if the user is managed by Terraform
@@ -407,7 +407,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	for _, access := range plan.AccessList {
 		// Check if the user is an organization admin
 		// It is not possible to revoke space access from organization admins
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID.ValueString())
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error checking if user is an organization admin",
@@ -416,7 +416,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 		// Skip if the user is an organization admin
 		if isOrganizationAdmin {
-			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin", access.UserUUID))
+			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin because organization admins inherently have access to all spaces by default, making individual space access management unnecessary.", access.UserUUID))
 		}
 		// Skip if the user is already in the access list
 		found := false
@@ -525,7 +525,7 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	accessList := []spaceResourceAccessBlockModel{}
 	organizationMembersService := services.NewOrganizationMembersService(r.client)
 	for _, access := range importedSpace.SpaceAccess {
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationMemberAdmin(access.UserUUID)
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error checking if user is an organization admin",

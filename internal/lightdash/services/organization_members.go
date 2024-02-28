@@ -39,12 +39,12 @@ func NewOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
-		var err error
 		// Fetch the members from the organization using the API client
-		s.members, err = s.client.GetOrganizationMembersV1()
+		members, err := s.client.GetOrganizationMembersV1()
 		if err != nil {
 			return nil, err
 		}
+		s.members = members
 	}
 	// Return the list of members
 	return s.members, nil
@@ -88,7 +88,7 @@ func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid st
 }
 
 // Check if a member with the passed user UUID is an admin of the organization.
-func (s *OrganizationMembersService) IsOrganizationMemberAdmin(userUuid string) (bool, error) {
+func (s *OrganizationMembersService) IsOrganizationAdmin(userUuid string) (bool, error) {
 	// Retrieve the organization member by their UUID
 	member, err := s.GetOrganizationMemberByUserUuid(userUuid)
 	if err != nil {
