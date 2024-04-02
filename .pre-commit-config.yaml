@@ -22,16 +22,16 @@ repos:
       - id: check-yaml
       - id: detect-private-key
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.26
+    rev: v1.6.27
     hooks:
       - id: actionlint-docker
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.33.0
+    rev: v1.35.1
     hooks:
       - id: yamllint
         args: [--strict, -c=.yamllint.yaml]
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.6
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         exclude: ^examples/
@@ -48,7 +48,7 @@ repos:
       # - id: go-critic
       - id: go-mod-tidy
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.55.2
+    rev: v1.57.2
     hooks:
       - id: golangci-lint
   # Run `go generate ./...` local
@@ -61,6 +61,6 @@ repos:
         language: system
         types: [go]
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.86.0
+    rev: v1.88.4
     hooks:
       - id: terraform_fmt
