@@ -29,7 +29,7 @@ repos:
     rev: v1.33.0
     hooks:
       - id: yamllint
-        args: [--strict, -c=.yamllint]
+        args: [--strict, -c=.yamllint.yaml]
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.9.0.6
     hooks:
