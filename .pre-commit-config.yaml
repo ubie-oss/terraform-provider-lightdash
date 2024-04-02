@@ -29,7 +29,7 @@ repos:
     rev: v1.33.0
     hooks:
       - id: yamllint
-        args: [--strict, -c=.yamllint]
+        args: [--strict, -c=.yamllint.yaml]
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.9.0.6
     hooks:
@@ -43,7 +43,6 @@ repos:
       # - id: go-imports
       # - id: go-cyclo
       #   args: [-over=15]
-      - id: validate-toml
       - id: no-go-testing
       # - id: golangci-lint
       # - id: go-critic
@@ -58,10 +57,10 @@ repos:
       - id: go-generate
         name: go generate
         entry: go
-        args: ["generate", "./..."]
+        args: [generate, ./...]
         language: system
         types: [go]
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: "v1.86.0"
+    rev: v1.86.0
     hooks:
       - id: terraform_fmt

@@ -26,7 +26,17 @@ test:
 build: gen-docs
 	go build -v ./
 
-format:
+lint: run-trunk-check run-pre-commit
+
+run-trunk-check:
+	trunk check --all
+
+format: format-go format-trunk
+
+format-trunk:
+	trunk fmt --all
+
+format-go:
 	go fmt ./internal/...
 
 install:
@@ -40,6 +50,9 @@ tidy:
 
 # Set up the development environment
 setup-dev: setup-pre-commit
+
+setup-trunk:
+	trunk git-hooks sync
 
 setup-pre-commit:
 	pre-commit install

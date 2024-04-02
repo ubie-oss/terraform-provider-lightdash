@@ -15,6 +15,13 @@ Before you begin, ensure you have the following prerequisites installed:
 
 - Terraform: Use `tfenv install` to install the specific Terraform version required, as indicated in the `.terraform-version` file.
 - GNU Make: Utilize the `make` command to facilitate building and testing the provider. Targets are defined in the [GNUmakefile](./GNUmakefile).
+- [Trunk](https://docs.trunk.io/) (Optional): Trunk is a developer experience (DevEx) toolkit that enables you to ship code quickly while maintaining the necessary guardrails for excellent eng teams. If you use macOS, `brew install trunk-io` enables you to install Trunk.
+
+The subsequent commands enable us to set up the local development environment.
+
+```shell
+make setup-dev
+```
 
 ### Configuring the Provider for Local Development
 
