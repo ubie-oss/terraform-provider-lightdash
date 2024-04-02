@@ -52,7 +52,10 @@ go-tidy:
 	go mod tidy
 
 # Set up the development environment
-setup-dev: setup-pre-commit
+setup-dev: unset-git-hooks setup-pre-commit setup-trunk
+
+unset-git-hooks:
+	git config --unset-all core.hooksPath || true
 
 setup-trunk:
 	trunk git-hooks sync
