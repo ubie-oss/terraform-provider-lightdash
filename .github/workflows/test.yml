@@ -20,12 +20,12 @@ name: Tests
 on:
   pull_request:
     paths-ignore:
-      - "README.md"
+      - README.md
   push:
     branches:
       - main
     paths-ignore:
-      - "README.md"
+      - README.md
 
 # Testing only needs permissions to read the repository contents.
 permissions:
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: "go.mod"
+          go-version-file: go.mod
           cache: true
       - run: go mod download
       - run: go build -v .
@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: "go.mod"
+          go-version-file: go.mod
           cache: true
       - run: go generate ./...
       - name: git diff
@@ -75,25 +75,27 @@ jobs:
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - "1.0.*"
-          - "1.1.*"
-          - "1.2.*"
-          - "1.3.*"
-          - "1.4.*"
-          - "1.5.*"
-          - "1.6.*"
+          - 1.0.*
+          - 1.1.*
+          - 1.2.*
+          - 1.3.*
+          - 1.4.*
+          - 1.5.*
+          - 1.6.*
     steps:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: "go.mod"
+          go-version-file: go.mod
           cache: true
       - uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - run: go mod download
-      - run: go test -v -cover ./internal/...
+      - run: |
+          go mod download
+      - run: |
+          go test -v -cover ./internal/...
       # TODO support integration test
       # - env:
       #     TF_ACC: "1"
@@ -110,7 +112,7 @@ jobs:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: "go.mod"
+          go-version-file: go.mod
           cache: true
       - run: go mod download
       - name: Run Gosec Security Scanner

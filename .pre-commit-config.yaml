@@ -57,10 +57,10 @@ repos:
       - id: go-generate
         name: go generate
         entry: go
-        args: ["generate", "./..."]
+        args: [generate, ./...]
         language: system
         types: [go]
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: "v1.86.0"
+    rev: v1.86.0
     hooks:
       - id: terraform_fmt
