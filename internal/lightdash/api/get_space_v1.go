@@ -24,8 +24,8 @@ import (
 )
 
 type SpaceAccessMember struct {
-	UserUUID    string                   `json:"userUuid"`
-	ProjectRole models.ProjectMemberRole `json:"role"`
+	UserUUID  string                 `json:"userUuid"`
+	SpaceRole models.SpaceMemberRole `json:"role"`
 }
 
 type GetSpaceV1Results struct {

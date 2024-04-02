@@ -67,6 +67,7 @@ resource "lightdash_space" "test_privacte" {
 
 Required:
 
+- `space_role` (String) Lightdash space role
 - `user_uuid` (String) User UUID
 
 Read-Only:
