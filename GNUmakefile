@@ -23,8 +23,11 @@ test:
 	# TF_ACC mustn't be set, otherwise acceptance tests will run
 	unset TF_ACC && cd "internal/" && go test -count=1 -v ./...
 
-build: gen-docs
+build: gen-docs go-tidy gosec
 	go build -v ./
+
+gosec:
+	gosec ./...
 
 lint: run-trunk-check run-pre-commit
 
@@ -45,7 +48,7 @@ install:
 gen-docs:
 	go generate ./...
 
-tidy:
+go-tidy:
 	go mod tidy
 
 # Set up the development environment
@@ -56,6 +59,11 @@ setup-trunk:
 
 setup-pre-commit:
 	pre-commit install
+
+update: update-pre-commit update-trunk
+
+update-trunk:
+	trunk upgrade
 
 update-pre-commit:
 	pre-commit autoupdate
