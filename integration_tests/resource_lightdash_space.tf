@@ -32,6 +32,8 @@ resource "lightdash_space" "test_public" {
   deletion_protection = false
 }
 
+# A command to import the resource
+# terraform import lightdash_space.test_private "projects/<project_uuid>/spaces/<space_uuid>>"
 resource "lightdash_space" "test_private" {
   project_uuid = var.test_lightdash_project_uuid
   name         = "zzz_test_private_space"
@@ -42,7 +44,8 @@ resource "lightdash_space" "test_private" {
   dynamic "access" {
     for_each = toset(local.test_private_spaces_access_members)
     content {
-      user_uuid = access.key
+      user_uuid  = access.key
+      space_role = "editor"
     }
   }
 

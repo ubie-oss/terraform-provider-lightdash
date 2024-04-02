@@ -25,7 +25,7 @@ type ListSpacesInProjectV1Results struct {
 	ProjectUUID      string `json:"projectUuid"`
 	SpaceUUID        string `json:"uuid"`
 	SpaceName        string `json:"name"`
-	IsPrivate        bool   `json:"isPrivate",string` // nolint: govet
+	IsPrivate        bool   `json:"isPrivate"` // nolint: govet
 }
 
 type ListSpacesInProjectV1Response struct {

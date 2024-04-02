@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
@@ -64,6 +65,7 @@ type spaceResourceModel struct {
 
 type spaceResourceAccessBlockModel struct {
 	UserUUID            types.String `tfsdk:"user_uuid"`
+	SpaceRole           types.String `tfsdk:"space_role"`
 	IsOrganizationAdmin types.Bool   `tfsdk:"is_organization_admin"`
 	// TODO support last_updated
 	// LastUpdated types.String `tfsdk:"last_updated"`
@@ -150,6 +152,10 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 							MarkdownDescription: "User UUID",
 							Required:            true,
 						},
+						"space_role": schema.StringAttribute{
+							MarkdownDescription: "Lightdash space role",
+							Required:            true,
+						},
 						"is_organization_admin": schema.BoolAttribute{
 							MarkdownDescription: "Indicates if the user's access is managed by Terraform." +
 								"Note: It is not possible to manage space access for organization admins through Terraform because they inherently have access to all spaces within the organization by default.",
@@ -220,14 +226,17 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 
 		// Add space access
+		spaceRole := models.SpaceMemberRole(access.SpaceRole.ValueString())
 		err = services.GrantSpaceAccess(
-			r.client, project_uuid, created_space.SpaceUUID, access.UserUUID.ValueString())
+			r.client, project_uuid, created_space.SpaceUUID,
+			access.UserUUID.ValueString(), spaceRole)
 		if err != nil {
 			tflog.Debug(ctx, fmt.Sprintf("Error adding space access %s: %s", access.UserUUID, err.Error()))
 			errors = append(errors, err)
 		} else {
 			accessList = append(accessList, spaceResourceAccessBlockModel{
 				UserUUID:            access.UserUUID,
+				SpaceRole:           access.SpaceRole,
 				IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 			})
 		}
@@ -312,6 +321,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		// Append the user to the members list
 		members = append(members, spaceResourceAccessBlockModel{
 			UserUUID:            access.UserUUID,
+			SpaceRole:           access.SpaceRole,
 			IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 		})
 	}
@@ -428,8 +438,9 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 		// Grant access if the user is not in the access list
 		if !found {
+			spaceRole := models.SpaceMemberRole(access.SpaceRole.ValueString())
 			err := services.GrantSpaceAccess(
-				r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString())
+				r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString(), spaceRole)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Error Granting space access",
@@ -443,6 +454,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			updatedAccessList,
 			spaceResourceAccessBlockModel{
 				UserUUID:            access.UserUUID,
+				SpaceRole:           types.StringValue(access.SpaceRole.ValueString()),
 				IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 			})
 	}
@@ -479,7 +491,7 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	if state.DeleteProtection.ValueBool() {
 		resp.Diagnostics.AddError(
 			"Error Deleting space",
-			"Could not delete space, deletion protection is enabled",
+			fmt.Sprintf("Could not delete space with UUID %s, deletion protection is enabled", state.SpaceUUID),
 		)
 		return
 	}
@@ -535,6 +547,7 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 		// Append each element to the slice
 		accessList = append(accessList, spaceResourceAccessBlockModel{
 			UserUUID:            types.StringValue(access.UserUUID),
+			SpaceRole:           types.StringValue(access.SpaceRole.String()),
 			IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 		})
 	}

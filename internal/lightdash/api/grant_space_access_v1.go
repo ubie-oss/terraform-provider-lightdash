@@ -20,16 +20,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
 type AddSpaceShareToUserV1Request struct {
-	UserUUID string `json:"userUuid"`
+	UserUUID  string `json:"userUuid"`
+	SpaceRole string `json:"spaceRole"`
 }
 
-func (c *Client) AddSpaceShareToUserV1(projectUuid string, spaceUuid string, userUuid string) error {
+func (c *Client) AddSpaceShareToUserV1(
+	projectUuid string,
+	spaceUuid string,
+	userUuid string,
+	spaceRole models.SpaceMemberRole) error {
 	// Create the request body
 	data := AddSpaceShareToUserV1Request{
-		UserUUID: userUuid,
+		UserUUID:  userUuid,
+		SpaceRole: spaceRole.String(),
 	}
 	marshalled, err := json.Marshal(data)
 	if err != nil {
