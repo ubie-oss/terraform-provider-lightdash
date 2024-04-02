@@ -18,6 +18,7 @@ terraform {
   # TODO Configure the GCS backend
 
   required_providers {
+    # tflint-ignore: terraform_required_providers
     lightdash = {
       source = "github.com/ubie-oss/lightdash"
     }

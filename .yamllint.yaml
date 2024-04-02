@@ -1,0 +1,14 @@
+extends: default
+
+rules:
+  quoted-strings:
+    required: false
+    extra-allowed: ["{|}"]
+  line-length:
+    max: 300
+  key-duplicates: enable
+  truthy: disable
+  document-start:
+    present: false
+  comments-indentation:
+    level: warning

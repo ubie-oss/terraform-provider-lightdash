@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Visit https://golangci-lint.run/ for usage documentation
 # and information on other useful linters
 issues:

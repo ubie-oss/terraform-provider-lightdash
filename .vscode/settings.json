@@ -1,11 +1,11 @@
 {
-    "copyrightInserter.holder": "Ubie, inc.",
-    "copyrightInserter.year": "2023",
-    "copyrightInserter.useLineComment": true,
-    "files.autoSave": "afterDelay",
-    "editor.fontSize": 14,
-    "editor.accessibilityPageSize": 10,
-    "window.autoDetectColorScheme": false,
-    "go.diagnostic.vulncheck": "Off",
-    "go.formatTool": "default"
+  "copyrightInserter.holder": "Ubie, inc.",
+  "copyrightInserter.year": "2023",
+  "copyrightInserter.useLineComment": true,
+  "files.autoSave": "afterDelay",
+  "editor.fontSize": 14,
+  "editor.accessibilityPageSize": 10,
+  "window.autoDetectColorScheme": false,
+  "go.diagnostic.vulncheck": "Off",
+  "go.formatTool": "default"
 }
