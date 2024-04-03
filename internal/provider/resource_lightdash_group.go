@@ -30,9 +30,9 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ resource.Resource                = &spaceResource{}
-	_ resource.ResourceWithConfigure   = &spaceResource{}
-	_ resource.ResourceWithImportState = &spaceResource{}
+	_ resource.Resource                = &groupResource{}
+	_ resource.ResourceWithConfigure   = &groupResource{}
+	_ resource.ResourceWithImportState = &groupResource{}
 )
 
 func NewGroupResource() resource.Resource {
