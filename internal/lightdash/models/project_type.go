@@ -18,15 +18,15 @@ type ProjectType string
 
 // List of ProjectType
 const (
-	DEFAULT__ProjectType ProjectType = "DEFAULT"
-	PREVIEW_ProjectType  ProjectType = "PREVIEW"
+	DEFAULT_PROJECT_TYPE ProjectType = "DEFAULT"
+	PREVIEW_PROJECT_TYPE ProjectType = "PREVIEW"
 )
 
 // Check if a given ProjectType is valid
 func (e ProjectType) IsValid() bool {
 	switch e {
-	case DEFAULT__ProjectType,
-		PREVIEW_ProjectType:
+	case DEFAULT_PROJECT_TYPE,
+		PREVIEW_PROJECT_TYPE:
 		return true
 	}
 	return false

@@ -23,9 +23,9 @@ func TestSpaceMemberRoleString(t *testing.T) {
 		role     SpaceMemberRole
 		expected string
 	}{
-		{VIEWER_SpaceMemberRole, "viewer"},
-		{EDITOR_SpaceMemberRole, "editor"},
-		{ADMIN_SpaceMemberRole, "admin"},
+		{SPACE_VIEWER_ROLE, "viewer"},
+		{SPACE_EDITOR_ROLE, "editor"},
+		{SPACE_ADMIN_ROLE, "admin"},
 	}
 
 	for _, test := range tests {
