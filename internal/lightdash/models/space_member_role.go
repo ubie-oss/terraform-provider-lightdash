@@ -18,9 +18,9 @@ type SpaceMemberRole string
 
 // List of ProjectMemberRole
 const (
-	VIEWER_SpaceMemberRole SpaceMemberRole = "viewer"
-	EDITOR_SpaceMemberRole SpaceMemberRole = "editor"
-	ADMIN_SpaceMemberRole  SpaceMemberRole = "admin"
+	SPACE_VIEWER_ROLE SpaceMemberRole = "viewer"
+	SPACE_EDITOR_ROLE SpaceMemberRole = "editor"
+	SPACE_ADMIN_ROLE  SpaceMemberRole = "admin"
 )
 
 // convert ProjectMemberRole to string
@@ -31,9 +31,9 @@ func (s SpaceMemberRole) String() string {
 // Check if a given string is a valid SpaceMemberRole
 func IsValidSpaceMemberRole(s string) bool {
 	switch SpaceMemberRole(s) {
-	case VIEWER_SpaceMemberRole,
-		EDITOR_SpaceMemberRole,
-		ADMIN_SpaceMemberRole:
+	case SPACE_VIEWER_ROLE,
+		SPACE_EDITOR_ROLE,
+		SPACE_ADMIN_ROLE:
 		return true
 	}
 	return false

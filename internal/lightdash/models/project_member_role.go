@@ -18,11 +18,11 @@ type ProjectMemberRole string
 
 // List of ProjectMemberRole
 const (
-	VIEWER_ProjectMemberRole             ProjectMemberRole = "viewer"
-	INTERACTIVE_VIEWER_ProjectMemberRole ProjectMemberRole = "interactive_viewer"
-	EDITOR_ProjectMemberRole             ProjectMemberRole = "editor"
-	DEVELOPER_ProjectMemberRole          ProjectMemberRole = "developer"
-	ADMIN_ProjectMemberRole              ProjectMemberRole = "admin"
+	PROJECT_VIEWER_ROLE             ProjectMemberRole = "viewer"
+	PROJECT_INTERACTIVE_VIEWER_ROLE ProjectMemberRole = "interactive_viewer"
+	PROJECT_EDITOR_ROLE             ProjectMemberRole = "editor"
+	PROJECT_DEVELOPER_ROLE          ProjectMemberRole = "developer"
+	PROJECT_ADMIN_ROLE              ProjectMemberRole = "admin"
 )
 
 // convert ProjectMemberRole to string
@@ -33,11 +33,11 @@ func (s ProjectMemberRole) String() string {
 // Check if a given string is a valid ProjectMemberRole
 func IsValidProjectMemberRole(s string) bool {
 	switch ProjectMemberRole(s) {
-	case VIEWER_ProjectMemberRole,
-		INTERACTIVE_VIEWER_ProjectMemberRole,
-		EDITOR_ProjectMemberRole,
-		DEVELOPER_ProjectMemberRole,
-		ADMIN_ProjectMemberRole:
+	case PROJECT_VIEWER_ROLE,
+		PROJECT_INTERACTIVE_VIEWER_ROLE,
+		PROJECT_EDITOR_ROLE,
+		PROJECT_DEVELOPER_ROLE,
+		PROJECT_ADMIN_ROLE:
 		return true
 	}
 	return false
