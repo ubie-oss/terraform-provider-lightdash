@@ -57,3 +57,6 @@ test*.sh
 
 # Integration tests
 integration_tests/testing.tfvars
+
+# go mod vendor
+vendor/
