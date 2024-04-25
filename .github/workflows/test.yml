@@ -43,7 +43,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - run: go mod download
+      - run: |
+          go mod download
+          go mod vendor
       - run: go build -v .
       - name: Run linters
         uses: golangci/golangci-lint-action@v5
