@@ -17,8 +17,6 @@ github.com/ProtonMail/go-crypto v1.1.0-alpha.2/go.mod h1:rA3QumHc/FZ8pAHreoekgiA
 github.com/agext/levenshtein v1.2.2 h1:0S/Yg6LYmFJ5stwQeRp6EeOcCbj7xiqQSdNelsXvaqE=
 github.com/agext/levenshtein v1.2.2/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
 github.com/apparentlymart/go-textseg/v12 v12.0.0/go.mod h1:S/4uRK2UtaQttw1GenVJEynmyUenKwP++x/+DdGV/Ec=
-github.com/apparentlymart/go-textseg/v13 v13.0.0 h1:Y+KvPE1NYz0xl601PVImeQfFyEy6iT90AvPUL1NNfNw=
-github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
 github.com/armon/go-radix v1.0.0 h1:F4z6KzEeeQIMeLFa97iZU6vupzoecKdU5TX24SNppXI=
@@ -91,8 +89,6 @@ github.com/hashicorp/go-version v1.6.0 h1:feTTfFNnjP967rlCxM/I9g701jU+RN74YKx2mO
 github.com/hashicorp/go-version v1.6.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/hc-install v0.6.4 h1:QLqlM56/+SIIGvGcfFiwMY3z5WGXT066suo/v9Km8e0=
 github.com/hashicorp/hc-install v0.6.4/go.mod h1:05LWLy8TD842OtgcfBbOT0WMoInBMUSHjmDx10zuBIA=
-github.com/hashicorp/hcl/v2 v2.17.0 h1:z1XvSUyXd1HP10U4lrLg5e0JMVz6CPaJvAgxM0KNZVY=
-github.com/hashicorp/hcl/v2 v2.17.0/go.mod h1:gJyW2PTShkJqQBKpAmPO3yxMxIuoXkOF2TpqXzrQyx4=
 github.com/hashicorp/hcl/v2 v2.19.1 h1://i05Jqznmb2EXqa39Nsvyan2o5XyMowW5fnCKW5RPI=
 github.com/hashicorp/hcl/v2 v2.19.1/go.mod h1:ThLC89FV4p9MPW804KVbe/cEXoQ8NZEh+JtMeeGErHE=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
@@ -101,16 +97,14 @@ github.com/hashicorp/terraform-exec v0.20.0 h1:DIZnPsqzPGuUnq6cH8jWcPunBfY+C+M8J
 github.com/hashicorp/terraform-exec v0.20.0/go.mod h1:ckKGkJWbsNqFKV1itgMnE0hY9IYf1HoiekpuN0eWoDw=
 github.com/hashicorp/terraform-json v0.21.0 h1:9NQxbLNqPbEMze+S6+YluEdXgJmhQykRyRNd+zTI05U=
 github.com/hashicorp/terraform-json v0.21.0/go.mod h1:qdeBs11ovMzo5puhrRibdD6d2Dq6TyE/28JiU4tIQxk=
-github.com/hashicorp/terraform-plugin-docs v0.19.1 h1:XYIlGCfnUDVTyKPIHFKRDfB4INU+pyPKk6VZ/1apPIc=
-github.com/hashicorp/terraform-plugin-docs v0.19.1/go.mod h1:NPfKCSfzTtq+YCFHr2qTAMknWUxR8C4KgTbGkHULSV8=
+github.com/hashicorp/terraform-plugin-docs v0.19.2 h1:YjdKa1vuqt9EnPYkkrv9HnGZz175HhSJ7Vsn8yZeWus=
+github.com/hashicorp/terraform-plugin-docs v0.19.2/go.mod h1:gad2aP6uObFKhgNE8DR9nsEuEQnibp7il0jZYYOunWY=
 github.com/hashicorp/terraform-plugin-framework v1.8.0 h1:P07qy8RKLcoBkCrY2RHJer5AEvJnDuXomBgou6fD8kI=
 github.com/hashicorp/terraform-plugin-framework v1.8.0/go.mod h1:/CpTukO88PcL/62noU7cuyaSJ4Rsim+A/pa+3rUVufY=
 github.com/hashicorp/terraform-plugin-go v0.22.2 h1:5o8uveu6eZUf5J7xGPV0eY0TPXg3qpmwX9sce03Bxnc=
 github.com/hashicorp/terraform-plugin-go v0.22.2/go.mod h1:drq8Snexp9HsbFZddvyLHN6LuWHHndSQg+gV+FPkcIM=
 github.com/hashicorp/terraform-plugin-log v0.9.0 h1:i7hOA+vdAItN1/7UrfBqBwvYPQ9TFvymaRGZED3FCV0=
 github.com/hashicorp/terraform-plugin-log v0.9.0/go.mod h1:rKL8egZQ/eXSyDqzLUuwUYLVdlYeamldAHSxjUFADow=
-github.com/hashicorp/terraform-plugin-sdk/v2 v2.28.0 h1:gY4SG34ANc6ZSeWEKC9hDTChY0ZiN+Myon17fSA0Xgc=
-github.com/hashicorp/terraform-plugin-sdk/v2 v2.28.0/go.mod h1:deXEw/iJXtJxNV9d1c/OVJrvL7Zh0a++v7rzokW6wVY=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.33.0 h1:qHprzXy/As0rxedphECBEQAh3R4yp6pKksKHcqZx5G8=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.33.0/go.mod h1:H+8tjs9TjV2w57QFVSMBQacf8k/E1XwLXGCARgViC6A=
 github.com/hashicorp/terraform-plugin-testing v1.5.1 h1:T4aQh9JAhmWo4+t1A7x+rnxAJHCDIYW9kXyo4sVO92c=
@@ -201,8 +195,8 @@ github.com/vmihailenco/tagparser/v2 v2.0.0/go.mod h1:Wri+At7QHww0WTrCBeu4J6bNtoV
 github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM=
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
-github.com/yuin/goldmark v1.7.0 h1:EfOIvIMZIzHdB/R/zVrikYLPPwJlfMcNczJFMs1m6sA=
-github.com/yuin/goldmark v1.7.0/go.mod h1:uzxRWxtg69N339t3louHJ7+O03ezfj6PlliRlaOzY1E=
+github.com/yuin/goldmark v1.7.1 h1:3bajkSilaCbjdKVsKdZjZCLBNPL9pYzrCakKaf4U49U=
+github.com/yuin/goldmark v1.7.1/go.mod h1:uzxRWxtg69N339t3louHJ7+O03ezfj6PlliRlaOzY1E=
 github.com/yuin/goldmark-meta v1.1.0 h1:pWw+JLHGZe8Rk0EGsMVssiNb/AaPMHfSRszZeUeiOUc=
 github.com/yuin/goldmark-meta v1.1.0/go.mod h1:U4spWENafuA7Zyg+Lj5RqK/MF+ovMYtBvXi1lBb2VP0=
 github.com/zclconf/go-cty v1.14.4 h1:uXXczd9QDGsgu0i/QFR/hzI5NYCHLf6NQw/atrbnhq8=
