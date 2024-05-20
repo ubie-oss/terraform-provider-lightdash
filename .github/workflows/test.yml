@@ -91,6 +91,7 @@ jobs:
           - 1.5.*
           - 1.6.*
           - 1.7.*
+          - 1.8.*
     steps:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
