@@ -28,7 +28,7 @@ lint:
     - isort@5.13.2
     - ruff@0.4.4
     - actionlint@1.7.0
-    - checkov@3.2.91
+    - checkov@3.2.98
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.57.2
@@ -39,8 +39,8 @@ lint:
     - shfmt@3.6.0
     - terrascan@1.19.1
     - tflint@0.51.1
-    - trivy@0.51.1
-    - trufflehog@3.75.1
+    - trivy@0.51.2
+    - trufflehog@3.76.3
     - yamllint@1.35.1
 actions:
   enabled:
