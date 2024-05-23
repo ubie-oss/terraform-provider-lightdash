@@ -26,9 +26,9 @@ lint:
     - bandit@1.7.8
     - black@24.4.2
     - isort@5.13.2
-    - ruff@0.4.4
+    - ruff@0.4.5
     - actionlint@1.7.0
-    - checkov@3.2.98
+    - checkov@3.2.106
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.57.2
