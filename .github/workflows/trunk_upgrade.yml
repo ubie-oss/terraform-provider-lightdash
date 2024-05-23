@@ -22,3 +22,10 @@ jobs:
       # SEE https://github.com/trunk-io/trunk-action
       - name: Trunk Upgrade
         uses: trunk-io/trunk-action/upgrade@v1
+      # Check all files
+      # When linters are upgraded, it can cause violations due to new rules.
+      # So, it is good to check all files after upgrading.
+      - name: Trunk Check
+        uses: trunk-io/trunk-action@v1
+        with:
+          check-mode: all
