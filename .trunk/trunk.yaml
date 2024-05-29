@@ -28,18 +28,18 @@ lint:
     - isort@5.13.2
     - ruff@0.4.5
     - actionlint@1.7.0
-    - checkov@3.2.106
+    - checkov@3.2.109
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.57.2
-    - markdownlint@0.40.0
+    - markdownlint@0.41.0
     - osv-scanner@1.7.3
     - prettier@3.2.5
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - terrascan@1.19.1
     - tflint@0.51.1
-    - trivy@0.51.2
+    - trivy@0.51.4
     - trufflehog@3.76.3
     - yamllint@1.35.1
 actions:
