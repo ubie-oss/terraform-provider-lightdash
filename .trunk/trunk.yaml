@@ -26,21 +26,21 @@ lint:
     - bandit@1.7.9
     - black@24.4.2
     - isort@5.13.2
-    - ruff@0.4.9
+    - ruff@0.4.10
     - actionlint@1.7.1
-    - checkov@3.2.139
+    - checkov@3.2.144
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.59.1
     - markdownlint@0.41.0
-    - osv-scanner@1.7.4
+    - osv-scanner@1.8.1
     - prettier@3.3.2
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - terrascan@1.19.1
     - tflint@0.51.1
     - trivy@0.52.2
-    - trufflehog@3.78.1
+    - trufflehog@3.78.2
     - yamllint@1.35.1
 actions:
   enabled:
