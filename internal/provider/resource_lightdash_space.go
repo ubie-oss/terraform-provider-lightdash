@@ -306,6 +306,12 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	organizationMembersService := services.NewOrganizationMembersService(r.client)
 	var members []spaceResourceAccessBlockModel
 	for _, access := range state.AccessList {
+		// Continue if the user no longer exists in the organization
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(access.UserUUID.ValueString())
+		if err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("User %s no longer exists in the organization. Skipping reading access to the space.", access.UserUUID))
+			continue
+		}
 		// Check if the user who isn't is an organization admin
 		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
 		if err != nil {

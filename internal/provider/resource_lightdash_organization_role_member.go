@@ -176,9 +176,9 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 	user_uuid = state.UserUUID.ValueString()
 	user, err := r.client.GetOrganizationMemberByUuidV1(user_uuid)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading space",
-			"Could not read space ID "+state.ID.ValueString()+": "+err.Error(),
+		resp.Diagnostics.AddWarning(
+			"Warning Reading organization member",
+			"Could not read organization member ID "+state.ID.ValueString()+": "+err.Error(),
 		)
 		return
 	}

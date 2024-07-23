@@ -202,8 +202,8 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 	user_uuid = state.UserUUID.ValueString()
 	projectMember, err := r.client.GetOrganizationMemberByUuidV1(user_uuid)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading organization member",
+		resp.Diagnostics.AddWarning(
+			"Warning Reading organization member",
 			"Could not read organization member ID "+state.ID.ValueString()+": "+err.Error(),
 		)
 		return
