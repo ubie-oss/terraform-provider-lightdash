@@ -430,6 +430,15 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Grant access to new users
 	var updatedAccessList []spaceResourceAccessBlockModel
 	for _, access := range plan.AccessList {
+		// Skip if the user doesn't exist in the organization
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(access.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"User no longer exists in the organization",
+				fmt.Sprintf("User %s no longer exists in the organization. Skipping granting access to the space.", access.UserUUID),
+			)
+			continue
+		}
 		// Check if the user is an organization admin
 		// It is not possible to revoke space access from organization admins
 		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
