@@ -383,6 +383,15 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// NOTE: Manually added users will be removed
 	organizationMembersService := services.NewOrganizationMembersService(r.client)
 	for _, existingAccess := range space.SpaceAccess {
+		// Skip if the user no longer exists in the organization
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(existingAccess.UserUUID)
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"User no longer exists in the organization",
+				fmt.Sprintf("User %s no longer exists in the organization. Skipping revoking access to the space.", existingAccess.UserUUID),
+			)
+			continue
+		}
 		// Check if the user is an organization admin
 		// It is not possible to revoke space access from organization admins
 		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(existingAccess.UserUUID)
