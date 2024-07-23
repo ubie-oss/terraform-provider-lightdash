@@ -22,25 +22,51 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
+type Pagination struct {
+	Page           int `json:"page"`
+	PageSize       int `json:"pageSize"`
+	TotalPageCount int `json:"totalPageCount"`
+}
+
 type GetOrganizationMembersV1Results struct {
 	OrganizationUUID string                        `json:"organizationUuid"`
 	UserUUID         string                        `json:"userUuid"`
 	Email            string                        `json:"email"`
+	FirstName        string                        `json:"firstName"`
+	LastName         string                        `json:"lastName"`
 	OrganizationRole models.OrganizationMemberRole `json:"role"`
 	IsActive         bool                          `json:"isActive"`
 	IsInviteExpired  bool                          `json:"isInviteExpired"`
 }
 
 type GetOrganizationMembersV1Response struct {
-	Results []GetOrganizationMembersV1Results `json:"results,omitempty"`
-	Status  string                            `json:"status"`
+	Results struct {
+		Pagination Pagination                        `json:"pagination"`
+		Data       []GetOrganizationMembersV1Results `json:"data"`
+	} `json:"results,omitempty"`
+	Status string `json:"status"`
 }
 
-func (c *Client) GetOrganizationMembersV1() ([]GetOrganizationMembersV1Results, error) {
+func (c *Client) GetOrganizationMembersV1(includeGroups, pageSize, page int, searchQuery string) ([]GetOrganizationMembersV1Results, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org/users", c.HostUrl), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new request for organization members: %w", err)
 	}
+
+	q := req.URL.Query()
+	if includeGroups != 0 {
+		q.Add("includeGroups", fmt.Sprintf("%d", includeGroups))
+	}
+	if pageSize != 0 {
+		q.Add("pageSize", fmt.Sprintf("%d", pageSize))
+	}
+	if page != 0 {
+		q.Add("page", fmt.Sprintf("%d", page))
+	}
+	if searchQuery != "" {
+		q.Add("searchQuery", searchQuery)
+	}
+	req.URL.RawQuery = q.Encode()
 
 	body, err := c.doRequest(req)
 	if err != nil {
@@ -54,7 +80,7 @@ func (c *Client) GetOrganizationMembersV1() ([]GetOrganizationMembersV1Results, 
 	}
 
 	// Check if each member is valid
-	for _, member := range response.Results {
+	for _, member := range response.Results.Data {
 		if member.OrganizationUUID == "" {
 			return nil, fmt.Errorf("organization is nil")
 		}
@@ -66,26 +92,5 @@ func (c *Client) GetOrganizationMembersV1() ([]GetOrganizationMembersV1Results, 
 		}
 	}
 
-	return response.Results, nil
-}
-
-func (c *Client) GetOrganizationMemberByEmail(email string) (*GetOrganizationMembersV1Results, error) {
-	if email == "" {
-		return nil, fmt.Errorf("email is nil")
-	}
-
-	// Get all members in the organization
-	members, err := c.GetOrganizationMembersV1()
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if each member is valid
-	for _, member := range members {
-		if member.Email == email {
-			return &member, nil
-		}
-	}
-
-	return nil, fmt.Errorf("user is not found")
+	return response.Results.Data, nil
 }

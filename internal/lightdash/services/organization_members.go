@@ -39,12 +39,20 @@ func NewOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
-		// Fetch the members from the organization using the API client
-		members, err := s.client.GetOrganizationMembersV1()
-		if err != nil {
-			return nil, err
+		page := 1
+		pageSize := 100
+		for {
+			// Fetch the members from the organization using the API client
+			members, err := s.client.GetOrganizationMembersV1(0, pageSize, page, "")
+			if err != nil {
+				return nil, err
+			}
+			if len(members) == 0 {
+				break
+			}
+			s.members = append(s.members, members...)
+			page++
 		}
-		s.members = members
 	}
 	// Return the list of members
 	return s.members, nil
@@ -85,6 +93,23 @@ func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid st
 	}
 	// Return an error if no member with the specified UUID is found
 	return nil, fmt.Errorf("member with UUID %s not found", userUuid)
+}
+
+// GetOrganizationMemberByEmail retrieves a member of an organization by their email.
+func (s *OrganizationMembersService) GetOrganizationMemberByEmail(email string) (*api.GetOrganizationMembersV1Results, error) {
+	// Retrieve all organization members
+	organizationMembers, err := s.GetOrganizationMembers()
+	if err != nil {
+		return nil, err
+	}
+	// Iterate through all members to find the one with the matching email
+	for _, member := range organizationMembers {
+		if member.Email == email {
+			return &member, nil
+		}
+	}
+	// Return an error if no member with the specified email is found
+	return nil, fmt.Errorf("member with email %s not found", email)
 }
 
 // Check if a member with the passed user UUID is an admin of the organization.

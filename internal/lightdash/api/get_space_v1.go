@@ -28,14 +28,21 @@ type SpaceAccessMember struct {
 	SpaceRole models.SpaceMemberRole `json:"role"`
 }
 
+type SpaceAccessGroup struct {
+	GroupUUID string                 `json:"groupUuid"`
+	GroupName string                 `json:"groupName"`
+	SpaceRole models.SpaceMemberRole `json:"role"`
+}
+
 type GetSpaceV1Results struct {
 	// The response doesn't contain the OrganizationUUID right now
 	// OrganizationUUID string              `json:"organizationUuid"`
-	ProjectUUID string              `json:"projectUuid"`
-	SpaceUUID   string              `json:"uuid"`
-	SpaceName   string              `json:"name"`
-	IsPrivate   bool                `json:"isPrivate"`
-	SpaceAccess []SpaceAccessMember `json:"access"`
+	ProjectUUID       string              `json:"projectUuid"`
+	SpaceUUID         string              `json:"uuid"`
+	SpaceName         string              `json:"name"`
+	IsPrivate         bool                `json:"isPrivate"`
+	SpaceAccess       []SpaceAccessMember `json:"access"`
+	SpaceGroupsAccess []SpaceAccessGroup  `json:"groupAccess"`
 }
 
 type GetSpaceV1Response struct {
