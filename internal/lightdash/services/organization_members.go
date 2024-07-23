@@ -95,6 +95,23 @@ func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid st
 	return nil, fmt.Errorf("member with UUID %s not found", userUuid)
 }
 
+// GetOrganizationMemberByEmail retrieves a member of an organization by their email.
+func (s *OrganizationMembersService) GetOrganizationMemberByEmail(email string) (*api.GetOrganizationMembersV1Results, error) {
+	// Retrieve all organization members
+	organizationMembers, err := s.GetOrganizationMembers()
+	if err != nil {
+		return nil, err
+	}
+	// Iterate through all members to find the one with the matching email
+	for _, member := range organizationMembers {
+		if member.Email == email {
+			return &member, nil
+		}
+	}
+	// Return an error if no member with the specified email is found
+	return nil, fmt.Errorf("member with email %s not found", email)
+}
+
 // Check if a member with the passed user UUID is an admin of the organization.
 func (s *OrganizationMembersService) IsOrganizationAdmin(userUuid string) (bool, error) {
 	// Retrieve the organization member by their UUID

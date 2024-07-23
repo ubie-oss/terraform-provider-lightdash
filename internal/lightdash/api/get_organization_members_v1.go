@@ -94,24 +94,3 @@ func (c *Client) GetOrganizationMembersV1(includeGroups, pageSize, page int, sea
 
 	return response.Results.Data, nil
 }
-
-func (c *Client) GetOrganizationMemberByEmail(email string) (*GetOrganizationMembersV1Results, error) {
-	if email == "" {
-		return nil, fmt.Errorf("email is nil")
-	}
-
-	// Get all members in the organization
-	members, err := c.GetOrganizationMembersV1(0, 0, 0, "")
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if each member is valid
-	for _, member := range members {
-		if member.Email == email {
-			return &member, nil
-		}
-	}
-
-	return nil, fmt.Errorf("user is not found")
-}

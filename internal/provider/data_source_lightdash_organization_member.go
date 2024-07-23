@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -108,7 +109,8 @@ func (d *organizationMemberDataSource) Read(ctx context.Context, req datasource.
 
 	// Get all members in the organization
 	email := state.Email.ValueString()
-	member, err := d.client.GetOrganizationMemberByEmail(email)
+	service := services.NewOrganizationMembersService(d.client)
+	member, err := service.GetOrganizationMemberByEmail(email)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization member",
