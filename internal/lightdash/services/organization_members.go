@@ -39,12 +39,20 @@ func NewOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
-		// Fetch the members from the organization using the API client
-		members, err := s.client.GetOrganizationMembersV1()
-		if err != nil {
-			return nil, err
+		page := 1
+		pageSize := 100
+		for {
+			// Fetch the members from the organization using the API client
+			members, err := s.client.GetOrganizationMembersV1(0, pageSize, page, "")
+			if err != nil {
+				return nil, err
+			}
+			if len(members) == 0 {
+				break
+			}
+			s.members = append(s.members, members...)
+			page++
 		}
-		s.members = members
 	}
 	// Return the list of members
 	return s.members, nil
