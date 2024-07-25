@@ -53,6 +53,7 @@ resource "lightdash_space" "test_privacte" {
 ### Optional
 
 - `access` (Block Set) This block represents the access settings for the Lightdash space. It allows you to define the users who have access to the space by specifying their user UUIDs. Each access block should contain a single attribute 'user_uuid' which is a required string attribute representing the user UUID. (see [below for nested schema](#nestedblock--access))
+- `group_access` (Block Set) This block represents the access settings for the Lightdash space. It allows you to define the groups who have access to the space by specifying their group UUIDs. Each group access block should contain a single attribute 'group_uuid' which is a required string attribute representing the group UUID. (see [below for nested schema](#nestedblock--group_access))
 - `is_private` (Boolean) Lightdash project is private or not
 
 ### Read-Only
@@ -73,6 +74,15 @@ Required:
 Read-Only:
 
 - `is_organization_admin` (Boolean) Indicates if the user's access is managed by Terraform.Note: It is not possible to manage space access for organization admins through Terraform because they inherently have access to all spaces within the organization by default.
+
+
+<a id="nestedblock--group_access"></a>
+### Nested Schema for `group_access`
+
+Required:
+
+- `group_uuid` (String) Group UUID
+- `space_role` (String) Lightdash space role
 
 ## Import
 

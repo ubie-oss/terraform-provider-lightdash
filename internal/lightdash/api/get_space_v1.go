@@ -37,12 +37,12 @@ type SpaceAccessGroup struct {
 type GetSpaceV1Results struct {
 	// The response doesn't contain the OrganizationUUID right now
 	// OrganizationUUID string              `json:"organizationUuid"`
-	ProjectUUID       string              `json:"projectUuid"`
-	SpaceUUID         string              `json:"uuid"`
-	SpaceName         string              `json:"name"`
-	IsPrivate         bool                `json:"isPrivate"`
-	SpaceAccess       []SpaceAccessMember `json:"access"`
-	SpaceGroupsAccess []SpaceAccessGroup  `json:"groupAccess"`
+	ProjectUUID        string              `json:"projectUuid"`
+	SpaceUUID          string              `json:"uuid"`
+	SpaceName          string              `json:"name"`
+	IsPrivate          bool                `json:"isPrivate"`
+	SpaceAccessMembers []SpaceAccessMember `json:"access"`
+	SpaceAccessGroups  []SpaceAccessGroup  `json:"groupAccess"`
 }
 
 type GetSpaceV1Response struct {
@@ -97,7 +97,7 @@ func (c *Client) GetSpaceMemberV1(projectUuid string, spaceUuid string, userUuid
 	}
 
 	// Find the user in the space
-	for _, member := range space.SpaceAccess {
+	for _, member := range space.SpaceAccessMembers {
 		if member.UserUUID == userUuid {
 			return &member, nil
 		}

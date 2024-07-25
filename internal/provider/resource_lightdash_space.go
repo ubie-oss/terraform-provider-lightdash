@@ -53,22 +53,28 @@ type spaceResourceModel struct {
 	ID types.String `tfsdk:"id"`
 	// The response from the API does not contain the organization UUID right now.
 	// OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String                    `tfsdk:"project_uuid"`
-	SpaceUUID        types.String                    `tfsdk:"space_uuid"`
-	IsPrivate        types.Bool                      `tfsdk:"is_private"`
-	SpaceName        types.String                    `tfsdk:"name"`
-	DeleteProtection types.Bool                      `tfsdk:"deletion_protection"`
-	CreatedAt        types.String                    `tfsdk:"created_at"`
-	LastUpdated      types.String                    `tfsdk:"last_updated"`
-	AccessList       []spaceResourceAccessBlockModel `tfsdk:"access"`
+	ProjectUUID      types.String                  `tfsdk:"project_uuid"`
+	SpaceUUID        types.String                  `tfsdk:"space_uuid"`
+	IsPrivate        types.Bool                    `tfsdk:"is_private"`
+	SpaceName        types.String                  `tfsdk:"name"`
+	DeleteProtection types.Bool                    `tfsdk:"deletion_protection"`
+	CreatedAt        types.String                  `tfsdk:"created_at"`
+	LastUpdated      types.String                  `tfsdk:"last_updated"`
+	MemberAccessList []spaceMemberAccessBlockModel `tfsdk:"access"`
+	GroupAccessList  []spaceGroupAccessBlockModel  `tfsdk:"group_access"`
 }
 
-type spaceResourceAccessBlockModel struct {
+type spaceMemberAccessBlockModel struct {
 	UserUUID            types.String `tfsdk:"user_uuid"`
 	SpaceRole           types.String `tfsdk:"space_role"`
 	IsOrganizationAdmin types.Bool   `tfsdk:"is_organization_admin"`
 	// TODO support last_updated
 	// LastUpdated types.String `tfsdk:"last_updated"`
+}
+
+type spaceGroupAccessBlockModel struct {
+	GroupUUID types.String `tfsdk:"group_uuid"`
+	SpaceRole types.String `tfsdk:"space_role"`
 }
 
 func (r *spaceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -164,6 +170,23 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 					},
 				},
 			},
+			"group_access": schema.SetNestedBlock{
+				MarkdownDescription: "This block represents the access settings for the Lightdash space. " +
+					"It allows you to define the groups who have access to the space by specifying their group UUIDs. " +
+					"Each group access block should contain a single attribute 'group_uuid' which is a required string attribute representing the group UUID.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"group_uuid": schema.StringAttribute{
+							MarkdownDescription: "Group UUID",
+							Required:            true,
+						},
+						"space_role": schema.StringAttribute{
+							MarkdownDescription: "Lightdash space role",
+							Required:            true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -178,7 +201,7 @@ func (r *spaceResource) Configure(ctx context.Context, req resource.ConfigureReq
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *api.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -208,11 +231,11 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Add space access
-	accessList := []spaceResourceAccessBlockModel{}
+	// Add space access at member level
+	memberAccessList := []spaceMemberAccessBlockModel{}
 	var errors []error
 	organizationMembersService := services.NewOrganizationMembersService(r.client)
-	for _, access := range plan.AccessList {
+	for _, access := range plan.MemberAccessList {
 		// Organization admins shouldn't be managed in Terraform states,
 		// because they have access to all spaces in the organization by default.
 		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
@@ -222,25 +245,48 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 			continue
 		}
 		if isOrganizationAdmin {
-			tflog.Info(ctx, fmt.Sprintf("Skipping adding access for organization admin user: %s because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
+			tflog.Warn(ctx, fmt.Sprintf("Skipping adding access for organization admin user: %s because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
 		}
 
 		// Add space access
 		spaceRole := models.SpaceMemberRole(access.SpaceRole.ValueString())
-		err = services.GrantSpaceAccess(
-			r.client, project_uuid, created_space.SpaceUUID,
-			access.UserUUID.ValueString(), spaceRole)
+		err = r.client.AddSpaceShareToUserV1(project_uuid, created_space.SpaceUUID, access.UserUUID.ValueString(), spaceRole)
 		if err != nil {
 			tflog.Debug(ctx, fmt.Sprintf("Error adding space access %s: %s", access.UserUUID, err.Error()))
 			errors = append(errors, err)
 		} else {
-			accessList = append(accessList, spaceResourceAccessBlockModel{
+			memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
 				UserUUID:            access.UserUUID,
 				SpaceRole:           access.SpaceRole,
 				IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
 			})
 		}
 	}
+	// Add space access at group level
+	groupAccessList := []spaceGroupAccessBlockModel{}
+	for _, access := range plan.GroupAccessList {
+		// Skip if the group no longer exists in the organization
+		_, getGroupError := r.client.GetGroupV1(access.GroupUUID.ValueString())
+		if getGroupError != nil {
+			tflog.Warn(ctx, fmt.Sprintf("Group %s no longer exists in the organization. Skipping adding access to the space.", access.GroupUUID))
+			continue
+		}
+		// Add space access
+		spaceRole := models.SpaceMemberRole(access.SpaceRole.ValueString())
+		grantSpaceAccessError := r.client.AddSpaceShareToGroupV1(
+			project_uuid, created_space.SpaceUUID,
+			access.GroupUUID.ValueString(), spaceRole)
+		if grantSpaceAccessError != nil {
+			errors = append(errors, grantSpaceAccessError)
+		} else {
+			groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
+				GroupUUID: access.GroupUUID,
+				SpaceRole: access.SpaceRole,
+			})
+		}
+	}
+
+	// Raise error if there are any errors
 	if len(errors) > 0 {
 		for _, err := range errors {
 			resp.Diagnostics.AddError(
@@ -257,7 +303,8 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
 	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
 	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
-	plan.AccessList = accessList
+	plan.MemberAccessList = memberAccessList
+	plan.GroupAccessList = groupAccessList
 	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -273,14 +320,16 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Declare variables to import from state
 	var projectUuid string
 	var spaceUuid string
-	var access []spaceResourceAccessBlockModel
-	var created_at string
-	var last_updated string
+	var memberAccessList []spaceMemberAccessBlockModel
+	var groupAccessList []spaceGroupAccessBlockModel
+	var createdAt string
+	var lastUpdated string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &spaceUuid)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("access"), &access)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("created_at"), &created_at)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("last_updated"), &last_updated)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("access"), &memberAccessList)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("group_access"), &groupAccessList)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("created_at"), &createdAt)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("last_updated"), &lastUpdated)...)
 
 	// Get current state
 	var state spaceResourceModel
@@ -304,8 +353,8 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	// Get space members
 	organizationMembersService := services.NewOrganizationMembersService(r.client)
-	var members []spaceResourceAccessBlockModel
-	for _, access := range state.AccessList {
+	var spaceMembers []spaceMemberAccessBlockModel
+	for _, access := range state.MemberAccessList {
 		// Continue if the user no longer exists in the organization
 		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(access.UserUUID.ValueString())
 		if err != nil {
@@ -322,10 +371,10 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		}
 		// Skip if the user who isn't in the state is an organization admin
 		if isOrganizationAdmin {
-			tflog.Info(ctx, fmt.Sprintf("Organization admin %s is registered in Terraform states. However, granting and revoking operations for organization admins are not executed because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
+			tflog.Warn(ctx, fmt.Sprintf("Organization admin %s is registered in Terraform states. However, granting and revoking operations for organization admins are not executed because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
 		}
 		// Append the user to the members list
-		members = append(members, spaceResourceAccessBlockModel{
+		spaceMembers = append(spaceMembers, spaceMemberAccessBlockModel{
 			UserUUID:            access.UserUUID,
 			SpaceRole:           access.SpaceRole,
 			IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
@@ -335,7 +384,8 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	// Set the state values
 	state.ProjectUUID = types.StringValue(space.ProjectUUID)
 	state.SpaceUUID = types.StringValue(space.SpaceUUID)
-	state.AccessList = members
+	state.MemberAccessList = spaceMembers
+	state.GroupAccessList = groupAccessList
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -347,20 +397,78 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
-	var plan spaceResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	// NOTE: The plan diags contains only added members and groups
+	var plan, state spaceResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Update existing space
-	project_uuid := plan.ProjectUUID.ValueString()
-	space_uuid := plan.SpaceUUID.ValueString()
-	space_name := plan.SpaceName.ValueString()
-	is_private := plan.IsPrivate.ValueBool()
-	tflog.Info(ctx, fmt.Sprintf("Updating space %s", space_uuid))
-	updatedSpace, err := r.client.UpdateSpaceV1(project_uuid, space_uuid, space_name, is_private)
+	projectUuid := plan.ProjectUUID.ValueString()
+	spaceUuid := plan.SpaceUUID.ValueString()
+	spaceName := plan.SpaceName.ValueString()
+	isPrivate := plan.IsPrivate.ValueBool()
+	updatedSpaceGroups := []spaceGroupAccessBlockModel{}
+	updatedSpaceMembers := []spaceMemberAccessBlockModel{}
+
+	// Select removed groups in the plan state
+	removedGroupsInState := []spaceGroupAccessBlockModel{}
+	for _, group := range state.GroupAccessList {
+		exists := false
+		for _, groupInPlan := range plan.GroupAccessList {
+			if group.GroupUUID.ValueString() == groupInPlan.GroupUUID.ValueString() {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			removedGroupsInState = append(removedGroupsInState, group)
+		}
+	}
+	// Select removed members in the plan state
+	removedMembersInState := []spaceMemberAccessBlockModel{}
+	for _, member := range state.MemberAccessList {
+		exists := false
+		for _, memberInPlan := range plan.MemberAccessList {
+			if member.UserUUID.ValueString() == memberInPlan.UserUUID.ValueString() {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			removedMembersInState = append(removedMembersInState, member)
+		}
+	}
+
+	// Get exiting groups in the organizations
+	// NOTE: We check if the group exists in the organization before adding access to the space,
+	//       because the group in Plan state can be manually deleted in the organization.
+	allGroupsInOrganization, err := r.client.GetOrganizationGroupsV1()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting groups",
+			"Could not get groups, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	// Get all members in the organization
+	// NOTE: We check if the member exists in the organization before adding access to the space,
+	//       because the member in Plan state can be manually deleted in the organization.
+	organizationMembersService := services.NewOrganizationMembersService(r.client)
+	allMembersInOrganization, err := organizationMembersService.GetOrganizationMembers()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting members",
+			"Could not get members, unexpected error: "+err.Error(),
+		)
+	}
+
+	// Update the space
+	tflog.Info(ctx, fmt.Sprintf("Updating space %s", spaceUuid))
+	updatedSpace, err := r.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating space",
@@ -369,8 +477,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Get the space to get the access members
-	space, err := r.client.GetSpaceV1(project_uuid, space_uuid)
+	// Get the spaceInLightdash to get the access members and groups
+	spaceInLightdash, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting space",
@@ -379,114 +487,123 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Revoke access from users not managed by Terraform
-	// NOTE: Manually added users will be removed
-	organizationMembersService := services.NewOrganizationMembersService(r.client)
-	for _, existingAccess := range space.SpaceAccess {
-		// Skip if the user no longer exists in the organization
-		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(existingAccess.UserUUID)
-		if err != nil {
-			resp.Diagnostics.AddWarning(
-				"User no longer exists in the organization",
-				fmt.Sprintf("User %s no longer exists in the organization. Skipping revoking access to the space.", existingAccess.UserUUID),
-			)
-			continue
-		}
-		// Check if the user is an organization admin
-		// It is not possible to revoke space access from organization admins
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(existingAccess.UserUUID)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error checking if user is an organization admin",
-				"Could not check if user is an organization admin: "+err.Error(),
-			)
-		}
-		if isOrganizationAdmin {
-			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin. Organization admins have space access to all spaces by default and cannot be managed individually.", existingAccess.UserUUID))
-			continue
-		}
-		// Check if the user is managed by Terraform
-		found := false
-		for _, access := range plan.AccessList {
-			if access.UserUUID.ValueString() == existingAccess.UserUUID {
-				found = true
+	// Revoke access from groups not in the plan state
+	for _, groupInLightdash := range removedGroupsInState {
+		// Check if the group exists in the organization
+		exists := false
+		for _, groupInOrganization := range allGroupsInOrganization {
+			if groupInLightdash.GroupUUID.ValueString() == groupInOrganization.GroupUUID {
+				exists = true
 				break
 			}
 		}
-		// Revoke access if the user is not in the access list
-		if !found {
-			err := r.client.RevokeSpaceAccessV1(
-				project_uuid, plan.SpaceUUID.ValueString(), existingAccess.UserUUID)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Revoking space access",
-					"Could not revoke space access, unexpected error: "+err.Error(),
-				)
-				return
-			}
+		if !exists {
+			tflog.Warn(ctx, fmt.Sprintf("Group %s not found in the organization. Skipping revoking access from the space.", groupInLightdash.GroupUUID.ValueString()))
+			continue
+		}
+		// Revoke access from the group
+		err := r.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupInLightdash.GroupUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Revoking space access",
+				fmt.Sprintf("Could not revoke space access for group %s, unexpected error: %s", groupInLightdash.GroupUUID, err.Error()),
+			)
+			return
 		}
 	}
 
-	// Grant access to new users
-	var updatedAccessList []spaceResourceAccessBlockModel
-	for _, access := range plan.AccessList {
-		// Skip if the user doesn't exist in the organization
-		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(access.UserUUID.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddWarning(
-				"User no longer exists in the organization",
-				fmt.Sprintf("User %s no longer exists in the organization. Skipping granting access to the space.", access.UserUUID),
-			)
-			continue
-		}
-		// Check if the user is an organization admin
-		// It is not possible to revoke space access from organization admins
-		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error checking if user is an organization admin",
-				"Could not check if user is an organization admin: "+err.Error(),
-			)
-		}
-		// Skip if the user is an organization admin
-		if isOrganizationAdmin {
-			tflog.Debug(ctx, fmt.Sprintf("Skipping user %s who is an organization admin because organization admins inherently have access to all spaces by default, making individual space access management unnecessary.", access.UserUUID))
-		}
-		// Skip if the user is already in the access list
-		found := false
-		for _, existingAccess := range space.SpaceAccess {
-			if access.UserUUID.ValueString() == existingAccess.UserUUID {
-				found = true
+	// Grant access to groups in the plan state
+	for _, groupInPlan := range plan.GroupAccessList {
+		// Check if the group exists in the organization
+		exists := false
+		for _, groupInOrganization := range allGroupsInOrganization {
+			if groupInPlan.GroupUUID.ValueString() == groupInOrganization.GroupUUID {
+				exists = true
 				break
 			}
 		}
-		// Grant access if the user is not in the access list
-		if !found {
-			spaceRole := models.SpaceMemberRole(access.SpaceRole.ValueString())
-			err := services.GrantSpaceAccess(
-				r.client, project_uuid, plan.SpaceUUID.ValueString(), access.UserUUID.ValueString(), spaceRole)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Granting space access",
-					"Could not grant space access, unexpected error: "+err.Error(),
-				)
-				return
+		if !exists {
+			tflog.Warn(ctx, fmt.Sprintf("Group %s not found in the organization. Skipping adding access to the space.", groupInPlan.GroupUUID.ValueString()))
+			continue
+		}
+		err := r.client.AddSpaceGroupAccessV1(
+			projectUuid,
+			spaceUuid,
+			groupInPlan.GroupUUID.ValueString(),
+			models.SpaceMemberRole(groupInPlan.SpaceRole.ValueString()),
+		)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Granting space access",
+				fmt.Sprintf("Could not grant space access for group %s with role %s, unexpected error: %s", groupInPlan.GroupUUID.ValueString(), groupInPlan.SpaceRole.ValueString(), err.Error()),
+			)
+			return
+		}
+		updatedSpaceGroups = append(updatedSpaceGroups, groupInPlan)
+	}
+
+	// Revoke access from existing members in Lightdash  not in the plan state
+	for _, memberInLightdash := range removedMembersInState {
+		// Check if the member exists in the organization
+		exists := false
+		for _, memberInOrganization := range allMembersInOrganization {
+			if memberInLightdash.UserUUID.ValueString() == memberInOrganization.UserUUID {
+				exists = true
+				break
 			}
 		}
-		// Append the user to the managed members list
-		updatedAccessList = append(
-			updatedAccessList,
-			spaceResourceAccessBlockModel{
-				UserUUID:            access.UserUUID,
-				SpaceRole:           types.StringValue(access.SpaceRole.ValueString()),
-				IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
-			})
+		if !exists {
+			tflog.Warn(ctx, fmt.Sprintf("Member %s not found in the organization. Skipping revoking access from the space.", memberInLightdash.UserUUID))
+			continue
+		}
+		// Revoke access from the member
+		err := r.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, memberInLightdash.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Revoking space access",
+				fmt.Sprintf("Could not revoke space access for member %s, unexpected error: %s", memberInLightdash.UserUUID, err.Error()),
+			)
+			return
+		}
+	}
+
+	// Grant access to members in the plan state
+	for _, memberInPlan := range plan.MemberAccessList {
+		// Check if the member in the plan state is already in the space
+		exists := false
+		isSameRole := false
+		for _, memberInLightdash := range spaceInLightdash.SpaceAccessMembers {
+			if memberInPlan.UserUUID.ValueString() == memberInLightdash.UserUUID {
+				exists = true
+				isSameRole = memberInPlan.SpaceRole.ValueString() == memberInLightdash.SpaceRole.String()
+				break
+			}
+		}
+		// Skip if the member is already in the space and has the same role
+		if exists && isSameRole {
+			tflog.Debug(ctx, fmt.Sprintf("Member %s is already in the space and has the same role. Skipping adding access to the space.", memberInPlan.UserUUID))
+			continue
+		}
+
+		// Grant access to the member
+		spaceRole := models.SpaceMemberRole(memberInPlan.SpaceRole.ValueString())
+		err := services.GrantSpaceAccessMemberService(
+			r.client, projectUuid, spaceUuid, memberInPlan.UserUUID.ValueString(), spaceRole)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Granting space access",
+				fmt.Sprintf("Could not grant space access to member %s with role %s, unexpected error: %s", memberInPlan.UserUUID.ValueString(), memberInPlan.SpaceRole.ValueString(), err.Error()),
+			)
+			return
+		}
+		updatedSpaceMembers = append(updatedSpaceMembers, memberInPlan)
 	}
 
 	// Update the state
 	plan.SpaceName = types.StringValue(updatedSpace.SpaceName)
 	plan.IsPrivate = types.BoolValue(updatedSpace.IsPrivate)
-	plan.AccessList = updatedAccessList
+	plan.MemberAccessList = updatedSpaceMembers
+	plan.GroupAccessList = updatedSpaceGroups
 	// TODO Update the last_updated field
 	//
 	// We can't update the last_updated field because of the following error:
@@ -495,7 +612,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Set state
-	diags = resp.State.Set(ctx, plan)
+	diags := resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -558,9 +675,9 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Get the space members
-	accessList := []spaceResourceAccessBlockModel{}
+	accessList := []spaceMemberAccessBlockModel{}
 	organizationMembersService := services.NewOrganizationMembersService(r.client)
-	for _, access := range importedSpace.SpaceAccess {
+	for _, access := range importedSpace.SpaceAccessMembers {
 		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(access.UserUUID)
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -569,10 +686,19 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 			)
 		}
 		// Append each element to the slice
-		accessList = append(accessList, spaceResourceAccessBlockModel{
+		accessList = append(accessList, spaceMemberAccessBlockModel{
 			UserUUID:            types.StringValue(access.UserUUID),
 			SpaceRole:           types.StringValue(access.SpaceRole.String()),
 			IsOrganizationAdmin: types.BoolValue(isOrganizationAdmin),
+		})
+	}
+
+	// Get the space groups
+	groupAccessList := []spaceGroupAccessBlockModel{}
+	for _, group := range importedSpace.SpaceAccessGroups {
+		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
+			GroupUUID: types.StringValue(group.GroupUUID),
+			SpaceRole: types.StringValue(group.SpaceRole.String()),
 		})
 	}
 
@@ -584,6 +710,7 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), importedSpace.SpaceName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("is_private"), importedSpace.IsPrivate)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), accessList)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access"), groupAccessList)...)
 
 	// resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), accessList)...)
 	// Note We put the current time as the last updated time because we don't know when the space was last updated.

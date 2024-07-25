@@ -21,9 +21,9 @@ resource "lightdash_group" "test2" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "zzz_test_group_02"
 
-  member {
-    user_uuid = data.lightdash_authenticated_user.test.user_uuid
-  }
+  members = [
+    { user_uuid = data.lightdash_authenticated_user.test.user_uuid },
+  ]
 }
 
 output "lightdash_group__test1" {

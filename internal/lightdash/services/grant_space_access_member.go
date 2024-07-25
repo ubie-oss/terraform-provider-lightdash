@@ -21,7 +21,7 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
-func GrantSpaceAccess(
+func GrantSpaceAccessMemberService(
 	client *api.Client,
 	projectUuid string,
 	spaceUuid string,

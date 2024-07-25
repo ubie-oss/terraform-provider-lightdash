@@ -18,14 +18,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -50,7 +54,7 @@ type groupResourceModel struct {
 	OrganizationUUID types.String               `tfsdk:"organization_uuid"`
 	GroupUUID        types.String               `tfsdk:"group_uuid"`
 	Name             types.String               `tfsdk:"name"`
-	Member           []groupMemberModelForGroup `tfsdk:"member"`
+	Members          []groupMemberModelForGroup `tfsdk:"members"`
 }
 
 type groupMemberModelForGroup struct {
@@ -91,18 +95,32 @@ func (r *groupResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				MarkdownDescription: "The name of the Lightdash group.",
 				Required:            true,
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"member": schema.SetNestedBlock{
-				MarkdownDescription: "Defines the members of the Lightdash group. " +
-					"Each member is identified by their unique user UUID.",
-				NestedObject: schema.NestedBlockObject{
+			// TODO check if values of userUUID are unique
+			"members": schema.ListNestedAttribute{
+				Description: "List of users.",
+				Required:    false,
+				Optional:    true,
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "The UUID of the user who is a member of the group.",
+							MarkdownDescription: "Lightdash user UUID",
 							Required:            true,
 						},
 					},
+				},
+				Default: listdefault.StaticValue(
+					types.ListValueMust(
+						types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"user_uuid": types.StringType,
+							},
+						},
+						[]attr.Value{},
+					),
+				),
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -138,11 +156,13 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Create new group
 	organization_uuid := plan.OrganizationUUID.ValueString()
 	group_name := plan.Name.ValueString()
-	members := make([]api.CreateGroupInOrganizationV1Member, 0, len(plan.Member))
-	for _, member := range plan.Member {
-		members = append(members, api.CreateGroupInOrganizationV1Member{
-			UserUUID: member.UserUUID.ValueString(),
-		})
+	members := make([]api.CreateGroupInOrganizationV1Member, 0, len(plan.Members))
+	if plan.Members != nil {
+		for _, member := range plan.Members {
+			members = append(members, api.CreateGroupInOrganizationV1Member{
+				UserUUID: member.UserUUID.ValueString(),
+			})
+		}
 	}
 	createdGroup, err := r.client.CreateGroupInOrganizationV1(organization_uuid, group_name, members)
 	if err != nil {
@@ -163,11 +183,11 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 	// Convert stateMembers to the correct type before assignment
-	plan.Member = make([]groupMemberModelForGroup, len(plan.Member))
-	for i, member := range updatedMembers {
-		plan.Member[i] = groupMemberModelForGroup{
+	var stateMembers []groupMemberModelForGroup
+	for _, member := range updatedMembers {
+		stateMembers = append(stateMembers, groupMemberModelForGroup{
 			UserUUID: types.StringValue(member.UserUUID),
-		}
+		})
 	}
 
 	// Assign the plan values to the state
@@ -175,6 +195,9 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ID = types.StringValue(stateId)
 	plan.GroupUUID = types.StringValue(createdGroup.GroupUUID)
 	plan.Name = types.StringValue(createdGroup.Name)
+	if stateMembers != nil || len(stateMembers) > 0 {
+		plan.Members = stateMembers
+	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, &plan)
@@ -189,11 +212,11 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	var organizationUuid string
 	var groupUuid string
 	var groupName string
-	var members []groupMemberModelForGroupMembers
+	var members []groupMemberModelForGroup
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organizationUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("group_uuid"), &groupUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("name"), &groupName)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("member"), &members)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("members"), &members)...)
 
 	// Get current state
 	var state groupResourceModel
@@ -213,18 +236,30 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	// Get group members
+	fetchedGroupMembers, getGroupMembersError := r.client.GetGroupMembersV1(group.GroupUUID)
+	if getGroupMembersError != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting group members",
+			"Could not get members for group "+group.GroupUUID+": "+getGroupMembersError.Error(),
+		)
+		return
+	}
+	// Convert members to the correct type before assignment
+	stateMembers := make([]groupMemberModelForGroup, len(fetchedGroupMembers))
+	for i, member := range fetchedGroupMembers {
+		stateMembers[i] = groupMemberModelForGroup{
+			UserUUID: types.StringValue(member.UserUUID),
+		}
+	}
+
 	// Set the state values
 	state.OrganizationUUID = types.StringValue(group.OrganizationUUID)
 	state.GroupUUID = types.StringValue(group.GroupUUID)
 	state.Name = types.StringValue(group.Name)
-	// Convert members to the correct type before assignment
-	stateMembers := make([]groupMemberModelForGroup, len(members))
-	for i, member := range members {
-		stateMembers[i] = groupMemberModelForGroup{
-			UserUUID: types.StringValue(member.UserUUID.ValueString()),
-		}
+	if len(stateMembers) > 0 {
+		state.Members = stateMembers
 	}
-	state.Member = stateMembers
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -236,57 +271,91 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
-	var plan groupResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	var plan, state groupResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Debut: show plan and state
+	resp.Diagnostics.AddWarning(
+		"Plan",
+		fmt.Sprintf("Plan: %+v", plan),
+	)
+	resp.Diagnostics.AddWarning(
+		"State",
+		fmt.Sprintf("State: %+v", state),
+	)
+
 	// Get the information from the state
 	groupUuid := plan.GroupUUID.ValueString()
 	groupName := plan.Name.ValueString()
-	members := []api.UpdateGroupV1Member{}
-	for _, member := range plan.Member {
-		members = append(members, api.UpdateGroupV1Member{
-			UserUUID: member.UserUUID.ValueString(),
-		})
-	}
 
-	// Remove the members which are not in the plan
-	fetchedMembers, err := r.client.GetGroupMembersV1(groupUuid)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Fetching Group Members",
-			fmt.Sprintf("Could not fetch members for group with UUID '%s': %s", groupUuid, err.Error()),
-		)
-		return
-	}
-	for _, member := range fetchedMembers {
-		// If the member is not in the plan, remove it
-		found := false
-		for _, planMember := range plan.Member {
-			if planMember.UserUUID.ValueString() == member.UserUUID {
-				found = true
+	updatedMembers := []groupMemberModelForGroup{}
+	removedMembers := []groupMemberModelForGroup{}
+
+	// The service to get the organization members
+	organizationMembersService := services.NewOrganizationMembersService(r.client)
+
+	// Select removed members
+	for _, memberInState := range state.Members {
+		// Check if the user still exists in the organization
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(memberInState.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"User no longer exists in the organization",
+				fmt.Sprintf("User %s no longer exists in the organization. Skipping adding access to the group.", memberInState.UserUUID.ValueString()),
+			)
+			continue
+		}
+		// Check if the user is in the plan
+		isRemoved := true
+		for _, memberInPlan := range plan.Members {
+			if memberInState.UserUUID == memberInPlan.UserUUID {
+				isRemoved = false
 				break
 			}
 		}
-		if !found {
-			// Remove the member
-			err = r.client.RemoveUserFromGroupV1(groupUuid, member.UserUUID)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error Removing User from Group",
-					fmt.Sprintf("Could not remove user with UUID '%s' from group with UUID '%s': %s", member.UserUUID, groupUuid, err.Error()),
-				)
-				return
-			}
+		if isRemoved {
+			removedMembers = append(removedMembers, memberInState)
+		}
+	}
+	// Check if the user is in the plan
+	for _, memberInPlan := range plan.Members {
+		// Check if the user still exists in the organization
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(memberInPlan.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddWarning(
+				"User no longer exists in the organization",
+				fmt.Sprintf("User %s no longer exists in the organization. Skipping adding access to the group.", memberInPlan.UserUUID.ValueString()),
+			)
+			continue
+		}
+		updatedMembers = append(updatedMembers, memberInPlan)
+	}
+
+	// Revoke access to removed members
+	for _, member := range removedMembers {
+		tflog.Info(ctx, fmt.Sprintf("Revoking access to group %s for user %s", groupUuid, member.UserUUID.ValueString()))
+		err := r.client.RemoveUserFromGroupV1(groupUuid, member.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Revoking access to group",
+				fmt.Sprintf("Could not revoke access to group %s for user %s, unexpected error: %s", groupUuid, member.UserUUID, err.Error()),
+			)
 		}
 	}
 
 	// Update the group
 	tflog.Info(ctx, fmt.Sprintf("Updating group %s", groupUuid))
-	updatedGroup, err := r.client.UpdateGroupV1(groupUuid, groupName, members)
+	updateMembersUUIDs := make([]api.UpdateGroupV1Member, len(updatedMembers))
+	for i, member := range updatedMembers {
+		updateMembersUUIDs[i] = api.UpdateGroupV1Member{
+			UserUUID: member.UserUUID.ValueString(),
+		}
+	}
+	updatedGroup, err := r.client.UpdateGroupV1(groupUuid, groupName, updateMembersUUIDs)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating group",
@@ -295,21 +364,13 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Build the state members
-	stateMembers := make([]groupMemberModelForGroup, len(members))
-	for i, member := range members {
-		stateMembers[i] = groupMemberModelForGroup{
-			UserUUID: types.StringValue(member.UserUUID),
-		}
-	}
-
 	// Update the state
 	plan.GroupUUID = types.StringValue(updatedGroup.GroupUUID)
 	plan.Name = types.StringValue(updatedGroup.Name)
-	plan.Member = stateMembers
+	plan.Members = updatedMembers
 
 	// Set state
-	diags = resp.State.Set(ctx, &plan)
+	diags := resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -371,10 +432,10 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Get the group memberBlock
-	memberBlock := make([]groupMemberModelForGroupMembers, len(importedMembers))
+	memberBlock := make([]groupMemberModelForGroup, len(importedMembers))
 	for i, member := range importedMembers {
 		// Update each element in the slice
-		memberBlock[i] = groupMemberModelForGroupMembers{
+		memberBlock[i] = groupMemberModelForGroup{
 			UserUUID: types.StringValue(member.UserUUID),
 		}
 	}
@@ -384,7 +445,7 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), importedGroup.OrganizationUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_uuid"), importedGroup.GroupUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), importedGroup.Name)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("member"), memberBlock)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("members"), memberBlock)...)
 }
 
 func getGroupResourceId(organization_uuid string, group_uuid string) string {

@@ -49,6 +49,16 @@ resource "lightdash_space" "test_private" {
     }
   }
 
+  group_access {
+    group_uuid = lightdash_group.test1.group_uuid
+    space_role = "admin"
+  }
+
+  group_access {
+    group_uuid = lightdash_group.test2.group_uuid
+    space_role = "admin"
+  }
+
   depends_on = [
     lightdash_project_role_member.test_admin_user,
     lightdash_project_role_member.test_member_user,
