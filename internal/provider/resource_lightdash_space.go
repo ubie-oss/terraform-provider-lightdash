@@ -532,6 +532,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			tflog.Warn(ctx, fmt.Sprintf("Group %s not found in the organization. Skipping adding access to the space.", groupInPlan.GroupUUID.ValueString()))
 			continue
 		}
+		// Grant space access to the group
 		err := r.client.AddSpaceGroupAccessV1(
 			projectUuid,
 			spaceUuid,
@@ -575,6 +576,15 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Grant access to members in the plan state
 	for _, memberInPlan := range plan.MemberAccessList {
+		// Check if the member in the plan is an organization admin
+		isOrganizationAdmin, err := organizationMembersService.IsOrganizationAdmin(memberInPlan.UserUUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error checking if user is an organization admin",
+				"Could not check if user is an organization admin: "+err.Error(),
+			)
+		}
+		memberInPlan.IsOrganizationAdmin = types.BoolValue(isOrganizationAdmin)
 		// Check if the member in the plan state is already in the space
 		exists := false
 		isSameRole := false
@@ -594,7 +604,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 		// Grant access to the member
 		spaceRole := models.SpaceMemberRole(memberInPlan.SpaceRole.ValueString())
-		err := services.GrantSpaceAccessMemberService(
+		err = services.GrantSpaceAccessMemberService(
 			r.client, projectUuid, spaceUuid, memberInPlan.UserUUID.ValueString(), spaceRole)
 		if err != nil {
 			resp.Diagnostics.AddError(
