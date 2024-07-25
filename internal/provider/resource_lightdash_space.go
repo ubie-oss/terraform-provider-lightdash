@@ -419,32 +419,42 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	updatedSpaceGroups := []spaceGroupAccessBlockModel{}
 	updatedSpaceMembers := []spaceMemberAccessBlockModel{}
 
+	// Get the actualSpace to get the access members and groups
+	actualSpace, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Getting space",
+			"Could not get space, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
 	// Select removed groups in the plan state
-	removedGroupsInState := []spaceGroupAccessBlockModel{}
-	for _, group := range state.GroupAccessList {
+	removedGroupUUIDs := []string{}
+	for _, group := range actualSpace.SpaceAccessGroups {
 		exists := false
 		for _, groupInPlan := range plan.GroupAccessList {
-			if group.GroupUUID.ValueString() == groupInPlan.GroupUUID.ValueString() {
+			if group.GroupUUID == groupInPlan.GroupUUID.ValueString() {
 				exists = true
 				break
 			}
 		}
 		if !exists {
-			removedGroupsInState = append(removedGroupsInState, group)
+			removedGroupUUIDs = append(removedGroupUUIDs, group.GroupUUID)
 		}
 	}
 	// Select removed members in the plan state
-	removedMembersInState := []spaceMemberAccessBlockModel{}
-	for _, member := range state.MemberAccessList {
+	removedMemberUUIDs := []string{}
+	for _, member := range actualSpace.SpaceAccessMembers {
 		exists := false
 		for _, memberInPlan := range plan.MemberAccessList {
-			if member.UserUUID.ValueString() == memberInPlan.UserUUID.ValueString() {
+			if member.UserUUID == memberInPlan.UserUUID.ValueString() {
 				exists = true
 				break
 			}
 		}
 		if !exists {
-			removedMembersInState = append(removedMembersInState, member)
+			removedMemberUUIDs = append(removedMemberUUIDs, member.UserUUID)
 		}
 	}
 
@@ -483,36 +493,26 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Get the spaceInLightdash to get the access members and groups
-	spaceInLightdash, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Getting space",
-			"Could not get space, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
 	// Revoke access from groups not in the plan state
-	for _, groupInLightdash := range removedGroupsInState {
+	for _, removedGroupUUID := range removedGroupUUIDs {
 		// Check if the group exists in the organization
 		exists := false
 		for _, groupInOrganization := range allGroupsInOrganization {
-			if groupInLightdash.GroupUUID.ValueString() == groupInOrganization.GroupUUID {
+			if removedGroupUUID == groupInOrganization.GroupUUID {
 				exists = true
 				break
 			}
 		}
 		if !exists {
-			tflog.Warn(ctx, fmt.Sprintf("Group %s not found in the organization. Skipping revoking access from the space.", groupInLightdash.GroupUUID.ValueString()))
+			tflog.Warn(ctx, fmt.Sprintf("Group %s not found in the organization. Skipping revoking access from the space.", removedGroupUUID))
 			continue
 		}
 		// Revoke access from the group
-		err := r.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupInLightdash.GroupUUID.ValueString())
+		err := r.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, removedGroupUUID)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Revoking space access",
-				fmt.Sprintf("Could not revoke space access for group %s, unexpected error: %s", groupInLightdash.GroupUUID, err.Error()),
+				fmt.Sprintf("Could not revoke space access for group %s, unexpected error: %s", removedGroupUUID, err.Error()),
 			)
 			return
 		}
@@ -550,25 +550,25 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Revoke access from existing members in Lightdash  not in the plan state
-	for _, memberInLightdash := range removedMembersInState {
+	for _, removedMemberUUID := range removedMemberUUIDs {
 		// Check if the member exists in the organization
 		exists := false
 		for _, memberInOrganization := range allMembersInOrganization {
-			if memberInLightdash.UserUUID.ValueString() == memberInOrganization.UserUUID {
+			if removedMemberUUID == memberInOrganization.UserUUID {
 				exists = true
 				break
 			}
 		}
 		if !exists {
-			tflog.Warn(ctx, fmt.Sprintf("Member %s not found in the organization. Skipping revoking access from the space.", memberInLightdash.UserUUID))
+			tflog.Warn(ctx, fmt.Sprintf("Member %s not found in the organization. Skipping revoking access from the space.", removedMemberUUID))
 			continue
 		}
 		// Revoke access from the member
-		err := r.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, memberInLightdash.UserUUID.ValueString())
+		err := r.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, removedMemberUUID)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Revoking space access",
-				fmt.Sprintf("Could not revoke space access for member %s, unexpected error: %s", memberInLightdash.UserUUID, err.Error()),
+				fmt.Sprintf("Could not revoke space access for member %s, unexpected error: %s", removedMemberUUID, err.Error()),
 			)
 			return
 		}
@@ -588,7 +588,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		// Check if the member in the plan state is already in the space
 		exists := false
 		isSameRole := false
-		for _, memberInLightdash := range spaceInLightdash.SpaceAccessMembers {
+		for _, memberInLightdash := range actualSpace.SpaceAccessMembers {
 			if memberInPlan.UserUUID.ValueString() == memberInLightdash.UserUUID {
 				exists = true
 				isSameRole = memberInPlan.SpaceRole.ValueString() == memberInLightdash.SpaceRole.String()
