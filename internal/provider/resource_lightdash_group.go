@@ -178,7 +178,7 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ID = types.StringValue(stateId)
 	plan.GroupUUID = types.StringValue(createdGroup.GroupUUID)
 	plan.Name = types.StringValue(createdGroup.Name)
-	plan.Members = plan.Members
+	// plan.Members = plan.Members
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, &plan)
