@@ -37,8 +37,8 @@ output "lightdash_project_role_member__test_member_user" {
 }
 
 # TODO remove
-resource "lightdash_project_role_member" "test_member_user_2" {
-  project_uuid = var.test_lightdash_project_uuid
-  user_uuid    = "841dacb8-d0dd-4f4e-a304-dd309b35ec22"
-  role         = "viewer"
-}
+# resource "lightdash_project_role_member" "test_member_user_2" {
+#   project_uuid = var.test_lightdash_project_uuid
+#   user_uuid    = "841dacb8-d0dd-4f4e-a304-dd309b35ec22"
+#   role         = "viewer"
+# }

@@ -12,23 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "lightdash_group" "test" {
-  for_each = (
-    data.lightdash_organization_groups.test.groups != null
-    ? { for group in data.lightdash_organization_groups.test.groups
-    : group.group_uuid => group } : {}
-  )
-
+data "lightdash_group" "test1" {
   organization_uuid = data.lightdash_projects.test.organization_uuid
   project_uuid      = var.test_lightdash_project_uuid
-  group_uuid        = each.value.group_uuid
-
-  depends_on = [
-    lightdash_group.test1,
-    lightdash_group.test2,
-  ]
+  group_uuid        = lightdash_group.test1.group_uuid
 }
 
-output "lightdash_group__test" {
-  value = data.lightdash_group.test
+data "lightdash_group" "test2" {
+  organization_uuid = data.lightdash_projects.test.organization_uuid
+  project_uuid      = var.test_lightdash_project_uuid
+  group_uuid        = lightdash_group.test2.group_uuid
+}
+
+output "data_lightdash_group__test1" {
+  value = data.lightdash_group.test1
+}
+
+output "data_lightdash_group__test2" {
+  value = data.lightdash_group.test2
 }

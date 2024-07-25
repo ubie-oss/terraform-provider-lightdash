@@ -43,19 +43,19 @@ resource "lightdash_group" "test_group2" {
 
 ### Optional
 
-- `member` (Block Set) Defines the members of the Lightdash group. Each member is identified by their unique user UUID. (see [below for nested schema](#nestedblock--member))
+- `members` (Attributes List) List of users. (see [below for nested schema](#nestedatt--members))
 
 ### Read-Only
 
 - `group_uuid` (String) The UUID of the Lightdash group.
 - `id` (String) The unique identifier for the resource.
 
-<a id="nestedblock--member"></a>
-### Nested Schema for `member`
+<a id="nestedatt--members"></a>
+### Nested Schema for `members`
 
 Required:
 
-- `user_uuid` (String) The UUID of the user who is a member of the group.
+- `user_uuid` (String) Lightdash user UUID
 
 ## Import
 
