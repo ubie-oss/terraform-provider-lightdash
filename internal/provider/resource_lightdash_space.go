@@ -358,7 +358,10 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		// Continue if the user no longer exists in the organization
 		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(access.UserUUID.ValueString())
 		if err != nil {
-			tflog.Warn(ctx, fmt.Sprintf("User %s no longer exists in the organization. Skipping reading access to the space.", access.UserUUID))
+			resp.Diagnostics.AddWarning(
+				"User no longer exists in the organization",
+				fmt.Sprintf("User %s no longer exists in the organization. Skipping reading access to the space.", access.UserUUID),
+			)
 			continue
 		}
 		// Check if the user who isn't is an organization admin
@@ -371,7 +374,10 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		}
 		// Skip if the user who isn't in the state is an organization admin
 		if isOrganizationAdmin {
-			tflog.Warn(ctx, fmt.Sprintf("Organization admin %s is registered in Terraform states. However, granting and revoking operations for organization admins are not executed because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID))
+			resp.Diagnostics.AddWarning(
+				"Organization admin registered in Terraform states",
+				fmt.Sprintf("Organization admin %s is registered in Terraform states. However, granting and revoking operations for organization admins are not executed because organization admins inherently have access to all spaces by default, making explicit access management unnecessary.", access.UserUUID),
+			)
 		}
 		// Append the user to the members list
 		spaceMembers = append(spaceMembers, spaceMemberAccessBlockModel{
@@ -582,6 +588,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		// Skip if the member is already in the space and has the same role
 		if exists && isSameRole {
 			tflog.Debug(ctx, fmt.Sprintf("Member %s is already in the space and has the same role. Skipping adding access to the space.", memberInPlan.UserUUID))
+			updatedSpaceMembers = append(updatedSpaceMembers, memberInPlan)
 			continue
 		}
 
