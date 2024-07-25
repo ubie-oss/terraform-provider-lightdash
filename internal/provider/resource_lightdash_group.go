@@ -173,31 +173,12 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Get the members of the group
-	updatedMembers, err := r.client.GetGroupMembersV1(createdGroup.GroupUUID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting group members",
-			"Could not get members for group "+createdGroup.GroupUUID+": "+err.Error(),
-		)
-		return
-	}
-	// Convert stateMembers to the correct type before assignment
-	var stateMembers []groupMemberModelForGroup
-	for _, member := range updatedMembers {
-		stateMembers = append(stateMembers, groupMemberModelForGroup{
-			UserUUID: types.StringValue(member.UserUUID),
-		})
-	}
-
 	// Assign the plan values to the state
 	stateId := getGroupResourceId(organization_uuid, createdGroup.GroupUUID)
 	plan.ID = types.StringValue(stateId)
 	plan.GroupUUID = types.StringValue(createdGroup.GroupUUID)
 	plan.Name = types.StringValue(createdGroup.Name)
-	if stateMembers != nil || len(stateMembers) > 0 {
-		plan.Members = stateMembers
-	}
+	// plan.Members = plan.Members
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, &plan)
@@ -277,16 +258,6 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Debut: show plan and state
-	resp.Diagnostics.AddWarning(
-		"Plan",
-		fmt.Sprintf("Plan: %+v", plan),
-	)
-	resp.Diagnostics.AddWarning(
-		"State",
-		fmt.Sprintf("State: %+v", state),
-	)
 
 	// Get the information from the state
 	groupUuid := plan.GroupUUID.ValueString()
