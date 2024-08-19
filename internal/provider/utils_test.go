@@ -15,7 +15,6 @@
 package provider
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -26,11 +25,11 @@ func TestIsIntegrationTestMode(t *testing.T) {
 
 	t.Setenv(integrationTestModeEnvVar, "1")
 	if !isIntegrationTestMode() {
-		t.Errorf(fmt.Sprintf("Expected: true, Got: %t", isIntegrationTestMode()))
+		t.Errorf("Expected: true, Got: %t", isIntegrationTestMode())
 	}
 	t.Setenv(integrationTestModeEnvVar, "0")
 	if isIntegrationTestMode() {
-		t.Errorf(fmt.Sprintf("Expected: false, Got: %t", isIntegrationTestMode()))
+		t.Errorf("Expected: false, Got: %t", isIntegrationTestMode())
 	}
 
 	t.Setenv(integrationTestModeEnvVar, original_value)
