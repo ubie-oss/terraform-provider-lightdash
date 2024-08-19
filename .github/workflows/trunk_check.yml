@@ -14,7 +14,9 @@
 
 name: Trunk Check
 
-on: [pull_request]
+on:
+  pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
