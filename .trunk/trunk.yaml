@@ -28,14 +28,14 @@ lint:
     - bandit@1.7.9
     - black@24.8.0
     - isort@5.13.2
-    - ruff@0.6.1
+    - ruff@0.6.2
     - actionlint@1.7.1
-    - checkov@3.2.234
+    - checkov@3.2.236
     - git-diff-check
     - gofmt@1.20.4
-    - golangci-lint@1.60.1
+    - golangci-lint@1.60.3
     - markdownlint@0.41.0
-    - osv-scanner@1.8.3
+    - osv-scanner@1.8.4
     - prettier@3.3.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
