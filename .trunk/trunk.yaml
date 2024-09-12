@@ -10,7 +10,7 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
-    - go@1.21.0
+    - go@1.23.1
     - node@18.12.1
     - python@3.10.8
 lint:
@@ -30,12 +30,12 @@ lint:
     - isort@5.13.2
     - ruff@0.6.4
     - actionlint@1.7.1
-    - checkov@3.2.250
+    - checkov@3.2.251
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.61.0
     - markdownlint@0.41.0
-    - osv-scanner@1.8.4
+    - osv-scanner@1.8.5
     - prettier@3.3.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
