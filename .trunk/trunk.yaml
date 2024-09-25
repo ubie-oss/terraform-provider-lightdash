@@ -22,25 +22,25 @@ lint:
         - tools/**
   enabled:
     - terraform@1.1.0
-    - semgrep@1.87.0
+    - semgrep@1.89.0
     - gitleaks@8.19.2
     - goimports@0.9.1
-    - bandit@1.7.9
+    - bandit@1.7.10
     - black@24.8.0
     - isort@5.13.2
-    - ruff@0.6.5
-    - actionlint@1.7.1
-    - checkov@3.2.254
+    - ruff@0.6.7
+    - actionlint@1.7.2
+    - checkov@3.2.255
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.61.0
-    - markdownlint@0.41.0
+    - markdownlint@0.42.0
     - osv-scanner@1.8.5
     - prettier@3.3.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - tflint@0.53.0
-    - trivy@0.55.1
+    - trivy@0.55.2
     - trufflehog@3.82.2
     - yamllint@1.35.1
 actions:
