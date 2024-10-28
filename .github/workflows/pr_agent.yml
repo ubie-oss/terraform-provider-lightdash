@@ -6,7 +6,10 @@ on:
     types: [opened, reopened, ready_for_review]
   issue_comment:
 
-permissions: {}
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
 
 jobs:
   pr_agent_job:
