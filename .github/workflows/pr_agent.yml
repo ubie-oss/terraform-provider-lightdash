@@ -31,5 +31,7 @@ jobs:
         uses: Codium-ai/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIG.MODEL: vertex-ai/gemini-1.5-pro
+          CONFIG.MODEL_TURBO: vertex-ai/gemini-1.5-pro
           VERTEXAI.VERTEX_PROJECT: ubie-oss-data-engineering
           VERTEXAI.VERTEX_LOCATION: asia-northeast1
