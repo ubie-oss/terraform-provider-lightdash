@@ -10,11 +10,6 @@ model = "vertex-ai/gemini-1.5-pro"
 model_turbo = "vertex-ai/gemini-1.5-pro"
 fallback_models = ["vertex-ai/gemini-1.5-pro"]
 
-# SEE https://qodo-merge-docs.qodo.ai/usage-guide/changing_a_model/#vertex-ai
-[vertexai]
-vertex_project = "ubie-oss-data-engineering"
-vertex_location = "asia-northeast1"
-
 [ignore]
 glob = ['*.json', '*.md']
 
