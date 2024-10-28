@@ -6,6 +6,8 @@ on:
     types: [opened, reopened, ready_for_review]
   issue_comment:
 
+permissions: {}
+
 jobs:
   pr_agent_job:
     if: ${{ github.event.sender.type != 'Bot' }}
