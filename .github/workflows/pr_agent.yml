@@ -3,13 +3,8 @@ name: PR Agent
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
+    types: [opened, edited, reopened, ready_for_review, synchronize]
   issue_comment:
-  # PR Agent is triggered by pushed commits, as development of the repos isn't so active.
-  # So, the cost of running PR Agent on every push isn't so high.
-  push:
-    branches-ignore:
-      - main
 
 permissions:
   contents: write
@@ -22,8 +17,7 @@ concurrency:
 
 jobs:
   pr_agent_job:
-    # event type is pull_request and sender is not a bot
-    if: ${{ github.event_name == 'pull_request' && github.event.sender.type != 'Bot' }}
+    if: ${{ github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
