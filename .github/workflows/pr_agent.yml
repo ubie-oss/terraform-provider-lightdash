@@ -23,7 +23,7 @@ concurrency:
 jobs:
   pr_agent_job:
     # event type is pull_request and sender is not a bot
-    if: ${{ github.event.action == 'pull_request' && github.event.sender.type != 'Bot' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
