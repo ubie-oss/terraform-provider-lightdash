@@ -21,10 +21,12 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
-func GetProjectSchedulerSettings(
-	client *api.Client,
-	projectUuid string) (*models.ProjectSchedulerSettings, error) {
+type ProjectSchedulerSettingsService struct {
+	client      *api.Client
+	projectUuid string
+}
 
+func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings() (*models.ProjectSchedulerSettings, error) {
 	// Get the project
 	project, err := client.GetProjectV1(projectUuid)
 	if err != nil {
@@ -37,4 +39,14 @@ func GetProjectSchedulerSettings(
 	}
 
 	return schedulerSettings, nil
+}
+
+func (s *ProjectSchedulerSettingsService) UpdateProjectSchedulerSettings(projectSchedulerSettings *models.ProjectSchedulerSettings) error {
+	// Update the project scheduler settings
+	var schedulerTimezone = projectSchedulerSettings.SchedulerTimezone
+	_, err := s.client.UpdateSchedulerSettingsV1(s.projectUuid, &schedulerTimezone)
+	if err != nil {
+		return fmt.Errorf("failed to update project scheduler settings: %w", err)
+	}
+	return nil
 }
