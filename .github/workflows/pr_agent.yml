@@ -1,5 +1,3 @@
-# checkov:skip=CKV2_GHA_1: Suppressing the check for GitHub Actions workflow
-
 # SEE https://qodo-merge-docs.qodo.ai/installation/github/
 name: PR Agent
 
@@ -16,6 +14,7 @@ jobs:
   pr_agent_job:
     if: ${{ github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-latest
+    # checkov:skip=CKV2_GHA_1: Suppressing the check for GitHub Actions workflow
     permissions:
       contents: write
       id-token: write
