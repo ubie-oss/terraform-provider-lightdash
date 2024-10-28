@@ -1,0 +1,39 @@
+# https://pr-agent-docs.codium.ai/
+# https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml
+
+[config]
+ignore_pr_labels = ['renovate']
+# models
+model = "vertex_ai/gemini-1.5-pro"
+model_turbo = "vertex_ai/gemini-1.5-pro"
+fallback_models = ["vertex_ai/gemini-1.5-pro"]
+
+[ignore]
+glob = ['*.json', '*.md']
+
+[pr_description]
+generate_ai_title = true
+final_update_message = true
+extra_instructions = """\
+"""
+
+[pr_reviewer]
+require_tests_review = true
+require_can_be_split_review = true
+num_code_suggestions = 0
+inline_code_comments = false
+enable_auto_approval = false
+maximal_review_effort = 5
+extra_instructions = """\
+"""
+
+[pr_questions]
+enable_help_text = true
+
+[pr_code_suggestions]
+num_code_suggestions = 0
+rank_suggestions = false
+commitable_code_suggestions = false
+demand_code_suggestions_self_review = false
+extra_instructions = """\
+"""
