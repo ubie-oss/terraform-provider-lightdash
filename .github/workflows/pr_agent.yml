@@ -31,3 +31,5 @@ jobs:
         uses: Codium-ai/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERTEXAI.VERTEX_PROJECT: ubie-oss-data-engineering
+          VERTEXAI.VERTEX_LOCATION: asia-northeast1
