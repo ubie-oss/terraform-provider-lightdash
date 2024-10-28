@@ -6,11 +6,6 @@ on:
     types: [opened, edited, reopened, ready_for_review, synchronize]
   issue_comment:
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
