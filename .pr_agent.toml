@@ -1,14 +1,12 @@
 # https://pr-agent-docs.codium.ai/
 # https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml
 
-
-
 [config]
 ignore_pr_labels = ['renovate']
 # models
-model = "vertex-ai/gemini-1.5-pro"
-model_turbo = "vertex-ai/gemini-1.5-pro"
-fallback_models = ["vertex-ai/gemini-1.5-pro"]
+model = "vertex_ai/gemini-1.5-pro"
+model_turbo = "vertex_ai/gemini-1.5-pro"
+fallback_models = ["vertex_ai/gemini-1.5-pro"]
 
 [ignore]
 glob = ['*.json', '*.md']
