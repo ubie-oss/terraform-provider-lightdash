@@ -3,7 +3,10 @@ name: PR Agent
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, synchronize]
+  push:
+    branches-ignore:
+      - main
   issue_comment:
 
 permissions:
@@ -13,7 +16,8 @@ permissions:
 
 jobs:
   pr_agent_job:
-    if: ${{ github.event.sender.type != 'Bot' }}
+    # event type is pull_request and sender is not a bot
+    if: ${{ github.event.action == 'pull_request' && github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
