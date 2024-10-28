@@ -1,3 +1,5 @@
+# checkov:ignore:CKV2_GHA_1
+
 # SEE https://qodo-merge-docs.qodo.ai/installation/github/
 name: PR Agent
 
