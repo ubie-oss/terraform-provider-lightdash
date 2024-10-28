@@ -4,15 +4,21 @@ name: PR Agent
 on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
+  issue_comment:
+  # PR Agent is triggered by pushed commits, as development of the repos isn't so active.
+  # So, the cost of running PR Agent on every push isn't so high.
   push:
     branches-ignore:
       - main
-  issue_comment:
 
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   pr_agent_job:
