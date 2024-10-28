@@ -26,27 +26,36 @@ type ProjectSchedulerSettingsService struct {
 	projectUuid string
 }
 
-func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings() (*models.ProjectSchedulerSettings, error) {
+func NewProjectSchedulerSettingsService(client *api.Client, projectUuid string) *ProjectSchedulerSettingsService {
+	return &ProjectSchedulerSettingsService{
+		client:      client,
+		projectUuid: projectUuid,
+	}
+}
+
+func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings(projectUuid string) (*models.ProjectSchedulerSettings, error) {
 	// Get the project
-	project, err := client.GetProjectV1(projectUuid)
+	project, err := s.client.GetProjectV1(projectUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project (%s): %w", projectUuid, err)
 	}
 
 	// Get the project scheduler settings
 	schedulerSettings := &models.ProjectSchedulerSettings{
-		SchedulerTimezone: &project.SchedulerTimezone,
+		SchedulerTimezone: project.SchedulerTimezone,
 	}
 
 	return schedulerSettings, nil
 }
 
-func (s *ProjectSchedulerSettingsService) UpdateProjectSchedulerSettings(projectSchedulerSettings *models.ProjectSchedulerSettings) error {
+func (s *ProjectSchedulerSettingsService) UpdateProjectSchedulerSettings(
+	projectSchedulerSettings *models.ProjectSchedulerSettings) error {
+
 	// Update the project scheduler settings
 	var schedulerTimezone = projectSchedulerSettings.SchedulerTimezone
-	_, err := s.client.UpdateSchedulerSettingsV1(s.projectUuid, &schedulerTimezone)
+	_, err := s.client.UpdateSchedulerSettingsV1(s.projectUuid, schedulerTimezone)
 	if err != nil {
-		return fmt.Errorf("failed to update project scheduler settings: %w", err)
+		return fmt.Errorf("failed to update project scheduler settings in project (%s) with timezone (%s): %w", s.projectUuid, schedulerTimezone, err)
 	}
 	return nil
 }

@@ -30,4 +30,4 @@ data "lightdash_project_scheduler_settings" "test" {
 ### Read-Only
 
 - `id` (String) Data source identifier
-- `timezone` (String) Timezone for the Lightdash project scheduler.
+- `scheduler_timezone` (String) Timezone for the Lightdash project scheduler.

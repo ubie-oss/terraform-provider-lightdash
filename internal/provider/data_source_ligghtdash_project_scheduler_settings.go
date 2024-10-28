@@ -42,10 +42,10 @@ type projectSchedulerSettingsDataSource struct {
 
 // projectSchedulerSettingsDataSourceModel describes the data source data model.
 type projectSchedulerSettingsDataSourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String `tfsdk:"project_uuid"`
-	Timezone         types.String `tfsdk:"timezone"`
+	ID                types.String `tfsdk:"id"`
+	OrganizationUUID  types.String `tfsdk:"organization_uuid"`
+	ProjectUUID       types.String `tfsdk:"project_uuid"`
+	SchedulerTimezone types.String `tfsdk:"scheduler_timezone"`
 }
 
 // Metadata defines the metadata for the data source.
@@ -71,7 +71,7 @@ func (d *projectSchedulerSettingsDataSource) Schema(ctx context.Context, req dat
 				Description: "Project UUID of the Lightdash project.",
 				Required:    true,
 			},
-			"timezone": schema.StringAttribute{
+			"scheduler_timezone": schema.StringAttribute{
 				Description: "Timezone for the Lightdash project scheduler.",
 				Required:    false,
 				Computed:    true,
@@ -108,7 +108,8 @@ func (d *projectSchedulerSettingsDataSource) Read(ctx context.Context, req datas
 	}
 
 	// Fetch scheduler settings from the API
-	settings, err := services.GetProjectSchedulerSettings(d.client, state.ProjectUUID.ValueString())
+	schedulerSettingsService := services.NewProjectSchedulerSettingsService(d.client, state.ProjectUUID.ValueString())
+	settings, err := schedulerSettingsService.GetProjectSchedulerSettings(state.ProjectUUID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Unable to Read Lightdash project scheduler settings (project UUID: %s)", state.ProjectUUID.ValueString()),
@@ -118,7 +119,7 @@ func (d *projectSchedulerSettingsDataSource) Read(ctx context.Context, req datas
 	}
 
 	// Set the state with fetched settings
-	state.Timezone = types.StringValue(settings.GetSchedulerTimezone())
+	state.SchedulerTimezone = types.StringValue(settings.GetSchedulerTimezone()) // Change to use the correct field
 
 	// Set resource ID
 	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/scheduler_settings",

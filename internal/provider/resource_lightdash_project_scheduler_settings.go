@@ -24,8 +24,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -112,10 +113,17 @@ func (r *projectSchedulerSettingsResource) Create(ctx context.Context, req resou
 
 	// Create new scheduler settings
 	organization_uuid := plan.OrganizationUUID.ValueString()
-	settings_name := plan.Name.ValueString()
-	enabled := plan.Enabled.ValueBool()
+	project_uuid := plan.ProjectUUID.ValueString()
+	scheduler_timezone := plan.SchedulerTimezone.ValueString()
 
-	createdSettings, err := r.client.CreateSchedulerSettingsV1(organization_uuid, settings_name, enabled)
+	schedulerSettingsService := services.NewProjectSchedulerSettingsService(
+		r.client,
+		project_uuid,
+	)
+
+	err := schedulerSettingsService.UpdateProjectSchedulerSettings(
+		&models.ProjectSchedulerSettings{SchedulerTimezone: scheduler_timezone},
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating scheduler settings",
@@ -125,11 +133,11 @@ func (r *projectSchedulerSettingsResource) Create(ctx context.Context, req resou
 	}
 
 	// Assign the plan values to the state
-	stateId := getSchedulerSettingsResourceId(organization_uuid, createdSettings.SettingsUUID)
+	stateId := getSchedulerSettingsResourceId(organization_uuid, project_uuid)
 	plan.ID = types.StringValue(stateId)
 	plan.OrganizationUUID = types.StringValue(organization_uuid)
-	plan.ProjectUUID = types.StringValue(createdSettings.ProjectUUID)
-	plan.SchedulerTimezone = types.StringValue(createdSettings.SchedulerTimezone)
+	plan.ProjectUUID = types.StringValue(project_uuid)
+	plan.SchedulerTimezone = types.StringValue(scheduler_timezone)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, &plan)
@@ -142,7 +150,8 @@ func (r *projectSchedulerSettingsResource) Create(ctx context.Context, req resou
 func (r *projectSchedulerSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Declare variables to import from state
 	var organizationUuid string
-	var settingsUuid string
+	var projectUuid string
+	var schedulerTimezone string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organizationUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("scheduler_timezone"), &schedulerTimezone)...)
@@ -156,7 +165,11 @@ func (r *projectSchedulerSettingsResource) Read(ctx context.Context, req resourc
 	}
 
 	// Get scheduler settings
-	settings, err := services.GetProjectSchedulerSettings(r.client, projectUuid)
+	schedulerSettingsService := services.NewProjectSchedulerSettingsService(
+		r.client,
+		projectUuid,
+	)
+	settings, err := schedulerSettingsService.GetProjectSchedulerSettings(projectUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading scheduler settings",
@@ -166,8 +179,8 @@ func (r *projectSchedulerSettingsResource) Read(ctx context.Context, req resourc
 	}
 
 	// Set the state values
-	state.OrganizationUUID = types.StringValue(settings.OrganizationUUID)
-	state.ProjectUUID = types.StringValue(settings.ProjectUUID)
+	state.OrganizationUUID = types.StringValue(state.OrganizationUUID.ValueString())
+	state.ProjectUUID = types.StringValue(state.ProjectUUID.ValueString())
 	state.SchedulerTimezone = types.StringValue(settings.SchedulerTimezone)
 
 	// Set refreshed state
@@ -192,18 +205,24 @@ func (r *projectSchedulerSettingsResource) Update(ctx context.Context, req resou
 	schedulerTimezone := plan.SchedulerTimezone.ValueString()
 
 	// Update the scheduler settings
-	updatedSettings, err := r.client.UpdateSchedulerSettingsV1(projectUuid, schedulerTimezone)
+	schedulerSettingsService := services.NewProjectSchedulerSettingsService(
+		r.client,
+		projectUuid,
+	)
+	err := schedulerSettingsService.UpdateProjectSchedulerSettings(
+		&models.ProjectSchedulerSettings{SchedulerTimezone: schedulerTimezone},
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating scheduler settings",
-			fmt.Sprintf("Could not update scheduler settings with UUID '%s' and name '%s', unexpected error: %s", plan.SettingsUUID, plan.Name, err.Error()),
+			fmt.Sprintf("Could not update scheduler settings for project UUID '%s', unexpected error: %s", projectUuid, err.Error()),
 		)
 		return
 	}
 
 	// Update the state
-	plan.ProjectUUID = types.StringValue(updatedSettings.ProjectUUID)
-	plan.SchedulerTimezone = types.StringValue(updatedSettings.SchedulerTimezone)
+	plan.ProjectUUID = types.StringValue(projectUuid)
+	plan.SchedulerTimezone = types.StringValue(schedulerTimezone)
 
 	// Set state
 	diags := resp.State.Set(ctx, &plan)
@@ -222,14 +241,19 @@ func (r *projectSchedulerSettingsResource) Delete(ctx context.Context, req resou
 		return
 	}
 
-	// Delete existing scheduler settings
-	settingsUuid := state.SettingsUUID.ValueString()
-	tflog.Info(ctx, fmt.Sprintf("Deleting scheduler settings %s", projectUuid))
-	err := r.client.DeleteSchedulerSettingsV1(projectUuid)
+	// Set default values
+	defaultProjectSchedulerTimezone := models.DefaultProjectSchedulerTimezone
+	schedulerSettingsService := services.NewProjectSchedulerSettingsService(
+		r.client,
+		state.ProjectUUID.ValueString(),
+	)
+	err := schedulerSettingsService.UpdateProjectSchedulerSettings(
+		&models.ProjectSchedulerSettings{SchedulerTimezone: defaultProjectSchedulerTimezone},
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting scheduler settings",
-			"Could not delete scheduler settings, unexpected error: "+err.Error(),
+			fmt.Sprintf("Could not delete scheduler settings for project UUID '%s', unexpected error: %s", state.ProjectUUID.ValueString(), err.Error()),
 		)
 		return
 	}
@@ -249,7 +273,11 @@ func (r *projectSchedulerSettingsResource) ImportState(ctx context.Context, req 
 	projectUuid := extracted_strings[1]
 
 	// Get the imported scheduler settings
-	importedSettings, err := services.GetProjectSchedulerSettings(r.client, projectUuid)
+	schedulerSettingsService := services.NewProjectSchedulerSettingsService(
+		r.client,
+		projectUuid,
+	)
+	importedSettings, err := schedulerSettingsService.GetProjectSchedulerSettings(projectUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting scheduler settings",
@@ -260,8 +288,8 @@ func (r *projectSchedulerSettingsResource) ImportState(ctx context.Context, req 
 
 	// Set the resource attributes
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), projectUuid)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), importedSettings.OrganizationUUID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), importedSettings.ProjectUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), organization_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUuid)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("scheduler_timezone"), importedSettings.SchedulerTimezone)...)
 }
 
@@ -272,7 +300,7 @@ func getSchedulerSettingsResourceId(organization_uuid string, settings_uuid stri
 
 func extractSchedulerSettingsResourceId(input string) ([]string, error) {
 	// Extract the captured groups
-	pattern := `^organizations/([^/]+)/scheduler_settings/([^/]+)$`
+	pattern := `^organizations/([^/]+)/projects/([^/]+)/scheduler_settings$`
 	groups, err := extractStrings(input, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract resource ID: %w", err)
@@ -280,6 +308,6 @@ func extractSchedulerSettingsResourceId(input string) ([]string, error) {
 
 	// Return the captured strings
 	organization_uuid := groups[0]
-	settings_uuid := groups[1]
-	return []string{organization_uuid, settings_uuid}, nil
+	project_uuid := groups[1]
+	return []string{organization_uuid, project_uuid}, nil
 }

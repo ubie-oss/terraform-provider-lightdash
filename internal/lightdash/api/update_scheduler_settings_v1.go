@@ -21,18 +21,18 @@ import (
 	"net/http"
 )
 
-type UpdateSchedulerSettingsRequest struct {
-	SchedulerTimezone string `json:"schedulerTimezone" validate:"required"`
+type UpdateSchedulerSettingsV1Request struct {
+	SchedulerTimezone string `json:"schedulerTimezone"`
 }
 
-type UpdateSchedulerSettingsResponse struct {
+type UpdateSchedulerSettingsV1Response struct {
 	Results interface{} `json:"results,omitempty"`
 	Status  string      `json:"status"`
 }
 
-func (c *Client) UpdateSchedulerSettings(projectUuid string, schedulerTimezone string) (*UpdateSchedulerSettingsResponse, error) {
+func (c *Client) UpdateSchedulerSettingsV1(projectUuid string, schedulerTimezone string) (*UpdateSchedulerSettingsV1Response, error) {
 	// Create the request body
-	data := UpdateSchedulerSettingsRequest{
+	data := UpdateSchedulerSettingsV1Request{
 		SchedulerTimezone: schedulerTimezone,
 	}
 
@@ -50,11 +50,11 @@ func (c *Client) UpdateSchedulerSettings(projectUuid string, schedulerTimezone s
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute request for updating scheduler settings: %w", err)
+		return nil, fmt.Errorf("failed to execute request for updating scheduler settings in project (%s) with timezone (%s): %w", projectUuid, schedulerTimezone, err)
 	}
 
 	// Marshal the response
-	response := UpdateSchedulerSettingsResponse{}
+	response := UpdateSchedulerSettingsV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response body for updating scheduler settings: %w", err)

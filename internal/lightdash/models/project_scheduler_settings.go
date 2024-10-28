@@ -15,18 +15,18 @@
 package models
 
 // The default timezone for the scheduler
-const DefaultSchedulerTimezone = "UTC"
+const DefaultProjectSchedulerTimezone = "UTC"
 
 // SchedulerSettings represents the scheduler settings for a project
 type ProjectSchedulerSettings struct {
-	SchedulerTimezone *string `json:"schedulerTimezone" validate:"omitempty"`
+	SchedulerTimezone string `json:"schedulerTimezone" validate:"required"`
 }
 
 // GetSchedulerTimezone returns the scheduler timezone for the project
 func (s *ProjectSchedulerSettings) GetSchedulerTimezone() string {
 	// If the scheduler timezone is not set, return the default
-	if s.SchedulerTimezone == nil {
-		return DefaultSchedulerTimezone
+	if s.SchedulerTimezone == "" {
+		return DefaultProjectSchedulerTimezone
 	}
-	return *s.SchedulerTimezone
+	return s.SchedulerTimezone
 }
