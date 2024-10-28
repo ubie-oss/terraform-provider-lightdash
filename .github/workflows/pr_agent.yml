@@ -20,12 +20,14 @@ jobs:
       id-token: write
       issues: write
       pull-requests: write
+    timeout-minutes: 5
     name: Run pr agent on every pull request, respond to user comments
     steps:
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/131500153501/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-oidc-provider
           service_account: ai-code-review@ubie-oss-data-engineering.iam.gserviceaccount.com
+          access_token_lifetime: 300
       - name: PR Agent action step
         id: pragent
         uses: Codium-ai/pr-agent@main

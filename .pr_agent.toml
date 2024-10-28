@@ -1,8 +1,6 @@
 # https://pr-agent-docs.codium.ai/
 # https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml
 
-
-
 [config]
 ignore_pr_labels = ['renovate']
 # models
