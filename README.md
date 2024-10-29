@@ -100,3 +100,11 @@ make testacc
 ## How to Contribute
 
 Contributions to the `terraform-provider-lightdash` are welcome! Check out our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get involved.
+
+## Cautions
+
+### Group-level space access control is not recommended
+
+We advise against using group-level space access control at this time, as it requires further improvements to ensure optimal functionality.
+
+<https://github.com/lightdash/lightdash/issues/10883>
