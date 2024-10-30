@@ -22,3 +22,5 @@ jobs:
       # SEE https://github.com/trunk-io/trunk-action
       - name: Trunk Upgrade
         uses: trunk-io/trunk-action/upgrade@v1
+        with:
+          signoff: true
