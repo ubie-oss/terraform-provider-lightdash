@@ -22,7 +22,7 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
-type Pagination struct {
+type MembersPagination struct {
 	Page           int `json:"page"`
 	PageSize       int `json:"pageSize"`
 	TotalPageCount int `json:"totalPageCount"`
@@ -41,7 +41,7 @@ type GetOrganizationMembersV1Results struct {
 
 type GetOrganizationMembersV1Response struct {
 	Results struct {
-		Pagination Pagination                        `json:"pagination"`
+		Pagination MembersPagination                 `json:"pagination"`
 		Data       []GetOrganizationMembersV1Results `json:"data"`
 	} `json:"results,omitempty"`
 	Status string `json:"status"`
