@@ -139,15 +139,19 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 	}
 
 	// Map response body to model
+	newMembers := []organizationMemberModel{}
 	for _, member := range members {
 		fetchedMember := organizationMemberModel{
 			UserUuid:         types.StringValue(member.UserUUID),
 			Email:            types.StringValue(member.Email),
 			OrganizationRole: member.OrganizationRole,
 		}
-		state.Members = append(state.Members, fetchedMember)
+		newMembers = append(newMembers, fetchedMember)
 	}
+
+	// Set state
 	state.OrganizationUuid = types.StringValue(organization.OrganizationUUID)
+	state.Members = newMembers
 
 	// Set resource ID
 	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/users", organization.OrganizationUUID))
