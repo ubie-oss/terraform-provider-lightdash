@@ -20,6 +20,13 @@ import (
 	"net/http"
 )
 
+type GetOrganizationGroupsV1Pagination struct {
+	Page           int `json:"page"`
+	PageSize       int `json:"pageSize"`
+	TotalResults   int `json:"totalResults"`
+	TotalPageCount int `json:"totalPageCount"`
+}
+
 type GetOrganizationGroupsV1Results struct {
 	OrganizationUUID string `json:"organizationUuid"`
 	Name             string `json:"name"`
@@ -28,8 +35,11 @@ type GetOrganizationGroupsV1Results struct {
 }
 
 type GetOrganizationGroupsV1Response struct {
-	Results []GetOrganizationGroupsV1Results `json:"results,omitempty"`
-	Status  string                           `json:"status"`
+	Results struct {
+		Pagination GetOrganizationGroupsV1Pagination `json:"pagination"`
+		Data       []GetOrganizationGroupsV1Results  `json:"data"`
+	} `json:"results,omitempty"`
+	Status string `json:"status"`
 }
 
 func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, error) {
@@ -50,7 +60,7 @@ func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, er
 	}
 
 	// Validate the response results
-	for _, group := range response.Results {
+	for _, group := range response.Results.Data {
 		if group.OrganizationUUID == "" {
 			return nil, fmt.Errorf("organization UUID is empty")
 		}
@@ -62,5 +72,5 @@ func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, er
 		}
 	}
 
-	return response.Results, nil
+	return response.Results.Data, nil
 }
