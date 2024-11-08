@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  groups = {
+    for group in data.lightdash_organization_groups.test.groups :
+    group.group_uuid => group...
+  }
+}
+
 data "lightdash_group_members" "test" {
   for_each = (
     data.lightdash_organization_groups.test.groups != null
-    ? { for group in data.lightdash_organization_groups.test.groups
-    : group.group_uuid => group } : {}
+    ? local.groups : {}
   )
 
   organization_uuid = data.lightdash_projects.test.organization_uuid

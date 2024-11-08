@@ -20,20 +20,35 @@ import (
 	"net/http"
 )
 
+type GroupsPagination struct {
+	Page           float64 `json:"page"`
+	PageSize       float64 `json:"pageSize"`
+	TotalResults   float64 `json:"totalResults"`
+	TotalPageCount float64 `json:"totalPageCount"`
+}
+
 type GetOrganizationGroupsV1Results struct {
-	OrganizationUUID string `json:"organizationUuid"`
-	Name             string `json:"name"`
-	GroupUUID        string `json:"uuid"`
-	CreatedAt        string `json:"createdAt"`
+	OrganizationUUID string   `json:"organizationUuid"`
+	Name             string   `json:"name"`
+	GroupUUID        string   `json:"uuid"`
+	CreatedAt        string   `json:"createdAt"`
+	MemberUUIDs      []string `json:"memberUuids,omitempty"`
+	Members          []struct {
+		UserUUID string `json:"userUuid"`
+		Email    string `json:"email"`
+	} `json:"members,omitempty"`
 }
 
 type GetOrganizationGroupsV1Response struct {
-	Results []GetOrganizationGroupsV1Results `json:"results,omitempty"`
-	Status  string                           `json:"status"`
+	Results struct {
+		Pagination GroupsPagination                 `json:"pagination"`
+		Data       []GetOrganizationGroupsV1Results `json:"data"`
+	} `json:"results"`
+	Status string `json:"status"`
 }
 
-func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org/groups", c.HostUrl), nil)
+func (c *Client) GetOrganizationGroupsV1(page float64, pageSize float64, includeMembers float64, searchQuery string) ([]GetOrganizationGroupsV1Results, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/org/groups?page=%f&pageSize=%f&includeMembers=%f&searchQuery=%s", c.HostUrl, page, pageSize, includeMembers, searchQuery), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating GET request for organization groups: %v", err)
 	}
@@ -50,7 +65,7 @@ func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, er
 	}
 
 	// Validate the response results
-	for _, group := range response.Results {
+	for _, group := range response.Results.Data {
 		if group.OrganizationUUID == "" {
 			return nil, fmt.Errorf("organization UUID is empty")
 		}
@@ -62,5 +77,5 @@ func (c *Client) GetOrganizationGroupsV1() ([]GetOrganizationGroupsV1Results, er
 		}
 	}
 
-	return response.Results, nil
+	return response.Results.Data, nil
 }

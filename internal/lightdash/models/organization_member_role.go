@@ -18,6 +18,7 @@ type OrganizationMemberRole string
 
 // List of OrganizationMemberRole
 const (
+	DEFAULT_ORGANIZATION_MEMBER_ROLE     OrganizationMemberRole = ORGANIZATION_MEMBER_ROLE
 	ORGANIZATION_MEMBER_ROLE             OrganizationMemberRole = "member"
 	ORGANIZATION_VIEWER_ROLE             OrganizationMemberRole = "viewer"
 	ORGANIZATION_INTERACTIVE_VIEWER_ROLE OrganizationMemberRole = "interactive_viewer"
