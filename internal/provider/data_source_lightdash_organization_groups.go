@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -115,18 +116,16 @@ func (d *organizationGroupsDataSource) Configure(ctx context.Context, req dataso
 func (d *organizationGroupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state organizationGroupsDataSourceModel
 
-	// Get information of the organization
-	organization, err := d.client.GetMyOrganizationV1()
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get organization",
-			err.Error(),
-		)
+	// Retrieve the organization UUID from the state
+	diags := req.Config.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Get all groups in the organization
-	groups, err := d.client.GetOrganizationGroupsV1()
+	// Get all groups in the organization using the service
+	orgGroupsService := services.NewOrganizationGroupsService(d.client)
+	groups, err := orgGroupsService.GetOrganizationGroups()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization groups",
@@ -134,23 +133,22 @@ func (d *organizationGroupsDataSource) Read(ctx context.Context, req datasource.
 		)
 		return
 	}
-
-	// Map response body to model
+	fetchedGroups := []organizationGroupModel{}
 	for _, group := range groups {
 		fetchedGroup := organizationGroupModel{
 			GroupUuid: types.StringValue(group.GroupUUID),
 			Name:      types.StringValue(group.Name),
 			CreatedAt: types.StringValue(group.CreatedAt),
 		}
-		state.Groups = append(state.Groups, fetchedGroup)
+		fetchedGroups = append(fetchedGroups, fetchedGroup)
 	}
-	state.OrganizationUuid = types.StringValue(organization.OrganizationUUID)
 
 	// Set resource ID
-	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/groups", organization.OrganizationUUID))
+	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/groups", state.OrganizationUuid.ValueString()))
+	state.Groups = fetchedGroups
 
 	// Set state
-	diags := resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

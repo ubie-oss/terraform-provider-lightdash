@@ -461,7 +461,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Get exiting groups in the organizations
 	// NOTE: We check if the group exists in the organization before adding access to the space,
 	//       because the group in Plan state can be manually deleted in the organization.
-	allGroupsInOrganization, err := r.client.GetOrganizationGroupsV1()
+	organizationGroupsService := services.NewOrganizationGroupsService(r.client)
+	allGroupsInOrganization, err := organizationGroupsService.GetOrganizationGroups()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting groups",
