@@ -41,7 +41,6 @@ func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganiza
 	if len(s.members) == 0 {
 		page := 1
 		pageSize := 100
-		memberMap := make(map[string]api.GetOrganizationMembersV1Results)
 		for {
 			// Fetch the members from the organization using the API client
 			members, err := s.client.GetOrganizationMembersV1(0, pageSize, page, "")
@@ -51,17 +50,10 @@ func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganiza
 			if len(members) == 0 {
 				break
 			}
-			for _, member := range members {
-				memberMap[member.UserUUID] = member
-			}
+			s.members = append(s.members, members...)
 			page++
 		}
-		// Convert map values to slice to ensure uniqueness
-		for _, member := range memberMap {
-			s.members = append(s.members, member)
-		}
 	}
-
 	// Return the list of members
 	return s.members, nil
 }
