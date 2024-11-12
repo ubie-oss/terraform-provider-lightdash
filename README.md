@@ -89,7 +89,7 @@ If you're interested in contributing to the development of the Lightdash provide
 
 To compile the provider, run `go install`. This will build the provider binary and place it in the `$GOPATH/bin` directory.
 
-To update or generate new documentation, use the `go generate` command.
+To update or generate new documentation, use the `make gen-docs` command.
 
 For running the full suite of Acceptance tests, which create actual resources and may incur costs, execute:
 

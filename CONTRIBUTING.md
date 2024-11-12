@@ -93,7 +93,7 @@ To publish the provider to the Terraform Registry, a series of steps must be fol
 For instance, we need to:
 
 - Register a PGP key to the Terraform Registry
-- Register GtiHub Actions' secrets
+- Register GitHub Actions' secrets
 
 The official tutorials describes the steps in detail.
 
