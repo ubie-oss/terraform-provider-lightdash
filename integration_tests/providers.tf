@@ -13,16 +13,16 @@
 # limitations under the License.
 
 terraform {
-  required_version = "1.1.0"
+  required_version = ">=1.1.0"
 
   # Please reconfigure the backend for your own environment
   # TODO set the backend configuration with a command line option of Terraform
-  backend "gcs" {
-    bucket = "ubie-oss-data-engineering-terraform-provider-lightdash"
-    prefix = "state"
-    # Service account impersonation is required to access the GCS bucket
-    impersonate_service_account = "terraform-provider-lightdash@ubie-oss-data-engineering.iam.gserviceaccount.com"
-  }
+  # backend "gcs" {
+  #   bucket = "ubie-oss-data-engineering-terraform-provider-lightdash"
+  #   prefix = "state"
+  #   # Service account impersonation is required to access the GCS bucket
+  #   impersonate_service_account = "terraform-provider-lightdash@ubie-oss-data-engineering.iam.gserviceaccount.com"
+  # }
 
   required_providers {
     # tflint-ignore: terraform_required_providers

@@ -18,19 +18,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
-	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -51,28 +50,28 @@ type projectResource struct {
 
 // projectResourceModel describes the resource data model.
 type projectResourceModel struct {
-	ID                                                 types.String  `tfsdk:"id"`
-	OrganizationUUID                                   types.String  `tfsdk:"organization_uuid"`
-	ProjectUUID                                        types.String  `tfsdk:"project_uuid"`
-	Name                                               types.String  `tfsdk:"name"`
-	Type                                               types.String  `tfsdk:"type"`
-	DbtConnectionType                                  types.String  `tfsdk:"dbt_connection_type"`
-	DbtConnectionRepository                            types.String  `tfsdk:"dbt_connection_repository"`
-	DbtConnectionBranch                                types.String  `tfsdk:"dbt_connection_branch"`
-	DbtConnectionProjectSubPath                        types.String  `tfsdk:"dbt_connection_project_sub_path"`
-	DbtConnectionHostDomain                            types.String  `tfsdk:"dbt_connection_host_domain"`
-	WarehouseConnectionType                            types.String  `tfsdk:"warehouse_connection_type"`
-	DatabricksConnectionServerHostName                 types.String  `tfsdk:"databricks_connection_server_host_name"`
-	DatabricksConnectionHTTPPath                       types.String  `tfsdk:"databricks_connection_http_path"`
-	DatabricksConnectionPersonalAccessToken            types.String  `tfsdk:"databricks_connection_personal_access_token"`
-	DatabricksConnectionCatalog                        types.String  `tfsdk:"databricks_connection_catalog"`
-	SnowflakeWarehouseConnectionAccount                types.String  `tfsdk:"snowflake_warehouse_connection_account"`
-	SnowflakeWarehouseConnectionRole                   types.String  `tfsdk:"snowflake_warehouse_connection_role"`
-	SnowflakeWarehouseConnectionDatabase               types.String  `tfsdk:"snowflake_warehouse_connection_database"`
-	SnowflakeWarehouseConnectionSchema                 types.String  `tfsdk:"snowflake_warehouse_connection_schema"`
-	SnowflakeWarehouseConnectionWarehouse              types.String  `tfsdk:"snowflake_warehouse_connection_warehouse"`
-	SnowflakeWarehouseConnectionThreads                types.Integer `tfsdk:"snowflake_warehouse_connection_threads"`
-	SnowflakeWarehouseConnectionClientSessionKeepAlive types.Bool    `tfsdk:"snowflake_warehouse_connection_client_session_keep_alive"`
+	ID                                                 types.String         `tfsdk:"id"`
+	OrganizationUUID                                   types.String         `tfsdk:"organization_uuid"`
+	ProjectUUID                                        types.String         `tfsdk:"project_uuid"`
+	Name                                               types.String         `tfsdk:"name"`
+	Type                                               models.ProjectType   `tfsdk:"type"`
+	DbtConnectionType                                  types.String         `tfsdk:"dbt_connection_type"`
+	DbtConnectionRepository                            types.String         `tfsdk:"dbt_connection_repository"`
+	DbtConnectionBranch                                types.String         `tfsdk:"dbt_connection_branch"`
+	DbtConnectionProjectSubPath                        types.String         `tfsdk:"dbt_connection_project_sub_path"`
+	DbtConnectionHostDomain                            types.String         `tfsdk:"dbt_connection_host_domain"`
+	WarehouseConnectionType                            models.WarehouseType `tfsdk:"warehouse_connection_type"`
+	DatabricksConnectionServerHostName                 types.String         `tfsdk:"databricks_connection_server_host_name"`
+	DatabricksConnectionHTTPPath                       types.String         `tfsdk:"databricks_connection_http_path"`
+	DatabricksConnectionPersonalAccessToken            types.String         `tfsdk:"databricks_connection_personal_access_token"`
+	DatabricksConnectionCatalog                        types.String         `tfsdk:"databricks_connection_catalog"`
+	SnowflakeWarehouseConnectionAccount                types.String         `tfsdk:"snowflake_warehouse_connection_account"`
+	SnowflakeWarehouseConnectionRole                   types.String         `tfsdk:"snowflake_warehouse_connection_role"`
+	SnowflakeWarehouseConnectionDatabase               types.String         `tfsdk:"snowflake_warehouse_connection_database"`
+	SnowflakeWarehouseConnectionSchema                 types.String         `tfsdk:"snowflake_warehouse_connection_schema"`
+	SnowflakeWarehouseConnectionWarehouse              types.String         `tfsdk:"snowflake_warehouse_connection_warehouse"`
+	SnowflakeWarehouseConnectionThreads                types.Int32          `tfsdk:"snowflake_warehouse_connection_threads"`
+	SnowflakeWarehouseConnectionClientSessionKeepAlive types.Bool           `tfsdk:"snowflake_warehouse_connection_client_session_keep_alive"`
 }
 
 type projectMemberModelForProject struct {
@@ -117,8 +116,10 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"dbt_connection_type": schema.StringAttribute{
 				MarkdownDescription: "dbt project connection type, currently only support 'github', which is the default",
+				Required:            false,
 				Optional:            true,
-				Default:             "github",
+				Computed:            true,
+				Default:             stringdefault.StaticString("github"),
 			},
 			"dbt_connection_repository": schema.StringAttribute{
 				MarkdownDescription: "Repository name in <org>/<repo> format",
@@ -126,24 +127,32 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"dbt_connection_branch": schema.StringAttribute{
 				MarkdownDescription: "Branch to use, default 'main'",
+				Required:            false,
 				Optional:            true,
-				Default:             "main",
+				Computed:            true,
+				Default:             stringdefault.StaticString("main"),
 			},
 			"dbt_connection_project_sub_path": schema.StringAttribute{
 				MarkdownDescription: "Sub path to find the project in the repo, default '/'",
+				Required:            false,
 				Optional:            true,
-				Default:             "/",
+				Computed:            true,
+				Default:             stringdefault.StaticString("/"),
 			},
 			"dbt_connection_host_domain": schema.StringAttribute{
 				MarkdownDescription: "Host domain of the repo, default 'github.com'",
+				Required:            false,
 				Optional:            true,
-				Default:             "github.com",
+				Computed:            true,
+				Default:             stringdefault.StaticString("github.com"),
 			},
 			// TODO: Convert warehouse connection to nested attribute
 			"warehouse_connection_type": schema.StringAttribute{
 				MarkdownDescription: "Type of warehouse to connect to, must be one of 'snowflake' or 'databricks', 'snowflake' is the default",
+				Required:            false,
 				Optional:            true,
-				Default:             "snowflake",
+				Computed:            true,
+				Default:             stringdefault.StaticString(string(models.SNOWFLAKE)),
 			},
 			"databricks_connection_server_host_name": schema.StringAttribute{
 				MarkdownDescription: "Databricks - Server host name for connection",
@@ -175,8 +184,10 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"snowflake_warehouse_connection_schema": schema.StringAttribute{
 				MarkdownDescription: "Snowflake - Schema to connect to, default 'PUBLIC'",
+				Required:            false,
 				Optional:            true,
-				Default:             "PUBLIC",
+				Computed:            true,
+				Default:             stringdefault.StaticString("PUBLIC"),
 			},
 			"snowflake_warehouse_connection_warehouse": schema.StringAttribute{
 				MarkdownDescription: "Snowflake - Warehouse to use",
@@ -184,13 +195,17 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"snowflake_warehouse_connection_client_session_keep_alive": schema.BoolAttribute{
 				MarkdownDescription: "Snowflake - Client session keep alive param, default `false`",
+				Required:            false,
 				Optional:            true,
-				Default:             false,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
 			},
-			"snowflake_warehouse_connection_threads": schema.IntAttribute{
+			"snowflake_warehouse_connection_threads": schema.Int32Attribute{
 				MarkdownDescription: "Snowflake - Number of threads to use, default `1`",
+				Required:            false,
 				Optional:            true,
-				Default:             1,
+				Computed:            true,
+				Default:             int32default.StaticInt32(1),
 			},
 		},
 	}
@@ -225,13 +240,13 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Create new project
 	organization_uuid := plan.OrganizationUUID.ValueString()
 	project_name := plan.Name.ValueString()
-	project_type := plan.Type.ValueString()
+	project_type := plan.Type
 	dbt_connection_type := plan.DbtConnectionType.ValueString()
 	dbt_connection_repository := plan.DbtConnectionRepository.ValueString()
 	dbt_connection_branch := plan.DbtConnectionBranch.ValueString()
 	dbt_connection_project_sub_path := plan.DbtConnectionProjectSubPath.ValueString()
 	dbt_connection_host_domain := plan.DbtConnectionHostDomain.ValueString()
-	warehouse_connection_type := plan.WarehouseConnectionType.ValueString()
+	warehouse_connection_type := plan.WarehouseConnectionType
 	databricks_connection_server_host_name := plan.DatabricksConnectionServerHostName.ValueString()
 	databricks_connection_http_path := plan.DatabricksConnectionHTTPPath.ValueString()
 	databricks_connection_personal_access_token := plan.DatabricksConnectionPersonalAccessToken.ValueString()
@@ -241,11 +256,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	snowflake_warehouse_connection_database := plan.SnowflakeWarehouseConnectionDatabase.ValueString()
 	snowflake_warehouse_connection_schema := plan.SnowflakeWarehouseConnectionSchema.ValueString()
 	snowflake_warehouse_connection_warehouse := plan.SnowflakeWarehouseConnectionWarehouse.ValueString()
-	snowflake_warehouse_connection_threads := plan.SnowflakeWarehouseConnectionThreads.ValueInt()
+	snowflake_warehouse_connection_threads := plan.SnowflakeWarehouseConnectionThreads.ValueInt32()
 	snowflake_warehouse_connection_client_session_keep_alive := plan.SnowflakeWarehouseConnectionClientSessionKeepAlive.ValueBool()
 
-	if !models.IsValid(projectType.String()) {
-		return nil, fmt.Errorf("invalid project type: %s", projectType)
+	if !models.ProjectType.IsValid(project_type) {
+		resp.Diagnostics.AddError(
+			"invalid project type: %s", string(project_type),
+		)
+		return
 	}
 	dbtConnection := api.DbtConnection{
 		Type:           dbt_connection_type,
@@ -255,13 +273,16 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		HostDomain:     dbt_connection_host_domain,
 	}
 
-	if !models.IsValidWarehouseType(warehouseType.String()) {
-		return nil, fmt.Errorf("invalid warehouse type: %s", warehouseType)
+	if !models.WarehouseType.IsValidWarehouseType(warehouse_connection_type) {
+		resp.Diagnostics.AddError(
+			"invalid warehouse type: %s", string(warehouse_connection_type),
+		)
+		return
 	}
 	warehouseConnection := api.WarehouseConnection{
 		Type: warehouse_connection_type,
 	}
-	if warehouseConnection.Type == models.WarehouseType.SNOWFLAKE {
+	if warehouseConnection.Type == models.SNOWFLAKE {
 		warehouseConnection.Account = snowflake_warehouse_connection_account
 		warehouseConnection.Role = snowflake_warehouse_connection_role
 		warehouseConnection.Database = snowflake_warehouse_connection_database
@@ -270,7 +291,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		warehouseConnection.ClientSessionKeepAlive = snowflake_warehouse_connection_client_session_keep_alive
 		warehouseConnection.Threads = snowflake_warehouse_connection_threads
 	}
-	if warehouseConnection.Type == models.WarehouseType.DATABRICKS {
+	if warehouseConnection.Type == models.DATABRICKS {
 		warehouseConnection.ServerHostName = databricks_connection_server_host_name
 		warehouseConnection.HTTPPath = databricks_connection_http_path
 		warehouseConnection.PersonalAccessToken = databricks_connection_personal_access_token
@@ -291,21 +312,20 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	plan.ID = types.StringValue(stateId)
 	plan.ProjectUUID = types.StringValue(createdProject.ProjectUUID)
 	plan.Name = types.StringValue(createdProject.Name)
-	plan.Type = types.StringValue(createdProject.Type)
+	plan.Type = createdProject.Type
 	plan.DbtConnectionType = types.StringValue(createdProject.DbtConnection.Type)
 	plan.DbtConnectionRepository = types.StringValue(createdProject.DbtConnection.Repository)
 	plan.DbtConnectionBranch = types.StringValue(createdProject.DbtConnection.Branch)
 	plan.DbtConnectionProjectSubPath = types.StringValue(createdProject.DbtConnection.ProjectSubPath)
 	plan.DbtConnectionHostDomain = types.StringValue(createdProject.DbtConnection.HostDomain)
-	plan.WarehouseConnectionType = types.StringValue(createdProject.Name)
-	plan.WarehouseConnectionType = types.StringValue(createdProject.WarehouseConnection.Type)
+	plan.WarehouseConnectionType = createdProject.WarehouseConnection.Type
 	plan.SnowflakeWarehouseConnectionAccount = types.StringValue(createdProject.WarehouseConnection.Account)
 	plan.SnowflakeWarehouseConnectionRole = types.StringValue(createdProject.WarehouseConnection.Role)
 	plan.SnowflakeWarehouseConnectionDatabase = types.StringValue(createdProject.WarehouseConnection.Database)
 	plan.SnowflakeWarehouseConnectionWarehouse = types.StringValue(createdProject.WarehouseConnection.Warehouse)
 	plan.SnowflakeWarehouseConnectionSchema = types.StringValue(createdProject.WarehouseConnection.Schema)
-	plan.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.StringValue(createdProject.WarehouseConnection.ClientSessionKeepAlive)
-	plan.SnowflakeWarehouseConnectionThreads = types.StringValue(createdProject.WarehouseConnection.Threads)
+	plan.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.BoolValue(createdProject.WarehouseConnection.ClientSessionKeepAlive)
+	plan.SnowflakeWarehouseConnectionThreads = types.Int32Value(createdProject.WarehouseConnection.Threads)
 	plan.DatabricksConnectionServerHostName = types.StringValue(createdProject.WarehouseConnection.ServerHostName)
 	plan.DatabricksConnectionHTTPPath = types.StringValue(createdProject.WarehouseConnection.HTTPPath)
 	plan.DatabricksConnectionPersonalAccessToken = types.StringValue(createdProject.WarehouseConnection.PersonalAccessToken)
@@ -375,22 +395,26 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Set the state values
 	state.OrganizationUUID = types.StringValue(project.OrganizationUUID)
 	state.ProjectUUID = types.StringValue(project.ProjectUUID)
-	state.Name = types.StringValue(project.Name)
-	state.Type = types.StringValue(project.Type)
+	state.Name = types.StringValue(project.ProjectName)
+	if project.ProjectType == string(models.DEFAULT_PROJECT_TYPE) {
+		state.Type = models.DEFAULT_PROJECT_TYPE
+	}
+	if project.ProjectType == string(models.PREVIEW_PROJECT_TYPE) {
+		state.Type = models.PREVIEW_PROJECT_TYPE
+	}
 	state.DbtConnectionType = types.StringValue(project.DbtConnection.Type)
 	state.DbtConnectionRepository = types.StringValue(project.DbtConnection.Repository)
 	state.DbtConnectionBranch = types.StringValue(project.DbtConnection.Branch)
 	state.DbtConnectionProjectSubPath = types.StringValue(project.DbtConnection.ProjectSubPath)
 	state.DbtConnectionHostDomain = types.StringValue(project.DbtConnection.HostDomain)
-	state.WarehouseConnectionType = types.StringValue(project.Name)
-	state.WarehouseConnectionType = types.StringValue(project.WarehouseConnection.Type)
+	state.WarehouseConnectionType = project.WarehouseConnection.Type
 	state.SnowflakeWarehouseConnectionAccount = types.StringValue(project.WarehouseConnection.Account)
 	state.SnowflakeWarehouseConnectionRole = types.StringValue(project.WarehouseConnection.Role)
 	state.SnowflakeWarehouseConnectionDatabase = types.StringValue(project.WarehouseConnection.Database)
 	state.SnowflakeWarehouseConnectionWarehouse = types.StringValue(project.WarehouseConnection.Warehouse)
 	state.SnowflakeWarehouseConnectionSchema = types.StringValue(project.WarehouseConnection.Schema)
-	state.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.StringValue(project.WarehouseConnection.ClientSessionKeepAlive)
-	state.SnowflakeWarehouseConnectionThreads = types.StringValue(project.WarehouseConnection.Threads)
+	state.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.BoolValue(project.WarehouseConnection.ClientSessionKeepAlive)
+	state.SnowflakeWarehouseConnectionThreads = types.Int32Value(project.WarehouseConnection.Threads)
 	state.DatabricksConnectionServerHostName = types.StringValue(project.WarehouseConnection.ServerHostName)
 	state.DatabricksConnectionHTTPPath = types.StringValue(project.WarehouseConnection.HTTPPath)
 	state.DatabricksConnectionPersonalAccessToken = types.StringValue(project.WarehouseConnection.PersonalAccessToken)
@@ -470,27 +494,27 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 
 	// Set the resource attributes
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), projectUuid)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("organization_uuid"), importedProject.OrganizationUUID)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("project_uuid"), importedProject.ProjectUUID)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("name"), importedProject.Name)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("type"), importedProject.Type)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("dbt_connection_type"), importedProject.DbtConnection.Type)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("dbt_connection_repository"), importedProject.DbtConnection.Repository)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("dbt_connection_branch"), importedProject.DbtConnection.Branch)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("dbt_connection_project_sub_path"), importedProject.DbtConnection.ProjectSubPath)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("dbt_connection_host_domain"), importedProject.DbtConnection.HostDomain)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("warehouse_connection_type"), importedProject.WarehouseConnection.Type)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("databricks_connection_server_host_name"), importedProject.WarehouseConnection.ServerHostName)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("databricks_connection_http_path"), importedProject.WarehouseConnection.HTTPPath)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("databricks_connection_personal_access_token"), importedProject.WarehouseConnection.PersonalAccessToken)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("databricks_connection_catalog"), importedProject.WarehouseConnection.Catalog)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_account"), importedProject.WarehouseConnection.Account)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_role"), importedProject.WarehouseConnection.Role)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_database"), importedProject.WarehouseConnection.Database)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_schema"), importedProject.WarehouseConnection.Schema)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_warehouse"), importedProject.WarehouseConnection.Warehouse)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_threads"), importedProject.WarehouseConnection.Threads)...)
-	resp.Diagnostics.Append(req.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_client_session_keep_alive"), importedProject.WarehouseConnection.ClientSessionKeepAlive)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), importedProject.OrganizationUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), importedProject.ProjectUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), importedProject.ProjectName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("type"), importedProject.ProjectType)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_type"), importedProject.DbtConnection.Type)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_repository"), importedProject.DbtConnection.Repository)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_branch"), importedProject.DbtConnection.Branch)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_project_sub_path"), importedProject.DbtConnection.ProjectSubPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_host_domain"), importedProject.DbtConnection.HostDomain)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("warehouse_connection_type"), importedProject.WarehouseConnection.Type)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_server_host_name"), importedProject.WarehouseConnection.ServerHostName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_http_path"), importedProject.WarehouseConnection.HTTPPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_personal_access_token"), importedProject.WarehouseConnection.PersonalAccessToken)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_catalog"), importedProject.WarehouseConnection.Catalog)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_account"), importedProject.WarehouseConnection.Account)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_role"), importedProject.WarehouseConnection.Role)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_database"), importedProject.WarehouseConnection.Database)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_schema"), importedProject.WarehouseConnection.Schema)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_warehouse"), importedProject.WarehouseConnection.Warehouse)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_threads"), importedProject.WarehouseConnection.Threads)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_client_session_keep_alive"), importedProject.WarehouseConnection.ClientSessionKeepAlive)...)
 }
 
 func getProjectResourceId(organization_uuid string, project_uuid string) string {

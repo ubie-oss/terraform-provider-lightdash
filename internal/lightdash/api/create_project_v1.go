@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
 type DbtConnection struct {
@@ -31,24 +33,24 @@ type DbtConnection struct {
 }
 
 type WarehouseConnection struct {
-	Type                   string `json:"type"`
-	Account                string `json:"account,omitempty"`
-	Role                   string `json:"role,omitempty"`
-	Database               string `json:"database,omitempty"`
-	Warehouse              string `json:"warehouse,omitempty"`
-	Schema                 string `json:"schema,omitempty"`
-	ClientSessionKeepAlive bool   `json:"clientSessionKeepAlive,omitempty"`
-	Threads                int    `json:"threads,omitempty"`
-	ServerHostName         string `json:"serverHostName,omitempty"`
-	HTTPPath               string `json:"httpPath,omitempty"`
-	PersonalAccessToken    string `json:"personalAccessToken,omitempty"`
-	Catalog                string `json:"catalog,omitempty"`
+	Type                   models.WarehouseType `json:"type"`
+	Account                string               `json:"account,omitempty"`
+	Role                   string               `json:"role,omitempty"`
+	Database               string               `json:"database,omitempty"`
+	Warehouse              string               `json:"warehouse,omitempty"`
+	Schema                 string               `json:"schema,omitempty"`
+	ClientSessionKeepAlive bool                 `json:"clientSessionKeepAlive,omitempty"`
+	Threads                int32                `json:"threads,omitempty"`
+	ServerHostName         string               `json:"serverHostName,omitempty"`
+	HTTPPath               string               `json:"httpPath,omitempty"`
+	PersonalAccessToken    string               `json:"personalAccessToken,omitempty"`
+	Catalog                string               `json:"catalog,omitempty"`
 }
 
 type CreateProjectV1Request struct {
 	OrganisationUUID    string              `json:"organizationUuid"`
 	Name                string              `json:"name"`
-	Type                string              `json:"type"`
+	Type                models.ProjectType  `json:"type"`
 	DbtConnection       DbtConnection       `json:"dbtConnection"`
 	WarehouseConnection WarehouseConnection `json:"warehouseConnection"`
 }
@@ -57,7 +59,7 @@ type CreateProjectV1Results struct {
 	ProjectUUID         string              `json:"projectUuid"`
 	Name                string              `json:"name,omitempty"`
 	OrganisationUUID    string              `json:"organizationUuid"`
-	Type                string              `json:"type"`
+	Type                models.ProjectType  `json:"type"`
 	DbtConnection       DbtConnection       `json:"dbtConnection"`
 	WarehouseConnection WarehouseConnection `json:"warehouseConnection"`
 }
@@ -72,7 +74,7 @@ type CreateProjectV1Response struct {
 	Status  string                         `json:"status"`
 }
 
-func (c *Client) CreateProjectV1(organisationUUID string, name string, projectType string, warehouseType string, dbtConnection DbtConnection, warehouseConnection WarehouseConnection) (*CreateProjectV1Results, error) {
+func (c *Client) CreateProjectV1(organisationUUID string, name string, projectType models.ProjectType, dbtConnection DbtConnection, warehouseConnection WarehouseConnection) (*CreateProjectV1Results, error) {
 	// Create the request body
 	data := CreateProjectV1Request{
 		OrganisationUUID:    organisationUUID,

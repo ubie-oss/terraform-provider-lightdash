@@ -17,7 +17,7 @@ resource "lightdash_project" "test1" {
   name              = "zzz_test_project_01_snowflake"
   type = "DEFAULT"
   dbt_connection_repository = "ubie-oss/terraform-provider-lightdash"
-  snowflake_warehouse_connection_type = "snowflake"
+  warehouse_connection_type = "snowflake"
   snowflake_warehouse_connection_account = "abc-123.eu-west-1"
   snowflake_warehouse_connection_role = "BI_ROLE"
   snowflake_warehouse_connection_database = "DB"
@@ -27,7 +27,7 @@ resource "lightdash_project" "test1" {
 resource "lightdash_project" "test2" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "zzz_test_project_02_databricks"
-  type = "DEVELOPMENT"
+  type = "PREVIEW"
   dbt_connection_repository = "ubie-oss/terraform-provider-lightdash"
   warehouse_connection_type = "databricks"
   databricks_connection_server_host_name = "host-name-for-databricks.com"
