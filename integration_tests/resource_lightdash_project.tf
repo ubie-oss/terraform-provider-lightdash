@@ -24,6 +24,7 @@ resource "lightdash_project" "test1" {
   snowflake_warehouse_connection_warehouse = "TEST_WH"
   snowflake_warehouse_connection_threads = 1
   snowflake_warehouse_connection_schema = "DATA"
+  snowflake_warehouse_connection_client_session_keep_alive = true
 }
 
 resource "lightdash_project" "test2" {

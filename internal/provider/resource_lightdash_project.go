@@ -305,17 +305,21 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	plan.DbtConnectionProjectSubPath = types.StringValue(createdProject.DbtConnection.ProjectSubPath)
 	plan.DbtConnectionHostDomain = types.StringValue(createdProject.DbtConnection.HostDomain)
 	plan.WarehouseConnectionType = createdProject.WarehouseConnection.Type
-	plan.SnowflakeWarehouseConnectionAccount = types.StringValue(createdProject.WarehouseConnection.Account)
-	plan.SnowflakeWarehouseConnectionRole = types.StringValue(createdProject.WarehouseConnection.Role)
-	plan.SnowflakeWarehouseConnectionDatabase = types.StringValue(createdProject.WarehouseConnection.Database)
-	plan.SnowflakeWarehouseConnectionWarehouse = types.StringValue(createdProject.WarehouseConnection.Warehouse)
-	plan.SnowflakeWarehouseConnectionSchema = types.StringValue(createdProject.WarehouseConnection.Schema)
-	plan.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.BoolValue(createdProject.WarehouseConnection.ClientSessionKeepAlive)
-	plan.SnowflakeWarehouseConnectionThreads = types.Int32Value(createdProject.WarehouseConnection.Threads)
-	plan.DatabricksConnectionServerHostName = types.StringValue(createdProject.WarehouseConnection.ServerHostName)
-	plan.DatabricksConnectionHTTPPath = types.StringValue(createdProject.WarehouseConnection.HTTPPath)
-	plan.DatabricksConnectionPersonalAccessToken = types.StringValue(createdProject.WarehouseConnection.PersonalAccessToken)
-	plan.DatabricksConnectionCatalog = types.StringValue(createdProject.WarehouseConnection.Catalog)
+	if warehouseConnection.Type == models.SNOWFLAKE {
+		plan.SnowflakeWarehouseConnectionAccount = types.StringValue(createdProject.WarehouseConnection.Account)
+		plan.SnowflakeWarehouseConnectionRole = types.StringValue(createdProject.WarehouseConnection.Role)
+		plan.SnowflakeWarehouseConnectionDatabase = types.StringValue(createdProject.WarehouseConnection.Database)
+		plan.SnowflakeWarehouseConnectionWarehouse = types.StringValue(createdProject.WarehouseConnection.Warehouse)
+		plan.SnowflakeWarehouseConnectionSchema = types.StringValue(createdProject.WarehouseConnection.Schema)
+		plan.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.BoolValue(createdProject.WarehouseConnection.ClientSessionKeepAlive)
+		plan.SnowflakeWarehouseConnectionThreads = types.Int32Value(createdProject.WarehouseConnection.Threads)
+	}
+	if warehouseConnection.Type == models.DATABRICKS {
+		plan.DatabricksConnectionServerHostName = types.StringValue(createdProject.WarehouseConnection.ServerHostName)
+		plan.DatabricksConnectionHTTPPath = types.StringValue(createdProject.WarehouseConnection.HTTPPath)
+		plan.DatabricksConnectionPersonalAccessToken = types.StringValue(databricks_connection_personal_access_token)
+		plan.DatabricksConnectionCatalog = types.StringValue(createdProject.WarehouseConnection.Catalog)
+	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, &plan)
@@ -331,34 +335,11 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	var projectUuid string
 	var projectName string
 	var projectType string
-	var dbtConnectionType, dbtConnectionRepository, dbtConnectionBranch, dbtConnectionProjectSubPath, dbtConnectionHostDomain string
-	var warehouseConnectionType string
-	var databricksConnectionServerHostName, databricksConnectionHTTPPath, databricksConnectionPersonalAccessToken, databricksConnectionCatalog string
-	var snowflakeWarehouseConnectionAccount, snowflakeWarehouseConnectionRole, snowflakeWarehouseConnectionDatabase, snowflakeWarehouseConnectionSchema, snowflakeWarehouseConnectionWarehouse string
-	var snowflakeWarehouseConnectionThreads int
-	var snowflakeWarehouseConnectionClientSessionKeepAlive bool
 
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organizationUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("name"), &projectName)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("type"), &projectType)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("dbt_connection_type"), &dbtConnectionType)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("dbt_connection_repository"), &dbtConnectionRepository)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("dbt_connection_branch"), &dbtConnectionBranch)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("dbt_connection_project_sub_path"), &dbtConnectionProjectSubPath)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("dbt_connection_host_domain"), &dbtConnectionHostDomain)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("warehouse_connection_type"), &warehouseConnectionType)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("databricks_connection_server_host_name"), &databricksConnectionServerHostName)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("databricks_connection_http_path"), &databricksConnectionHTTPPath)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("databricks_connection_personal_access_token"), &databricksConnectionPersonalAccessToken)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("databricks_connection_catalog"), &databricksConnectionCatalog)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_account"), &snowflakeWarehouseConnectionAccount)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_role"), &snowflakeWarehouseConnectionRole)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_database"), &snowflakeWarehouseConnectionDatabase)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_schema"), &snowflakeWarehouseConnectionSchema)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_warehouse"), &snowflakeWarehouseConnectionWarehouse)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_threads"), &snowflakeWarehouseConnectionThreads)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("snowflake_warehouse_connection_client_session_keep_alive"), &snowflakeWarehouseConnectionClientSessionKeepAlive)...)
 
 	// Get current state
 	var state projectResourceModel
@@ -405,8 +386,12 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	state.DatabricksConnectionServerHostName = types.StringValue(project.WarehouseConnection.ServerHostName)
 	state.DatabricksConnectionHTTPPath = types.StringValue(project.WarehouseConnection.HTTPPath)
-	state.DatabricksConnectionPersonalAccessToken = types.StringValue(project.WarehouseConnection.PersonalAccessToken)
 	state.DatabricksConnectionCatalog = types.StringValue(project.WarehouseConnection.Catalog)
+	if project.WarehouseConnection.Type == "databricks" {
+		var databricksConnectionPersonalAccessToken string
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("databricks_connection_personal_access_token"), &databricksConnectionPersonalAccessToken)...)
+		state.DatabricksConnectionPersonalAccessToken = types.StringValue(databricksConnectionPersonalAccessToken)
+	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -492,7 +477,6 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_project_sub_path"), importedProject.DbtConnection.ProjectSubPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_host_domain"), importedProject.DbtConnection.HostDomain)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("warehouse_connection_type"), importedProject.WarehouseConnection.Type)...)
-
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_account"), importedProject.WarehouseConnection.Account)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_role"), importedProject.WarehouseConnection.Role)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_database"), importedProject.WarehouseConnection.Database)...)
