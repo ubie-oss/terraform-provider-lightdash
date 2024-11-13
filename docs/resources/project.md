@@ -59,13 +59,13 @@ resource "lightdash_project" "test_databricks" {
 - `dbt_connection_project_sub_path` (String) Sub path to find the project in the repo, default '/'
 - `dbt_connection_type` (String) dbt project connection type, currently only support 'github', which is the default
 - `snowflake_warehouse_connection_account` (String) Snowflake - Account identifier, including region/ cloud path
-- `snowflake_warehouse_connection_client_session_keep_alive` (Boolean) Snowflake - Client session keep alive param, default `false`
+- `snowflake_warehouse_connection_client_session_keep_alive` (Boolean) Snowflake - Client session keep alive param
 - `snowflake_warehouse_connection_database` (String) Snowflake - Database to connect to
 - `snowflake_warehouse_connection_role` (String) Snowflake - Role to connect to the warehouse with
-- `snowflake_warehouse_connection_schema` (String) Snowflake - Schema to connect to, default 'PUBLIC'
-- `snowflake_warehouse_connection_threads` (Number) Snowflake - Number of threads to use, default `1`
+- `snowflake_warehouse_connection_schema` (String) Snowflake - Schema to connect to
+- `snowflake_warehouse_connection_threads` (Number) Snowflake - Number of threads to use
 - `snowflake_warehouse_connection_warehouse` (String) Snowflake - Warehouse to use
-- `warehouse_connection_type` (String) Type of warehouse to connect to, must be one of 'snowflake' or 'databricks', 'snowflake' is the default
+- `warehouse_connection_type` (String) Type of warehouse to connect to, must be one of 'snowflake' or 'databricks'
 
 ### Read-Only
 

@@ -21,8 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -148,11 +146,8 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			// TODO: Convert warehouse connection to nested attribute
 			"warehouse_connection_type": schema.StringAttribute{
-				MarkdownDescription: "Type of warehouse to connect to, must be one of 'snowflake' or 'databricks', 'snowflake' is the default",
-				Required:            false,
+				MarkdownDescription: "Type of warehouse to connect to, must be one of 'snowflake' or 'databricks'",
 				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString(string(models.SNOWFLAKE)),
 			},
 			"databricks_connection_server_host_name": schema.StringAttribute{
 				MarkdownDescription: "Databricks - Server host name for connection",
@@ -183,29 +178,20 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Optional:            true,
 			},
 			"snowflake_warehouse_connection_schema": schema.StringAttribute{
-				MarkdownDescription: "Snowflake - Schema to connect to, default 'PUBLIC'",
-				Required:            false,
+				MarkdownDescription: "Snowflake - Schema to connect to",
 				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("PUBLIC"),
 			},
 			"snowflake_warehouse_connection_warehouse": schema.StringAttribute{
 				MarkdownDescription: "Snowflake - Warehouse to use",
 				Optional:            true,
 			},
 			"snowflake_warehouse_connection_client_session_keep_alive": schema.BoolAttribute{
-				MarkdownDescription: "Snowflake - Client session keep alive param, default `false`",
-				Required:            false,
+				MarkdownDescription: "Snowflake - Client session keep alive param",
 				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
 			},
 			"snowflake_warehouse_connection_threads": schema.Int32Attribute{
-				MarkdownDescription: "Snowflake - Number of threads to use, default `1`",
-				Required:            false,
+				MarkdownDescription: "Snowflake - Number of threads to use",
 				Optional:            true,
-				Computed:            true,
-				Default:             int32default.StaticInt32(1),
 			},
 		},
 	}
@@ -408,6 +394,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	state.DbtConnectionProjectSubPath = types.StringValue(project.DbtConnection.ProjectSubPath)
 	state.DbtConnectionHostDomain = types.StringValue(project.DbtConnection.HostDomain)
 	state.WarehouseConnectionType = project.WarehouseConnection.Type
+
 	state.SnowflakeWarehouseConnectionAccount = types.StringValue(project.WarehouseConnection.Account)
 	state.SnowflakeWarehouseConnectionRole = types.StringValue(project.WarehouseConnection.Role)
 	state.SnowflakeWarehouseConnectionDatabase = types.StringValue(project.WarehouseConnection.Database)
@@ -415,6 +402,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	state.SnowflakeWarehouseConnectionSchema = types.StringValue(project.WarehouseConnection.Schema)
 	state.SnowflakeWarehouseConnectionClientSessionKeepAlive = types.BoolValue(project.WarehouseConnection.ClientSessionKeepAlive)
 	state.SnowflakeWarehouseConnectionThreads = types.Int32Value(project.WarehouseConnection.Threads)
+
 	state.DatabricksConnectionServerHostName = types.StringValue(project.WarehouseConnection.ServerHostName)
 	state.DatabricksConnectionHTTPPath = types.StringValue(project.WarehouseConnection.HTTPPath)
 	state.DatabricksConnectionPersonalAccessToken = types.StringValue(project.WarehouseConnection.PersonalAccessToken)
@@ -504,10 +492,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_project_sub_path"), importedProject.DbtConnection.ProjectSubPath)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_connection_host_domain"), importedProject.DbtConnection.HostDomain)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("warehouse_connection_type"), importedProject.WarehouseConnection.Type)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_server_host_name"), importedProject.WarehouseConnection.ServerHostName)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_http_path"), importedProject.WarehouseConnection.HTTPPath)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_personal_access_token"), importedProject.WarehouseConnection.PersonalAccessToken)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_catalog"), importedProject.WarehouseConnection.Catalog)...)
+
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_account"), importedProject.WarehouseConnection.Account)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_role"), importedProject.WarehouseConnection.Role)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_database"), importedProject.WarehouseConnection.Database)...)
@@ -515,6 +500,10 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_warehouse"), importedProject.WarehouseConnection.Warehouse)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_threads"), importedProject.WarehouseConnection.Threads)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("snowflake_warehouse_connection_client_session_keep_alive"), importedProject.WarehouseConnection.ClientSessionKeepAlive)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_server_host_name"), importedProject.WarehouseConnection.ServerHostName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_http_path"), importedProject.WarehouseConnection.HTTPPath)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_personal_access_token"), importedProject.WarehouseConnection.PersonalAccessToken)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("databricks_connection_catalog"), importedProject.WarehouseConnection.Catalog)...)
 }
 
 func getProjectResourceId(organization_uuid string, project_uuid string) string {

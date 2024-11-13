@@ -22,6 +22,8 @@ resource "lightdash_project" "test1" {
   snowflake_warehouse_connection_role = "BI_ROLE"
   snowflake_warehouse_connection_database = "DB"
   snowflake_warehouse_connection_warehouse = "TEST_WH"
+  snowflake_warehouse_connection_threads = 1
+  snowflake_warehouse_connection_schema = "DATA"
 }
 
 resource "lightdash_project" "test2" {
