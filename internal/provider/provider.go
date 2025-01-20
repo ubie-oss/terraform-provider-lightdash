@@ -39,8 +39,11 @@ type lightdashProvider struct {
 
 // lightdashProviderModel describes the provider data model.
 type lightdashProviderModel struct {
-	HostURL types.String `tfsdk:"host"`
-	Token   types.String `tfsdk:"token"`
+	HostURL               types.String `tfsdk:"host"`
+	Token                 types.String `tfsdk:"token"`
+	MaxConcurrentRequests types.Int64  `tfsdk:"max_concurrent_requests"`
+	RequestTimeout        types.Int64  `tfsdk:"request_timeout"`
+	RetryTimes            types.Int64  `tfsdk:"retry_times"`
 }
 
 func (p *lightdashProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -60,6 +63,18 @@ func (p *lightdashProvider) Schema(ctx context.Context, req provider.SchemaReque
 				MarkdownDescription: "Personal access token for Lightdash",
 				Required:            true,
 				Sensitive:           true,
+			},
+			"max_concurrent_requests": schema.Int64Attribute{
+				MarkdownDescription: "Maximum number of concurrent requests to the Lightdash API",
+				Optional:            true,
+			},
+			"request_timeout": schema.Int64Attribute{
+				MarkdownDescription: "Timeout for requests to the Lightdash API in seconds",
+				Optional:            true,
+			},
+			"retry_times": schema.Int64Attribute{
+				MarkdownDescription: "Number of times to retry requests to the Lightdash API",
+				Optional:            true,
 			},
 		},
 	}
@@ -93,10 +108,26 @@ func (p *lightdashProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
 	host := config.HostURL.ValueString()
 	token := config.Token.ValueString()
-	client, _ := api.NewClient(&host, &token)
+
+	// Set default values if not provided in the configuration
+	maxConcurrentRequests := int64(10) // Default value
+	if !config.MaxConcurrentRequests.IsNull() {
+		maxConcurrentRequests = config.MaxConcurrentRequests.ValueInt64()
+	}
+
+	requestTimeout := int64(180) // Default value
+	if !config.RequestTimeout.IsNull() {
+		requestTimeout = config.RequestTimeout.ValueInt64()
+	}
+
+	retryTimes := int64(3) // Default value
+	if !config.RetryTimes.IsNull() {
+		retryTimes = config.RetryTimes.ValueInt64()
+	}
+
+	client, _ := api.NewClient(&host, &token, maxConcurrentRequests, requestTimeout, retryTimes)
 
 	// Check if the token is valid as long as the test mode is not disabled
 	if !isIntegrationTestMode() {

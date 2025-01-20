@@ -35,4 +35,8 @@ terraform {
 provider "lightdash" {
   host  = var.lightdash_url
   token = var.personal_access_token
+
+  max_concurrent_requests = 20
+  request_timeout         = 300
+  retry_times             = 1
 }

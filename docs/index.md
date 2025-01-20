@@ -26,3 +26,9 @@ provider "lightdash" {
 
 - `host` (String) Lightdash Host
 - `token` (String, Sensitive) Personal access token for Lightdash
+
+### Optional
+
+- `max_concurrent_requests` (Number) Maximum number of concurrent requests to the Lightdash API
+- `request_timeout` (Number) Timeout for requests to the Lightdash API in seconds
+- `retry_times` (Number) Number of times to retry requests to the Lightdash API
