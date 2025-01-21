@@ -4,9 +4,9 @@
 [config]
 ignore_pr_labels = ['renovate']
 # models
-model = "vertex_ai/gemini-1.5-pro"
-model_turbo = "vertex_ai/gemini-1.5-pro"
-fallback_models = ["vertex_ai/gemini-1.5-pro"]
+model = "vertex_ai/gemini-2.0-flash-exp"
+model_turbo = "vertex_ai/gemini-2.0-flash-exp"
+fallback_models = ["vertex_ai/gemini-2.0-flash-exp"]
 
 [ignore]
 glob = ['*.json', '*.md']
@@ -21,7 +21,7 @@ extra_instructions = """\
 require_tests_review = true
 require_can_be_split_review = true
 num_code_suggestions = 0
-inline_code_comments = false
+inline_code_comments = true
 enable_auto_approval = false
 maximal_review_effort = 5
 extra_instructions = """\
