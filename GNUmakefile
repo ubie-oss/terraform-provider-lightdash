@@ -23,6 +23,9 @@ test:
 	# TF_ACC mustn't be set, otherwise acceptance tests will run
 	unset TF_ACC && cd "internal/" && go test -count=1 -v ./...
 
+clean:
+	go clean -cache -modcache -i -r
+
 build: gen-docs go-tidy gosec
 	go build -v ./
 
