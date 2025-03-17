@@ -24,6 +24,9 @@ jobs:
     name: Run pr agent on every pull request, respond to user comments
     steps:
       - uses: actions/checkout@v4
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/131500153501/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-oidc-provider
