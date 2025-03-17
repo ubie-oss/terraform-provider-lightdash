@@ -36,6 +36,9 @@ jobs:
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - name: Set up Go
         uses: actions/setup-go@v5
       - name: Import GPG key

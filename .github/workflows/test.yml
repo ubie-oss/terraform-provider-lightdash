@@ -45,6 +45,9 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version-file: go.mod
