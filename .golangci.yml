@@ -14,31 +14,41 @@
 
 # Visit https://golangci-lint.run/ for usage documentation
 # and information on other useful linters
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  exclude-dirs:
-    - tools
-  exclude-generated: strict
-  new: true
-  fix: true
-
+version: "2"
 linters:
   enable:
+    - copyloopvar
     - durationcheck
-    - errcheck
     - forcetypeassert
-    - gofmt
-    - gosimple
-    - ineffassign
     - makezero
     - misspell
     - nilerr
     - predeclared
-    - staticcheck
     - unconvert
     - unparam
-    - unused
-    - govet
-    - copyloopvar
     - usetesting
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - tools
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: true
+  fix: true
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    paths:
+      - tools
+      - third_party$
+      - builtin$
+      - examples$
