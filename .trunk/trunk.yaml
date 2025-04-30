@@ -6,7 +6,7 @@ cli:
 plugins:
   sources:
     - id: trunk
-      ref: v1.6.7
+      ref: v1.6.8
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
@@ -23,14 +23,14 @@ lint:
   enabled:
     - terraform@1.1.0
     - semgrep@1.116.0
-    - gitleaks@8.24.2
+    - gitleaks@8.24.3
     - goimports@0.9.1
     - bandit@1.8.3
     - black@25.1.0
     - isort@6.0.1
-    - ruff@0.11.4
+    - ruff@0.11.7
     - actionlint@1.7.7
-    - checkov@3.2.399
+    - checkov@3.2.412
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.64.8
@@ -40,8 +40,8 @@ lint:
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - tflint@0.56.0
-    - trivy@0.61.0
-    - trufflehog@3.88.23
+    - trivy@0.61.1
+    - trufflehog@3.88.25
     - yamllint@1.37.0
 actions:
   enabled:
