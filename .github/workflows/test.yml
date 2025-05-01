@@ -45,7 +45,7 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
-      - uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.10.3
+      - uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.10.3
         with:
           egress-policy: audit
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
