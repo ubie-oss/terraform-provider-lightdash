@@ -38,6 +38,7 @@ type GetSpaceV1Results struct {
 	// The response doesn't contain the OrganizationUUID right now
 	// OrganizationUUID string              `json:"organizationUuid"`
 	ProjectUUID        string              `json:"projectUuid"`
+	ParentSpaceUUID    *string             `json:"parentSpaceUuid,omitempty"`
 	SpaceUUID          string              `json:"uuid"`
 	SpaceName          string              `json:"name"`
 	IsPrivate          bool                `json:"isPrivate"`
