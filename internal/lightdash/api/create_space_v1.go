@@ -18,21 +18,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
 type CreateSpaceV1Request struct {
-	Name      string `json:"name"`
-	IsPrivate bool   `json:"isPrivate"`
+	Name            string  `json:"name"`
+	IsPrivate       bool    `json:"isPrivate"`
+	ParentSpaceUUID *string `json:"parentSpaceUuid,omitempty"`
 }
 
 type CreateSpaceV1Results struct {
-	OrganizationUUID string `json:"organizationUuid"`
-	ProjectUUID      string `json:"projectUuid"`
-	SpaceUUID        string `json:"uuid"`
-	SpaceName        string `json:"name"`
-	IsPrivate        bool   `json:"isPrivate"`
+	OrganizationUUID string  `json:"organizationUuid"`
+	ProjectUUID      string  `json:"projectUuid"`
+	ParentSpaceUUID  *string `json:"parentSpaceUuid,omitempty"`
+	SpaceUUID        string  `json:"uuid"`
+	SpaceName        string  `json:"name"`
+	IsPrivate        bool    `json:"isPrivate"`
 }
 
 type CreateSpaceV1Response struct {
@@ -40,36 +41,38 @@ type CreateSpaceV1Response struct {
 	Status  string               `json:"status"`
 }
 
-func (c *Client) CreateSpaceV1(projectUuid string, spaceName string, isPrivate bool) (*CreateSpaceV1Results, error) {
-	// Create the request body
+// CreateSpaceV1 creates a new space in the given project. If parentSpaceUUID is nil, the space is created at the root level.
+func (c *Client) CreateSpaceV1(projectUUID, spaceName string, isPrivate bool, parentSpaceUUID *string) (*CreateSpaceV1Results, error) {
 	data := CreateSpaceV1Request{
-		Name:      spaceName,
-		IsPrivate: isPrivate,
+		Name:            spaceName,
+		IsPrivate:       isPrivate,
+		ParentSpaceUUID: parentSpaceUUID,
 	}
+
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		log.Fatalf("impossible to marshall teacher: %s", err)
+		return nil, fmt.Errorf("failed to marshal CreateSpaceV1Request: %w", err)
 	}
-	// Create the request
-	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces", c.HostUrl, projectUuid)
+
+	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces", c.HostUrl, projectUUID)
 	req, err := http.NewRequest("POST", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return nil, fmt.Errorf("error creating new request: %v", err)
+		return nil, fmt.Errorf("failed to create new request: %w", err)
 	}
-	// Do request
+
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, fmt.Errorf("error performing request: %v", err)
+		return nil, fmt.Errorf("failed to perform request: %w", err)
 	}
-	// Marshal the response
-	response := CreateSpaceV1Response{}
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling response: %v", err)
+
+	var response CreateSpaceV1Response
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	// Make sure if the organization is not nil
+
 	if response.Results.SpaceUUID == "" {
-		return nil, fmt.Errorf("space UUID is nil")
+		return nil, fmt.Errorf("space UUID is empty in response")
 	}
+
 	return &response.Results, nil
 }

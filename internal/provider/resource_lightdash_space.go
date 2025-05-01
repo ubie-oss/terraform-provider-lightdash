@@ -54,6 +54,7 @@ type spaceResourceModel struct {
 	// The response from the API does not contain the organization UUID right now.
 	// OrganizationUUID types.String `tfsdk:"organization_uuid"`
 	ProjectUUID      types.String                  `tfsdk:"project_uuid"`
+	ParentSpaceUUID  types.String                  `tfsdk:"parent_space_uuid"`
 	SpaceUUID        types.String                  `tfsdk:"space_uuid"`
 	IsPrivate        types.Bool                    `tfsdk:"is_private"`
 	SpaceName        types.String                  `tfsdk:"name"`
@@ -110,6 +111,11 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"project_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash project UUID",
 				Required:            true,
+			},
+			"parent_space_uuid": schema.StringAttribute{
+				MarkdownDescription: "Lightdash parent space UUID",
+				Optional:            true,
+				Computed:            true,
 			},
 			"space_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash space UUID",
@@ -220,9 +226,14 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Create new space
 	project_uuid := plan.ProjectUUID.ValueString()
+	var parent_space_uuid *string
+	if !plan.ParentSpaceUUID.IsNull() && !plan.ParentSpaceUUID.IsUnknown() {
+		// Use the value from the plan if set, otherwise pass nil
+		parent_space_uuid = plan.ParentSpaceUUID.ValueStringPointer()
+	}
 	space_name := plan.SpaceName.ValueString()
 	is_private := plan.IsPrivate.ValueBool()
-	created_space, err := r.client.CreateSpaceV1(project_uuid, space_name, is_private)
+	created_space, err := r.client.CreateSpaceV1(project_uuid, space_name, is_private, parent_space_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating space",
@@ -301,6 +312,12 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ID = types.StringValue(state_id)
 	plan.ProjectUUID = types.StringValue(created_space.ProjectUUID)
 	plan.SpaceUUID = types.StringValue(created_space.SpaceUUID)
+	// Set ParentSpaceUUID in state if present in the API response, else null
+	if created_space.ParentSpaceUUID != nil {
+		plan.ParentSpaceUUID = types.StringValue(*created_space.ParentSpaceUUID)
+	} else {
+		plan.ParentSpaceUUID = types.StringNull()
+	}
 	plan.IsPrivate = types.BoolValue(created_space.IsPrivate)
 	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
 	plan.MemberAccessList = memberAccessList
@@ -319,12 +336,14 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Declare variables to import from state
 	var projectUuid string
+	var parentSpaceUuid *string
 	var spaceUuid string
 	var memberAccessList []spaceMemberAccessBlockModel
 	var groupAccessList []spaceGroupAccessBlockModel
 	var createdAt string
 	var lastUpdated string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("parent_space_uuid"), &parentSpaceUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("space_uuid"), &spaceUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("access"), &memberAccessList)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("group_access"), &groupAccessList)...)
@@ -341,6 +360,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	// Get space
 	projectUuid = state.ProjectUUID.ValueString()
+	parentSpaceUuid = state.ParentSpaceUUID.ValueStringPointer()
 	spaceUuid = state.SpaceUUID.ValueString()
 	space, err := r.client.GetSpaceV1(projectUuid, spaceUuid)
 	if err != nil {
@@ -389,6 +409,11 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	// Set the state values
 	state.ProjectUUID = types.StringValue(space.ProjectUUID)
+	if space.ParentSpaceUUID != nil {
+		state.ParentSpaceUUID = types.StringValue(*space.ParentSpaceUUID)
+	} else {
+		state.ParentSpaceUUID = types.StringNull()
+	}
 	state.SpaceUUID = types.StringValue(space.SpaceUUID)
 	state.MemberAccessList = spaceMembers
 	state.GroupAccessList = groupAccessList
