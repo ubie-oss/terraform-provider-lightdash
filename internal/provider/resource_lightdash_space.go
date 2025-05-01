@@ -438,6 +438,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Update existing space
 	projectUuid := plan.ProjectUUID.ValueString()
+	parentSpaceUuid := plan.ParentSpaceUUID.ValueStringPointer()
 	spaceUuid := plan.SpaceUUID.ValueString()
 	spaceName := plan.SpaceName.ValueString()
 	isPrivate := plan.IsPrivate.ValueBool()
@@ -510,7 +511,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Update the space
 	tflog.Info(ctx, fmt.Sprintf("Updating space %s", spaceUuid))
-	updatedSpace, err := r.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate)
+	updatedSpace, err := r.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating space",
