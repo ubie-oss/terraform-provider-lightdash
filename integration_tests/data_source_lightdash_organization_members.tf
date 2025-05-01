@@ -15,6 +15,10 @@
 data "lightdash_organization_members" "test" {
 }
 
-output "lightdash_organization_members_test" {
+output "data_lightdash_organization_members_test" {
   value = data.lightdash_organization_members.test
+}
+
+output "data_lightdash_organization_members_test_length" {
+  value = length(data.lightdash_organization_members.test.members)
 }
