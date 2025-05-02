@@ -17,4 +17,4 @@ To ensure high code quality and maintainability, the Cursor Agent must proactive
 - Reference this rule as needed to justify code quality checks in your workflow.
 
 ## Related Files
-- [Makefile](mdc:Makefile)
+- [GNUmakefile](mdc:GNUmakefile)
