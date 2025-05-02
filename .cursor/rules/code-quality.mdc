@@ -1,6 +1,6 @@
 ---
 description:
-globs: internal/**/*.go
+globs: internal/**/*.go,go.mod,main.go
 alwaysApply: false
 ---
 # Code Quality Enforcement Rule
