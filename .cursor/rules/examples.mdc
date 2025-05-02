@@ -1,0 +1,11 @@
+---
+description:
+globs: examples/**/*.tf,examples/**/*.sh
+alwaysApply: false
+---
+Rule Name: examples
+Description:
+- The `examples` directory contains runnable and documentation examples for the Lightdash Terraform provider.
+- Only `provider/provider.tf`, `data-sources/<data_source_name>/data-source.tf`, and `resources/<resource_name>/resource.tf` are used for documentation generation.
+- Other files (e.g., `import.sh`) are for manual testing and user reference.
+- Example files are organized by resource or data source name in their respective subdirectories.
