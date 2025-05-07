@@ -510,8 +510,9 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Update the space
+	spaceService := services.NewSpaceService(r.client)
 	tflog.Info(ctx, fmt.Sprintf("Updating space %s", spaceUuid))
-	updatedSpace, err := r.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuid)
+	updatedSpace, err := spaceService.UpdateSpace(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating space",

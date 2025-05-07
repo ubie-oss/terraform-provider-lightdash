@@ -18,23 +18,23 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
-// SpaceService provides methods to update and move a Lightdash space.
+// SpaceService provides methods for managing Lightdash spaces.
 type SpaceService struct {
 	client *api.Client
 }
 
-// NewUpdateSpaceService creates a new UpdateSpaceService.
-func NewUpdateSpaceService(client *api.Client) *SpaceService {
+// NewSpaceService creates a new SpaceService.
+func NewSpaceService(client *api.Client) *SpaceService {
 	return &SpaceService{client: client}
 }
 
 // UpdateSpace updates the space's name, privacy, and optionally its parent space.
 // projectUuid is required for both UpdateSpaceV1 and MoveSpaceV1 API calls.
-func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isPrivate bool, parentSpaceUuid *string) error {
+func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isPrivate bool, parentSpaceUuid *string) (*api.UpdateSpaceV1Results, error) {
 	// Update the space's name, privacy, and parent (if provided)
 	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// If parentSpaceUuid is provided and isn't the same as the updatedSpace's parentSpaceUUID, move the space to the new parent
@@ -42,11 +42,13 @@ func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isP
 	if !isSameParentSpaceUUID {
 		err := s.client.MoveSpaceV1(projectUuid, spaceUuid, parentSpaceUuid)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		// Override the parentSpaceUUID in the updatedSpace to the new parentSpaceUUID
+		updatedSpace.ParentSpaceUUID = parentSpaceUuid
 	}
 
-	return nil
+	return updatedSpace, nil
 }
 
 // TODO move the function to an appropriate package
