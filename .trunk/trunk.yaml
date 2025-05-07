@@ -21,19 +21,19 @@ lint:
         - examples/**
         - tools/**
   enabled:
-    - golangci-lint2@2.1.5
-    - renovate@40.0.0
+    - golangci-lint2@2.1.6
+    - renovate@40.0.6
     - taplo@0.9.3
     - terraform@1.1.0
     - semgrep@1.116.0
-    - gitleaks@8.25.0
+    - gitleaks@8.25.1
     - goimports@0.9.1
     - bandit@1.8.3
     - black@25.1.0
     - isort@6.0.1
-    - ruff@0.11.7
+    - ruff@0.11.8
     - actionlint@1.7.7
-    - checkov@3.2.413
+    - checkov@3.2.415
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.44.0
@@ -41,10 +41,10 @@ lint:
     - prettier@3.5.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
-    - tflint@0.56.0
+    - tflint@0.57.0
     - trivy@0.61.1
-    - trufflehog@3.88.26
-    - yamllint@1.37.0
+    - trufflehog@3.88.28
+    - yamllint@1.37.1
 actions:
   enabled:
     - trunk-upgrade-available
