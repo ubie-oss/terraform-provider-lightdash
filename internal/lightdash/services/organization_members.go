@@ -39,10 +39,8 @@ func NewOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
-		page := 1
-		// NOTE we tentatively increase the page size to 300 to avoid pagination issues
-		// TODO we should find a better solution in the future
-		pageSize := 300
+		page := 0
+		pageSize := 100
 		memberMap := make(map[string]api.GetOrganizationMembersV1Results)
 		for {
 			// Fetch the members from the organization using the API client

@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
@@ -138,6 +139,9 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
+	// log the number of members
+	tflog.Info(ctx, fmt.Sprintf("Fetched organization members: %d", len(members)))
+
 	// Map response body to model
 	newMembers := []organizationMemberModel{}
 	for _, member := range members {
@@ -148,6 +152,9 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 		}
 		newMembers = append(newMembers, fetchedMember)
 	}
+
+	// log the number of new members
+	tflog.Info(ctx, fmt.Sprintf("Updated organization members: %d", len(newMembers)))
 
 	// Set state
 	state.OrganizationUuid = types.StringValue(organization.OrganizationUUID)
