@@ -1,0 +1,406 @@
+---
+description:
+globs: internal/provider/**/*.go
+alwaysApply: false
+---
+# Custom Terraform Provider Implementation Guide
+
+This guide provides comprehensive instructions for implementing a custom Terraform provider using the HashiCorp Plugin Framework. It covers all essential components and best practices based on official HashiCorp documentation.
+
+## Project Structure
+
+A typical custom provider project structure:
+
+```
+terraform-provider-example/
+├── examples/                    # Example configurations using the provider
+├── internal/
+│   ├── provider/               # Provider implementation
+│   │   ├── provider.go         # Main provider definition
+│   │   ├── resource_*.go       # Resource implementations
+│   │   └── data_source_*.go    # Data source implementations
+│   └── client/                 # API client implementation
+├── docs/                       # Provider documentation
+├── go.mod                      # Go module definition
+└── main.go                     # Provider entry point
+```
+
+## 1. Provider Implementation (`internal/provider/provider.go`)
+
+The provider is the core component that defines available resources and data sources.
+
+### Provider Interface Implementation
+
+```go
+// Ensure provider defined types fully satisfy framework interfaces
+var _ provider.Provider = &exampleProvider{}
+
+type exampleProvider struct {
+    // Provider configuration values
+    version string
+}
+
+func New(version string) func() provider.Provider {
+    return func() provider.Provider {
+        return &exampleProvider{
+            version: version,
+        }
+    }
+}
+```
+
+### Provider Schema
+
+Define configuration options for the provider:
+
+```go
+func (p *exampleProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+    resp.Schema = schema.Schema{
+        Attributes: map[string]schema.Attribute{
+            "host": schema.StringAttribute{
+                Required:    true,
+                Sensitive:  false,
+                Description: "The host address of the API.",
+            },
+            "token": schema.StringAttribute{
+                Required:    true,
+                Sensitive:   true,
+                Description: "API authentication token.",
+            },
+        },
+    }
+}
+```
+
+### Provider Configuration
+
+Handle provider configuration and client setup:
+
+```go
+type providerData struct {
+    Host  types.String `tfsdk:"host"`
+    Token types.String `tfsdk:"token"`
+}
+
+func (p *exampleProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+    var config providerData
+    diags := req.Config.Get(ctx, &config)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Initialize API client
+    client, err := client.New(config.Host.ValueString(), config.Token.ValueString())
+    if err != nil {
+        resp.Diagnostics.AddError(
+            "Unable to Create API Client",
+            "An unexpected error occurred when creating the API client: " + err.Error(),
+        )
+        return
+    }
+
+    // Store client in provider data for use by resources/data sources
+    resp.DataSourceData = client
+    resp.ResourceData = client
+}
+```
+
+## 2. Resource Implementation
+
+Each resource type should be implemented in its own file (e.g., `resource_server.go`).
+
+### Resource Structure
+
+```go
+// Ensure resource implements required interfaces
+var (
+    _ resource.Resource = &serverResource{}
+    _ resource.ResourceWithImportState = &serverResource{}
+)
+
+type serverResource struct {
+    client *client.Client
+}
+
+type serverResourceModel struct {
+    ID          types.String `tfsdk:"id"`
+    Name        types.String `tfsdk:"name"`
+    Address     types.String `tfsdk:"address"`
+    LastUpdated types.String `tfsdk:"last_updated"`
+}
+```
+
+### Resource Schema
+
+```go
+func (r *serverResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+    resp.Schema = schema.Schema{
+        Description: "Manages a server instance.",
+        Attributes: map[string]schema.Attribute{
+            "id": schema.StringAttribute{
+                Computed: true,
+                PlanModifiers: []planmodifier.String{
+                    stringplanmodifier.UseStateForUnknown(),
+                },
+            },
+            "name": schema.StringAttribute{
+                Required:    true,
+                Description: "Name of the server.",
+            },
+            "address": schema.StringAttribute{
+                Required:    true,
+                Description: "Server address.",
+            },
+            "last_updated": schema.StringAttribute{
+                Computed: true,
+            },
+        },
+    }
+}
+```
+
+### CRUD Operations
+
+#### Create
+
+```go
+func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+    // Read plan data into model
+    var plan serverResourceModel
+    diags := req.Plan.Get(ctx, &plan)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Create resource via API
+    server, err := r.client.CreateServer(plan.Name.ValueString(), plan.Address.ValueString())
+    if err != nil {
+        resp.Diagnostics.AddError(
+            "Error creating server",
+            "Could not create server, unexpected error: " + err.Error(),
+        )
+        return
+    }
+
+    // Map response to model
+    plan.ID = types.StringValue(server.ID)
+    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+    // Set state
+    diags = resp.State.Set(ctx, plan)
+    resp.Diagnostics.Append(diags...)
+}
+```
+
+#### Read
+
+```go
+func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+    // Get current state
+    var state serverResourceModel
+    diags := req.State.Get(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Get refreshed server from API
+    server, err := r.client.GetServer(state.ID.ValueString())
+    if err != nil {
+        resp.Diagnostics.AddError(
+            "Error Reading server",
+            "Could not read server ID " + state.ID.ValueString() + ": " + err.Error(),
+        )
+        return
+    }
+
+    // Map response to model
+    state.Name = types.StringValue(server.Name)
+    state.Address = types.StringValue(server.Address)
+
+    // Set refreshed state
+    diags = resp.State.Set(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+}
+```
+
+#### Update
+
+```go
+func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+    // Read plan and state data
+    var plan, state serverResourceModel
+    resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+    resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Update server via API
+    server, err := r.client.UpdateServer(
+        state.ID.ValueString(),
+        plan.Name.ValueString(),
+        plan.Address.ValueString(),
+    )
+    if err != nil {
+        resp.Diagnostics.AddError(
+            "Error updating server",
+            "Could not update server ID " + state.ID.ValueString() + ": " + err.Error(),
+        )
+        return
+    }
+
+    // Map response to model
+    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+    // Set state
+    diags := resp.State.Set(ctx, plan)
+    resp.Diagnostics.Append(diags...)
+}
+```
+
+#### Delete
+
+```go
+func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+    var state serverResourceModel
+    diags := req.State.Get(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Delete server via API
+    err := r.client.DeleteServer(state.ID.ValueString())
+    if err != nil {
+        resp.Diagnostics.AddError(
+            "Error deleting server",
+            "Could not delete server ID " + state.ID.ValueString() + ": " + err.Error(),
+        )
+        return
+    }
+}
+```
+
+### Import Support
+
+```go
+func (r *serverResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+    // Import server using ID
+    resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+```
+
+## 3. Data Source Implementation
+
+Data sources provide read-only access to existing resources.
+
+```go
+type serverDataSource struct {
+    client *client.Client
+}
+
+func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+    var state serverResourceModel
+    diags := req.Config.Get(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Read server from API
+    server, err := d.client.GetServer(state.ID.ValueString())
+    if err != nil {
+        resp.Diagnostics.AddError(
+            "Error Reading server",
+            "Could not read server ID " + state.ID.ValueString() + ": " + err.Error(),
+        )
+        return
+    }
+
+    // Map response to model
+    state.Name = types.StringValue(server.Name)
+    state.Address = types.StringValue(server.Address)
+
+    // Set state
+    diags = resp.State.Set(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+}
+```
+
+## 4. Best Practices
+
+### Error Handling
+
+- Use `resp.Diagnostics.AddError()` for errors that should stop execution
+- Use `resp.Diagnostics.AddWarning()` for non-fatal issues
+- Always check `resp.Diagnostics.HasError()` after operations that might add diagnostics
+
+### Logging
+
+```go
+import "github.com/hashicorp/terraform-plugin-log/tflog"
+
+func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+    tflog.Debug(ctx, "Creating server resource")
+
+    // ... implementation ...
+
+    tflog.Info(ctx, "Created server resource", map[string]any{
+        "id": server.ID,
+    })
+}
+```
+
+### State Management
+
+- Always use framework types (`types.String`, `types.Bool`, etc.) for state attributes
+- Use plan modifiers to control how values are handled during planning
+- Implement proper state refresh in the Read operation
+
+### Testing
+
+Create comprehensive tests in `internal/provider/resource_*_test.go`:
+
+```go
+func TestAccExampleResource(t *testing.T) {
+    resource.Test(t, resource.TestCase{
+        PreCheck:                 func() { testAccPreCheck(t) },
+        ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+        Steps: []resource.TestStep{
+            {
+                Config: testAccExampleResourceConfig,
+                Check: resource.ComposeTestCheckFunc(
+                    resource.TestCheckResourceAttr("example_resource.test", "name", "test"),
+                ),
+            },
+        },
+    })
+}
+```
+
+## 5. Documentation
+
+Maintain comprehensive documentation in the `docs/` directory:
+
+- `index.md`: Provider overview and configuration
+- `resources/<resource_name>.md`: Resource documentation
+- `data-sources/<data_source_name>.md`: Data source documentation
+
+Include:
+- Schema details
+- Example configurations
+- Import instructions
+- Any known limitations or caveats
+
+## References
+
+- [Provider Schema](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider)
+- [Provider Configure](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider-configure)
+- [Resource Implementation](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-resource-create)
+- [Data Sources](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-data-source-read)
+- [Logging](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-logging)
+- [Resource Import](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-resource-import)
+- [Provider Functions](mdc:https:/developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-functions)

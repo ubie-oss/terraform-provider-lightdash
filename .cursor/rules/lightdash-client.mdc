@@ -1,0 +1,67 @@
+---
+description:
+globs: internal/lightdash/**/*.go
+alwaysApply: false
+---
+# Lightdash API Client (`internal/lightdash`)
+
+This directory contains the Go code responsible for communicating with the Lightdash API. It is organized into several subdirectories, each with a clear responsibility:
+
+---
+
+## `api/` – HTTP Client and Endpoint Wrappers
+
+- **Purpose:** Implements the custom HTTP client (`Client` struct in `client.go`) and provides Go functions for each Lightdash API endpoint.
+- **Key files:**
+  - `client.go`: Defines the `Client` struct, which manages HTTP communication, authentication, and request/response handling.
+  - `*_v1.go`: Each file implements a function for a specific Lightdash API endpoint, using the `Client` to make requests and parse responses.
+  - `utils.go`: Utility functions for API operations.
+- **Usage:** The `Client` is instantiated with host and token, and endpoint methods (e.g., `AddProjectAccessToGroupV1`, `GetOrganizationGroupsV1`) are called to interact with the Lightdash API.
+
+---
+
+## `models/` – Data Structures
+
+- **Purpose:** Contains Go structs representing the data models used in Lightdash API requests and responses.
+- **Key files:**
+  - `organization_member_role.go`, `project_member_role.go`, `space_member_role.go`, `project_type.go`: Define enums and validation helpers for roles and types.
+  - `organization_group.go`, `warehouse_credentials.go`, `project_scheduler_settings.go`, `user_core.go`: Define core data structures for organization groups, credentials, scheduler settings, and users.
+- **Usage:** These models are used throughout the API and service layers to marshal/unmarshal JSON and enforce type safety.
+
+---
+
+## `services/` – Service Layer
+
+- **Purpose:** Provides higher-level abstractions and business logic for interacting with Lightdash resources, grouping related API calls and handling data aggregation or caching.
+- **Key files:**
+  - `organization_members.go`, `organization_groups.go`, `project_scheduler_settings.go`, `warehouse_credentials.go`: Each file defines a service struct (e.g., `OrganizationMembersService`) that uses the API client to perform resource-specific operations, such as fetching and filtering organization members or groups.
+- **Usage:** Services are instantiated with an `api.Client` and expose methods for common workflows, such as retrieving all organization members or updating scheduler settings.
+
+---
+
+## `controllers/` – (Currently Placeholder)
+
+- **Purpose:** Intended for future expansion to include controller logic, but currently contains only a `.gitkeep` placeholder file and no implementation.
+
+---
+
+## Unit Testing (`*_test.go`)
+
+- **Approach:** Unit tests for Go files under `internal/lightdash` are designed to work without making real API calls. Instead of using mocks for API calls (which can get complicated), tests focus on verifying the correctness of model classes, request/response structs, and their (un)marshalling logic.
+- **Typical tests:**
+  - Validation of enum and type helpers (e.g., role validation, string conversion).
+  - JSON (un)marshalling for request and response structs.
+  - Field assignment and logic in data models.
+- **No API calls:** Tests do not interact with the real Lightdash API or use network calls.
+- **No mocks:** API call logic is not tested with mocks; the emphasis is on pure data/model logic.
+
+---
+
+**Summary:**
+The `internal/lightdash` directory implements a layered Lightdash API client:
+- The `api/` package handles low-level HTTP and endpoint logic.
+- The `models/` package defines all data structures and enums.
+- The `services/` package provides business logic and resource-oriented operations.
+- The `controllers/` package is reserved for future use.
+
+This structure abstracts HTTP details and provides a clean, testable interface for the Terraform provider code in `internal/provider` to interact with Lightdash.
