@@ -35,6 +35,10 @@ data "lightdash_spaces" "test" {
 <a id="nestedatt--spaces"></a>
 ### Nested Schema for `spaces`
 
+Optional:
+
+- `parent_space_uuid` (String) Parent space UUID of the Lightdash space. This attribute is nullable and will be empty if the space has no parent.
+
 Read-Only:
 
 - `is_private` (Boolean) Is the Lightdash space private.

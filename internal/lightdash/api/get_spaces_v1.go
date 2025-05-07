@@ -21,11 +21,12 @@ import (
 )
 
 type ListSpacesInProjectV1Results struct {
-	OrganizationUUID string `json:"organizationUuid"`
-	ProjectUUID      string `json:"projectUuid"`
-	SpaceUUID        string `json:"uuid"`
-	SpaceName        string `json:"name"`
-	IsPrivate        bool   `json:"isPrivate"` // nolint: govet
+	OrganizationUUID string  `json:"organizationUuid"`
+	ProjectUUID      string  `json:"projectUuid"`
+	ParentSpaceUUID  *string `json:"parentSpaceUuid,omitempty"`
+	SpaceUUID        string  `json:"uuid"`
+	SpaceName        string  `json:"name"`
+	IsPrivate        bool    `json:"isPrivate"` // nolint: govet
 }
 
 type ListSpacesInProjectV1Response struct {
