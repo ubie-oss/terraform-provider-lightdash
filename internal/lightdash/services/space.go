@@ -18,19 +18,19 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
-// UpdateSpaceService provides methods to update and move a Lightdash space.
-type UpdateSpaceService struct {
+// SpaceService provides methods to update and move a Lightdash space.
+type SpaceService struct {
 	client *api.Client
 }
 
 // NewUpdateSpaceService creates a new UpdateSpaceService.
-func NewUpdateSpaceService(client *api.Client) *UpdateSpaceService {
-	return &UpdateSpaceService{client: client}
+func NewUpdateSpaceService(client *api.Client) *SpaceService {
+	return &SpaceService{client: client}
 }
 
 // UpdateSpace updates the space's name, privacy, and optionally its parent space.
 // projectUuid is required for both UpdateSpaceV1 and MoveSpaceV1 API calls.
-func (s *UpdateSpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isPrivate bool, parentSpaceUuid *string) error {
+func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isPrivate bool, parentSpaceUuid *string) error {
 	// Update the space's name, privacy, and parent (if provided)
 	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
