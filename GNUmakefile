@@ -30,7 +30,7 @@ build: gen-docs go-tidy gosec
 	go build -v ./
 
 gosec:
-	gosec ./...
+	gosec ./internal/...
 
 lint: run-trunk-check run-pre-commit
 
