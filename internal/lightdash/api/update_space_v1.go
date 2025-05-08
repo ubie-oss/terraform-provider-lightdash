@@ -23,7 +23,7 @@ import (
 
 type UpdateSpaceV1Request struct {
 	Name            string  `json:"name"`
-	IsPrivate       bool    `json:"isPrivate"`
+	IsPrivate       bool    `json:"isPrivate,omitempty"`
 	ParentSpaceUUID *string `json:"parentSpaceUuid,omitempty"`
 }
 
@@ -41,39 +41,56 @@ type UpdateSpaceV1Response struct {
 	Status  string               `json:"status"`
 }
 
-func (c *Client) UpdateSpaceV1(projectUuid string, spaceUuid string, spaceName string, isPrivate bool, parentSpaceUuid *string) (*UpdateSpaceV1Results, error) {
+func (c *Client) UpdateSpaceV1(projectUuid string, spaceUuid string, spaceName string, isPrivate *bool, parentSpaceUuid *string) (*UpdateSpaceV1Results, error) {
 	// Create the request body, including parentSpaceUuid if provided
 	data := UpdateSpaceV1Request{
-		Name:      spaceName,
-		IsPrivate: isPrivate,
+		Name: spaceName,
+	}
+	if isPrivate != nil {
+		data.IsPrivate = *isPrivate
 	}
 	if parentSpaceUuid != nil {
 		data.ParentSpaceUUID = parentSpaceUuid
 	}
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal UpdateSpaceV1Request: %w", err)
+		return nil, fmt.Errorf(
+			"failed to marshal UpdateSpaceV1Request (data=%#v): %w",
+			data, err,
+		)
 	}
 	// Create the request
 	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces/%s", c.HostUrl, projectUuid, spaceUuid)
 	req, err := http.NewRequest("PATCH", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new request: %w", err)
+		return nil, fmt.Errorf(
+			"failed to create new request (data=%#v): %w",
+			data, err,
+		)
 	}
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, fmt.Errorf(
+			"request failed (data=%#v): %w",
+			data, err,
+		)
 	}
 	// Marshal the response
 	response := UpdateSpaceV1Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, fmt.Errorf(
+			"failed to unmarshal response (data=%#v): %w",
+			data, err,
+		)
 	}
 	// Make sure if the space UUID is not empty
 	if response.Results.SpaceUUID == "" {
-		return nil, fmt.Errorf("space UUID is nil")
+		return nil, fmt.Errorf(
+			"space UUID is nil (data=%#v)",
+			data,
+		)
 	}
 	return &response.Results, nil
 }

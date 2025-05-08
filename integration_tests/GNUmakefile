@@ -18,11 +18,11 @@ terraform-init:
 
 .PHONY: terraform-apply
 terraform-apply:
-	TF_LOG=DEBUG terraform apply -var-file="testing.tfvars"
+	TF_LOG=DEBUG TF_LOG_PATH=tf-apply.log terraform apply -var-file="testing.tfvars"
 
 .PHONY: terraform-destroy
 terraform-destroy:
-	TF_LOG=DEBUG terraform destroy -var-file="testing.tfvars"
+	TF_LOG=DEBUG TF_LOG_PATH=tf-destroy.log terraform destroy -var-file="testing.tfvars"
 
 .PHONY: terraform-show
 terraform-show:

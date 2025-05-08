@@ -85,21 +85,31 @@ resource "lightdash_space" "test_parent_space" {
   deletion_protection = false
 }
 
-resource "lightdash_space" "test_child_space" {
+resource "lightdash_space" "test_child_space_1" {
   project_uuid      = var.test_lightdash_project_uuid
-  name              = "zzz_test_child_space"
+  name              = "zzz_test_child_space_1"
   is_private        = true
   parent_space_uuid = lightdash_space.test_parent_space.space_uuid
 
   deletion_protection = false
 }
 
+resource "lightdash_space" "test_child_space_2" {
+  project_uuid      = var.test_lightdash_project_uuid
+  name              = "zzz_test_child_space_2"
+  is_private        = true
+  parent_space_uuid = lightdash_space.test_parent_space.space_uuid
+  # We test to switch the parent space
+  # parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
+
+  deletion_protection = false
+}
 
 resource "lightdash_space" "test_grandchild_space" {
   project_uuid      = var.test_lightdash_project_uuid
   name              = "zzz_test_grandchild_space"
   is_private        = true
-  parent_space_uuid = lightdash_space.test_child_space.space_uuid
+  parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
 
   deletion_protection = false
 }
