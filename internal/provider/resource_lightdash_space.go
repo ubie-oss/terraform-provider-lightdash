@@ -233,18 +233,16 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		parentSpaceUUID = plan.ParentSpaceUUID.ValueStringPointer()
 	}
 
-	// Remember which users were specified in the original plan
-	planUserUUIDs := make(map[string]spaceMemberAccessBlockModel)
-	for _, access := range plan.MemberAccessList {
-		planUserUUIDs[access.UserUUID.ValueString()] = access
-	}
-
-	// Convert member access list to controller format
+	// Convert member access list from plan to controller format.
+	// The controller will handle whether to apply access based on is_organization_admin status.
 	memberAccess := []controllers.SpaceMemberAccess{}
 	for _, access := range plan.MemberAccessList {
 		memberAccess = append(memberAccess, controllers.SpaceMemberAccess{
 			UserUUID:  access.UserUUID.ValueString(),
 			SpaceRole: models.SpaceMemberRole(access.SpaceRole.ValueString()),
+			// Pass the is_organization_admin status from the plan to the controller.
+			// The controller should decide whether to use this info or rely on API checks.
+			IsOrganizationAdmin: access.IsOrganizationAdmin.ValueBool(),
 		})
 	}
 
@@ -282,78 +280,40 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Update the plan with values from the controller
-	plan.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", spaceDetails.ProjectUUID, spaceDetails.SpaceUUID))
-	plan.ProjectUUID = types.StringValue(spaceDetails.ProjectUUID)
-	plan.SpaceUUID = types.StringValue(spaceDetails.SpaceUUID)
-	plan.SpaceName = types.StringValue(spaceDetails.SpaceName)
-	plan.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
+	// Populate the state with values returned by the controller (which reflects the API response)
+	var state spaceResourceModel
+	state.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", spaceDetails.ProjectUUID, spaceDetails.SpaceUUID))
+	state.ProjectUUID = types.StringValue(spaceDetails.ProjectUUID)
+	state.SpaceUUID = types.StringValue(spaceDetails.SpaceUUID)
+	state.SpaceName = types.StringValue(spaceDetails.SpaceName)
+	state.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
 
-	// Handle parent space UUID
+	// Handle parent space UUID from controller result
 	if spaceDetails.ParentSpaceUUID != nil {
-		plan.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
+		state.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
 	} else {
-		plan.ParentSpaceUUID = types.StringNull()
+		state.ParentSpaceUUID = types.StringNull()
 	}
 
-	// Preserve deletion protection from plan
-	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
+	// Preserve deletion protection from plan - this is a Terraform setting
+	state.DeleteProtection = plan.DeleteProtection
 
-	// Set timestamps
-	plan.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	// Set timestamps - these are typically set by the provider on creation and update
+	state.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
+	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Track organization admins found during creation
-	orgAdmins := make(map[string]bool)
+	// Populate member access list from controller result (which reflects the API)
+	memberAccessList := []spaceMemberAccessBlockModel{}
 	for _, member := range spaceDetails.MemberAccess {
-		if member.IsOrganizationAdmin {
-			orgAdmins[member.UserUUID] = true
-			tflog.Debug(ctx, fmt.Sprintf("Found org admin during creation: %s", member.UserUUID))
-		}
-	}
-
-	// Prepare final member access list
-	finalMemberAccessList := []spaceMemberAccessBlockModel{}
-	addedUsers := make(map[string]bool)
-
-	// First add all members from the original plan with updated org admin status
-	for userUUID, planMember := range planUserUUIDs {
-		isOrgAdmin := orgAdmins[userUUID]
-
-		// Look for updated role from spaceDetails
-		spaceRole := planMember.SpaceRole
-		for _, member := range spaceDetails.MemberAccess {
-			if member.UserUUID == userUUID {
-				// Only update the role if it's different
-				if string(member.SpaceRole) != planMember.SpaceRole.ValueString() {
-					spaceRole = types.StringValue(string(member.SpaceRole))
-				}
-				break
-			}
-		}
-
-		finalMemberAccessList = append(finalMemberAccessList, spaceMemberAccessBlockModel{
-			UserUUID:            planMember.UserUUID,
-			SpaceRole:           spaceRole,
-			IsOrganizationAdmin: types.BoolValue(isOrgAdmin),
+		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
+			UserUUID:            types.StringValue(member.UserUUID),
+			SpaceRole:           types.StringValue(string(member.SpaceRole)),
+			IsOrganizationAdmin: types.BoolValue(member.IsOrganizationAdmin),
 		})
-		addedUsers[userUUID] = true
 	}
+	state.MemberAccessList = memberAccessList
 
-	// Then add any additional members returned by the controller that weren't in the plan
-	for _, member := range spaceDetails.MemberAccess {
-		if !addedUsers[member.UserUUID] {
-			finalMemberAccessList = append(finalMemberAccessList, spaceMemberAccessBlockModel{
-				UserUUID:            types.StringValue(member.UserUUID),
-				SpaceRole:           types.StringValue(string(member.SpaceRole)),
-				IsOrganizationAdmin: types.BoolValue(member.IsOrganizationAdmin),
-			})
-		}
-	}
-
-	plan.MemberAccessList = finalMemberAccessList
-
-	// Update group access list
+	// Populate group access list from controller result
 	groupAccessList := []spaceGroupAccessBlockModel{}
 	for _, group := range spaceDetails.GroupAccess {
 		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
@@ -361,15 +321,15 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 			SpaceRole: types.StringValue(string(group.SpaceRole)),
 		})
 	}
-	plan.GroupAccessList = groupAccessList
+	state.GroupAccessList = groupAccessList
 
 	// Set state
-	diags = resp.State.Set(ctx, plan)
+	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// Get current state. This is the source of truth for organization admins.
+	// Get current state. This is needed to preserve Terraform-managed attributes.
 	var state spaceResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -377,16 +337,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	// Create a map of existing members from the current state for easy lookup.
-	// This map will be used to determine if a member was previously an organization admin
-	existingMemberMap := make(map[string]spaceMemberAccessBlockModel)
-	for _, member := range state.MemberAccessList {
-		existingMemberMap[member.UserUUID.ValueString()] = member
-		tflog.Debug(ctx, fmt.Sprintf("Original state member: %s, role: %s, is_admin: %t",
-			member.UserUUID.ValueString(), member.SpaceRole.ValueString(), member.IsOrganizationAdmin.ValueBool()))
-	}
-
-	// Get space details from controller
+	// Get space details from controller (API)
 	projectUUID := state.ProjectUUID.ValueString()
 	spaceUUID := state.SpaceUUID.ValueString()
 
@@ -416,61 +367,19 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		state.ParentSpaceUUID = types.StringNull()
 	}
 
-	// Prepare the new member access list.
-	// Start by including all members from the original state, especially organization admins.
-	newMemberAccessList := []spaceMemberAccessBlockModel{}
-	addedUsers := make(map[string]bool)
-
-	// Add all members from the original state first.
-	// For organization admins in the state, their entries are final and won't be overwritten by API data.
-	// For non-admins, these entries serve as a base and may be updated by API data.
-	for userUUID, existingMember := range existingMemberMap {
-		newMemberAccessList = append(newMemberAccessList, existingMember)
-		addedUsers[userUUID] = true
-		tflog.Debug(ctx, fmt.Sprintf("Added member from state: %s, role: %s, is_admin: %t",
-			userUUID, existingMember.SpaceRole.ValueString(), existingMember.IsOrganizationAdmin.ValueBool()))
+	// Populate member access list directly from API response.
+	// The API response should provide the current state including is_organization_admin status.
+	memberAccessList := []spaceMemberAccessBlockModel{}
+	for _, member := range spaceDetails.MemberAccess {
+		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
+			UserUUID:            types.StringValue(member.UserUUID),
+			SpaceRole:           types.StringValue(string(member.SpaceRole)),
+			IsOrganizationAdmin: types.BoolValue(member.IsOrganizationAdmin),
+		})
 	}
+	state.MemberAccessList = memberAccessList
 
-	// Now, iterate through members returned by the API.
-	// If a user from the API is already in our list (from the original state), update their data ONLY if they are NOT an org admin in the state.
-	// If a user is not in our list, add them using API data.
-	for _, apiMember := range spaceDetails.MemberAccess {
-		userUUID := apiMember.UserUUID
-
-		if existingMember, exists := existingMemberMap[userUUID]; exists {
-			// User exists in original state.
-			// If they are NOT an org admin in the state, update their entry in the new list with the API data.
-			if !existingMember.IsOrganizationAdmin.ValueBool() {
-				// Find this member in newMemberAccessList and update their details with API data
-				for i := range newMemberAccessList {
-					if newMemberAccessList[i].UserUUID.ValueString() == userUUID {
-						// Update the role and is_organization_admin status based on API
-						newMemberAccessList[i].SpaceRole = types.StringValue(string(apiMember.SpaceRole))
-						newMemberAccessList[i].IsOrganizationAdmin = types.BoolValue(apiMember.IsOrganizationAdmin)
-						tflog.Debug(ctx, fmt.Sprintf("Updated non-org admin from state with API data: %s, role: %s, is_admin: %t",
-							userUUID, string(apiMember.SpaceRole), apiMember.IsOrganizationAdmin))
-						break
-					}
-				}
-			}
-			// If the user *was* an org admin in the state, we do nothing here;
-			// their original state entry is already in newMemberAccessList and is preserved exactly.
-		} else {
-			// User does not exist in original state, add them from API.
-			newMemberAccessList = append(newMemberAccessList, spaceMemberAccessBlockModel{
-				UserUUID:            types.StringValue(userUUID),
-				SpaceRole:           types.StringValue(string(apiMember.SpaceRole)),
-				IsOrganizationAdmin: types.BoolValue(apiMember.IsOrganizationAdmin),
-			})
-			addedUsers[userUUID] = true // Mark as added from API to avoid duplicates
-			tflog.Debug(ctx, fmt.Sprintf("Added new member from API: %s, role: %s, is_admin: %t",
-				userUUID, string(apiMember.SpaceRole), apiMember.IsOrganizationAdmin))
-		}
-	}
-
-	state.MemberAccessList = newMemberAccessList
-
-	// Update group access list (should be consistent between API and state for groups)
+	// Populate group access list directly from API response
 	groupAccessList := []spaceGroupAccessBlockModel{}
 	for _, group := range spaceDetails.GroupAccess {
 		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
@@ -480,23 +389,29 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	state.GroupAccessList = groupAccessList
 
-	// Preserve deletion protection, created_at, and last_updated from original state
-	// These fields are managed by Terraform, not directly by the API in this context.
-	// We must get these from the *original* state, not the potentially modified 'state' variable.
-	var originalState spaceResourceModel
-	diags = req.State.Get(ctx, &originalState)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// Preserve deletion protection, created_at, and last_updated from the *original* state.
+	// These fields are managed by Terraform, not directly by the API in this context, and should only change
+	// when the user modifies the Terraform configuration.
+	// We already read the original state at the beginning of the function.
 
-	state.DeleteProtection = originalState.DeleteProtection
-	state.CreatedAt = originalState.CreatedAt
-	state.LastUpdated = originalState.LastUpdated
+	// Restore original Terraform-managed attributes
+	// Note: 'state' now contains the API-fetched data for most fields, but we overwrite
+	// the Terraform-managed ones with values from the state *before* the API call.
+	state.DeleteProtection = state.DeleteProtection // This line doesn't do anything, retaining original state value implicitly
+	state.CreatedAt = state.CreatedAt
+	state.LastUpdated = state.LastUpdated
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
+	// Check for inconsistencies after setting state
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Optional: If needed for debugging, uncomment the following to see the state being set
+	// tflog.Debug(ctx, "Read method finished, state set")
 }
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -508,34 +423,6 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Create a map of existing organization admins from the current state
-	// These must be preserved during the update process
-	orgAdmins := make(map[string]spaceMemberAccessBlockModel)
-	for _, member := range state.MemberAccessList {
-		if member.IsOrganizationAdmin.ValueBool() {
-			orgAdmins[member.UserUUID.ValueString()] = member
-			tflog.Debug(ctx, fmt.Sprintf("Found org admin in state during update: %s with role %s",
-				member.UserUUID.ValueString(), member.SpaceRole.ValueString()))
-		}
-	}
-
-	// Check if any org admins are missing from the plan and add them back
-	// This ensures that even if a user tries to remove an org admin, we preserve it
-	planMemberMap := make(map[string]spaceMemberAccessBlockModel)
-	for _, member := range plan.MemberAccessList {
-		planMemberMap[member.UserUUID.ValueString()] = member
-	}
-
-	// Add any missing org admins back to the plan
-	updatedMemberAccessList := plan.MemberAccessList
-	for userUUID, orgAdmin := range orgAdmins {
-		if _, exists := planMemberMap[userUUID]; !exists {
-			tflog.Info(ctx, fmt.Sprintf("Adding back org admin to plan: %s", userUUID))
-			updatedMemberAccessList = append(updatedMemberAccessList, orgAdmin)
-		}
-	}
-	plan.MemberAccessList = updatedMemberAccessList
-
 	// Prepare data for controller
 	projectUUID := plan.ProjectUUID.ValueString()
 	spaceUUID := plan.SpaceUUID.ValueString()
@@ -546,19 +433,14 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		parentSpaceUUID = plan.ParentSpaceUUID.ValueStringPointer()
 	}
 
-	// Convert member access list to controller format
+	// Convert member access list from plan to controller format.
+	// Pass the is_organization_admin status from the plan.
 	memberAccess := []controllers.SpaceMemberAccess{}
 	for _, access := range plan.MemberAccessList {
-		// Check if this is an org admin from our map
-		isOrgAdmin := false
-		if _, isAdmin := orgAdmins[access.UserUUID.ValueString()]; isAdmin {
-			isOrgAdmin = true
-		}
-
 		memberAccess = append(memberAccess, controllers.SpaceMemberAccess{
 			UserUUID:            access.UserUUID.ValueString(),
 			SpaceRole:           models.SpaceMemberRole(access.SpaceRole.ValueString()),
-			IsOrganizationAdmin: isOrgAdmin,
+			IsOrganizationAdmin: access.IsOrganizationAdmin.ValueBool(),
 		})
 	}
 
@@ -597,68 +479,37 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Update the plan with values from the controller
-	plan.ProjectUUID = types.StringValue(spaceDetails.ProjectUUID)
-	plan.SpaceUUID = types.StringValue(spaceDetails.SpaceUUID)
-	plan.SpaceName = types.StringValue(spaceDetails.SpaceName)
-	plan.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
+	// Populate the state with values returned by the controller (which reflects the API response)
+	state.ProjectUUID = types.StringValue(spaceDetails.ProjectUUID)
+	state.SpaceUUID = types.StringValue(spaceDetails.SpaceUUID)
+	state.SpaceName = types.StringValue(spaceDetails.SpaceName)
+	state.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
 
-	// Handle parent space UUID
+	// Handle parent space UUID from controller result
 	if spaceDetails.ParentSpaceUUID != nil {
-		plan.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
+		state.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
 	} else {
-		plan.ParentSpaceUUID = types.StringNull()
+		state.ParentSpaceUUID = types.StringNull()
 	}
 
 	// Preserve deletion protection from plan
-	plan.DeleteProtection = types.BoolValue(plan.DeleteProtection.ValueBool())
+	state.DeleteProtection = plan.DeleteProtection
 
-	// Set last updated timestamp
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	// Set last updated timestamp - this is typically set by the provider on creation and update
+	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Prepare the final member access list for the new state
-	finalMemberAccessList := []spaceMemberAccessBlockModel{}
-	addedUsers := make(map[string]bool)
-
-	// First, ensure all organization admins are in the final list
-	for userUUID, orgAdmin := range orgAdmins {
-		// Check if the admin is in spaceDetails with an updated role
-		updatedRole := orgAdmin.SpaceRole
-		for _, member := range spaceDetails.MemberAccess {
-			if member.UserUUID == userUUID {
-				updatedRole = types.StringValue(string(member.SpaceRole))
-				break
-			}
-		}
-
-		// Add the org admin with their role (original or updated)
-		finalMemberAccessList = append(finalMemberAccessList, spaceMemberAccessBlockModel{
-			UserUUID:            orgAdmin.UserUUID,
-			SpaceRole:           updatedRole,
-			IsOrganizationAdmin: types.BoolValue(true),
-		})
-		addedUsers[userUUID] = true
-		tflog.Debug(ctx, fmt.Sprintf("Preserving org admin in update result: %s with role %s",
-			userUUID, updatedRole.ValueString()))
-	}
-
-	// Then add the regular members from spaceDetails
+	// Populate member access list from controller result (which reflects the API)
+	memberAccessList := []spaceMemberAccessBlockModel{}
 	for _, member := range spaceDetails.MemberAccess {
-		// Skip users we've already added (the org admins)
-		if addedUsers[member.UserUUID] {
-			continue
-		}
-
-		finalMemberAccessList = append(finalMemberAccessList, spaceMemberAccessBlockModel{
+		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
 			UserUUID:            types.StringValue(member.UserUUID),
 			SpaceRole:           types.StringValue(string(member.SpaceRole)),
 			IsOrganizationAdmin: types.BoolValue(member.IsOrganizationAdmin),
 		})
 	}
+	state.MemberAccessList = memberAccessList
 
-	plan.MemberAccessList = finalMemberAccessList
-
-	// Update group access list
+	// Populate group access list from controller result
 	groupAccessList := []spaceGroupAccessBlockModel{}
 	for _, group := range spaceDetails.GroupAccess {
 		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
@@ -666,10 +517,10 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			SpaceRole: types.StringValue(string(group.SpaceRole)),
 		})
 	}
-	plan.GroupAccessList = groupAccessList
+	state.GroupAccessList = groupAccessList
 
 	// Set state
-	diags := resp.State.Set(ctx, plan)
+	diags := resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
 }
 
