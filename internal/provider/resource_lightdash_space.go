@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -38,6 +39,62 @@ var (
 	_ resource.ResourceWithConfigure   = &spaceResource{}
 	_ resource.ResourceWithImportState = &spaceResource{}
 )
+
+// Helper function to convert API SpaceAccessMember to spaceMemberAccessBlockModel for access_all
+func convertToAllMemberAccessBlockModels(apiMembers []api.SpaceAccessMember) []spaceMemberAccessBlockModel {
+	var blockModels []spaceMemberAccessBlockModel
+	if apiMembers == nil {
+		return blockModels
+	}
+	for _, member := range apiMembers {
+		var hasDirectAccessVal = types.BoolValue(member.HasDirectAccess)
+
+		var inheritedFromVal types.String
+		if member.InheritedFrom != "" {
+			inheritedFromVal = types.StringValue(member.InheritedFrom)
+		} else {
+			inheritedFromVal = types.StringNull()
+		}
+
+		blockModels = append(blockModels, spaceMemberAccessBlockModel{
+			UserUUID:        types.StringValue(member.UserUUID),
+			SpaceRole:       types.StringValue(string(member.SpaceRole)),
+			HasDirectAccess: hasDirectAccessVal,
+			InheritedFrom:   inheritedFromVal,
+		})
+	}
+	return blockModels
+}
+
+// Helper function to convert API SpaceAccessGroup to spaceGroupAccessBlockModel
+func convertToGroupAccessBlockModels(apiGroups []api.SpaceAccessGroup) []spaceGroupAccessBlockModel {
+	var blockModels []spaceGroupAccessBlockModel
+	if apiGroups == nil {
+		return blockModels
+	}
+	for _, group := range apiGroups {
+		blockModels = append(blockModels, spaceGroupAccessBlockModel{
+			GroupUUID: types.StringValue(group.GroupUUID),
+			SpaceRole: types.StringValue(string(group.SpaceRole)),
+		})
+	}
+	return blockModels
+}
+
+// Helper function to convert Controller SpaceGroupAccess to spaceGroupAccessBlockModel
+func convertControllerGroupAccessToBlockModels(controllerGroups []controllers.SpaceGroupAccess) []spaceGroupAccessBlockModel {
+	var blockModels []spaceGroupAccessBlockModel
+	if controllerGroups == nil {
+		return blockModels
+	}
+	for _, group := range controllerGroups {
+		blockModels = append(blockModels, spaceGroupAccessBlockModel{
+			GroupUUID: types.StringValue(group.GroupUUID),
+			SpaceRole: types.StringValue(string(group.SpaceRole)),
+		})
+	}
+	return blockModels
+}
 
 func NewSpaceResource() resource.Resource {
 	return &spaceResource{}
@@ -54,16 +111,18 @@ type spaceResourceModel struct {
 	ID types.String `tfsdk:"id"`
 	// The response from the API does not contain the organization UUID right now.
 	// OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String                  `tfsdk:"project_uuid"`
-	ParentSpaceUUID  types.String                  `tfsdk:"parent_space_uuid"`
-	SpaceUUID        types.String                  `tfsdk:"space_uuid"`
-	IsPrivate        types.Bool                    `tfsdk:"is_private"`
-	SpaceName        types.String                  `tfsdk:"name"`
-	DeleteProtection types.Bool                    `tfsdk:"deletion_protection"`
-	CreatedAt        types.String                  `tfsdk:"created_at"`
-	LastUpdated      types.String                  `tfsdk:"last_updated"`
-	MemberAccessList []spaceMemberAccessBlockModel `tfsdk:"access"`
-	GroupAccessList  []spaceGroupAccessBlockModel  `tfsdk:"group_access"`
+	ProjectUUID         types.String                  `tfsdk:"project_uuid"`
+	ParentSpaceUUID     types.String                  `tfsdk:"parent_space_uuid"`
+	SpaceUUID           types.String                  `tfsdk:"space_uuid"`
+	IsPrivate           types.Bool                    `tfsdk:"is_private"`
+	SpaceName           types.String                  `tfsdk:"name"`
+	DeleteProtection    types.Bool                    `tfsdk:"deletion_protection"`
+	CreatedAt           types.String                  `tfsdk:"created_at"`
+	LastUpdated         types.String                  `tfsdk:"last_updated"`
+	MemberAccessList    []spaceMemberAccessBlockModel `tfsdk:"access"`
+	MemberAccessListAll []spaceMemberAccessBlockModel `tfsdk:"access_all"`
+	GroupAccessList     []spaceGroupAccessBlockModel  `tfsdk:"group_access"`
+	GroupAccessListAll  []spaceGroupAccessBlockModel  `tfsdk:"group_access_all"`
 }
 
 // spaceMemberAccessBlockModel maps the member access data from the API to the Terraform schema.
@@ -163,10 +222,9 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 		},
 		Blocks: map[string]schema.Block{
 			"access": schema.SetNestedBlock{
-				MarkdownDescription: "This block represents the access settings for the Lightdash space. " +
-					"It allows you to define the users who have access to the space by specifying their user UUIDs. " +
-					"Each access block should contain a 'user_uuid' and 'space_role' attributes. " +
-					"Note: Organization administrators in Lightdash inherently have access to all spaces. " +
+				MarkdownDescription: "Use this block to define the users who have access to the Lightdash space. " +
+					"Specify each user's UUID and their role within the space. " +
+					"Note: Organization administrators in Lightdash automatically have access to all spaces. " +
 					"IMPORTANT: This block is ignored for nested spaces, as they inherit access from their parent space.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
@@ -181,24 +239,41 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
 							Required:            true,
 						},
+					},
+				},
+			},
+			"access_all": schema.SetNestedBlock{
+				MarkdownDescription: "This block displays the complete list of users with access to the space, including those with direct access, inherited access, and organization administrators." +
+					"It mirrors the API response for space access members and is read-only.",
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"user_uuid": schema.StringAttribute{
+							MarkdownDescription: "User UUID",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"space_role": schema.StringAttribute{
+							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
+							Computed:            true,
+						},
 						"has_direct_access": schema.BoolAttribute{
 							MarkdownDescription: "Indicates if the user has direct access to the space.",
 							Computed:            true,
-							Optional:            true,
 						},
 						"inherited_from": schema.StringAttribute{
 							MarkdownDescription: "Indicates where the user's access is inherited from (e.g., organization, project).",
 							Computed:            true,
-							Optional:            true,
 						},
 					},
 				},
 			},
 			"group_access": schema.SetNestedBlock{
-				MarkdownDescription: "This block represents the group access settings for the Lightdash space. " +
-					"It allows you to define the groups who have access to the space by specifying their group UUIDs. " +
-					"Each group access block should contain 'group_uuid' and 'space_role' attributes. " +
-					"IMPORTANT: This block is ignored for nested spaces, as they inherit access from their parent space.",
+				MarkdownDescription: "Use this block to define the groups who have access to the Lightdash space by specifying their group UUIDs and their role within the space.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"group_uuid": schema.StringAttribute{
@@ -208,6 +283,28 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"space_role": schema.StringAttribute{
 							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
 							Required:            true,
+						},
+					},
+				},
+			},
+			"group_access_all": schema.SetNestedBlock{
+				MarkdownDescription: "This block displays the complete list of groups with access to the space, including those with direct access and inherited access." +
+					"It mirrors the API response for space access groups and is read-only.",
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"group_uuid": schema.StringAttribute{
+							MarkdownDescription: "Group UUID",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"space_role": schema.StringAttribute{
+							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
+							Computed:            true,
 						},
 					},
 				},
@@ -302,7 +399,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		})
 
 	// Create space using controller
-	spaceDetails, errors := r.spaceController.CreateSpace(
+	spaceDetailsFromController, controllerErrors := r.spaceController.CreateSpace(
 		projectUUID,
 		spaceName,
 		isPrivate,
@@ -312,23 +409,29 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	)
 
 	// Handle errors from controller
-	if len(errors) > 0 {
-		for _, err := range errors {
-			resp.Diagnostics.AddWarning("Warning during space creation", err.Error())
+	if len(controllerErrors) > 0 {
+		for _, err := range controllerErrors {
+			resp.Diagnostics.AddError("Error during space creation", err.Error())
 		}
+		return
+	}
+
+	if spaceDetailsFromController == nil {
+		resp.Diagnostics.AddError("Error during space creation", "Controller returned nil space details")
+		return
 	}
 
 	// Populate the state with values returned by the controller (which reflects the API response)
 	var state spaceResourceModel
-	state.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", spaceDetails.ProjectUUID, spaceDetails.SpaceUUID))
-	state.ProjectUUID = types.StringValue(spaceDetails.ProjectUUID)
-	state.SpaceUUID = types.StringValue(spaceDetails.SpaceUUID)
-	state.SpaceName = types.StringValue(spaceDetails.SpaceName)
-	state.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
+	state.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", spaceDetailsFromController.ProjectUUID, spaceDetailsFromController.SpaceUUID))
+	state.ProjectUUID = types.StringValue(spaceDetailsFromController.ProjectUUID)
+	state.SpaceUUID = types.StringValue(spaceDetailsFromController.SpaceUUID)
+	state.SpaceName = types.StringValue(spaceDetailsFromController.SpaceName)
+	state.IsPrivate = types.BoolValue(spaceDetailsFromController.IsPrivate)
 
 	// Handle parent space UUID from controller result
-	if spaceDetails.ParentSpaceUUID != nil {
-		state.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
+	if spaceDetailsFromController.ParentSpaceUUID != nil {
+		state.ParentSpaceUUID = types.StringValue(*spaceDetailsFromController.ParentSpaceUUID)
 	} else {
 		state.ParentSpaceUUID = types.StringNull()
 	}
@@ -336,32 +439,21 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Preserve deletion protection from plan - this is a Terraform setting
 	state.DeleteProtection = plan.DeleteProtection
 
-	// Set timestamps - these are typically set by the provider on creation and update
-	state.CreatedAt = types.StringValue(time.Now().Format(time.RFC850))
-	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	// Set timestamps
+	// Use the CreatedAt from the controller's SpaceDetails, and set LastUpdated to now
+	state.CreatedAt = types.StringValue(spaceDetailsFromController.CreatedAt.Format(time.RFC850))
+	currentTime := types.StringValue(time.Now().Format(time.RFC850))
+	state.LastUpdated = currentTime
 
-	// Determine if the created space is nested
-	isNestedSpace = spaceDetails.ParentSpaceUUID != nil
+	// Populate MemberAccessList (access attribute) directly from plan
+	state.MemberAccessList = plan.MemberAccessList
 
-	// Populate member access list from controller result (API response)
-	memberAccessList := []spaceMemberAccessBlockModel{}
-	for _, member := range spaceDetails.MemberAccess {
-		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
-			UserUUID:  types.StringValue(member.UserUUID),
-			SpaceRole: types.StringValue(string(member.SpaceRole)),
-		})
-	}
-	state.MemberAccessList = memberAccessList
+	// Populate GroupAccessList from controller result (what was actually applied)
+	state.GroupAccessList = plan.GroupAccessList
 
-	// Populate group access list from controller result (API response)
-	groupAccessList := []spaceGroupAccessBlockModel{}
-	for _, group := range spaceDetails.GroupAccess {
-		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
-			GroupUUID: types.StringValue(group.GroupUUID),
-			SpaceRole: types.StringValue(string(group.SpaceRole)),
-		})
-	}
-	state.GroupAccessList = groupAccessList
+	// Populate MemberAccessListAll and GroupAccessListAll from raw data returned by controller
+	state.MemberAccessListAll = convertToAllMemberAccessBlockModels(spaceDetailsFromController.RawMemberAccessList)
+	state.GroupAccessListAll = convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList)
 
 	// Show the state
 	tflog.Debug(ctx, "************* State (Create end) *************", map[string]any{"state": state})
@@ -379,89 +471,78 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state. This is needed to preserve Terraform-managed attributes.
-	var state spaceResourceModel
-	diags := req.State.Get(ctx, &state)
+	var currentState spaceResourceModel
+	diags := req.State.Get(ctx, &currentState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Show the state
-	tflog.Debug(ctx, "************* State (Read start) *************", map[string]any{"state": state})
-	// Show the space name
-	tflog.Debug(ctx, "************* Space Name (Read start): ", map[string]any{"spaceName": state.SpaceName.ValueString()})
-	// Show length of member access list
-	tflog.Debug(ctx, "************* Member Access List (Read start): ", map[string]any{"length": len(state.MemberAccessList)})
-	// Show length of group access list
-	tflog.Debug(ctx, "************* Group Access List (Read start): ", map[string]any{"length": len(state.GroupAccessList)})
+	tflog.Debug(ctx, "************* Current State (Read start) *************", map[string]any{"currentState": currentState})
 
-	// Get space details from controller (API)
-	projectUUID := state.ProjectUUID.ValueString()
-	spaceUUID := state.SpaceUUID.ValueString()
+	// Get space details from API using controller
+	projectUUID := currentState.ProjectUUID.ValueString()
+	spaceUUID := currentState.SpaceUUID.ValueString()
 
-	spaceDetails, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
+	// Use controller's GetSpace which returns SpaceDetails with raw lists
+	spaceDetailsFromController, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading space",
-			"Could not read space ID "+state.ID.ValueString()+": "+err.Error(),
-		)
+		// If the space is not found, remove it from state
+		// TODO: Check for specific "not found" error type if available
+		tflog.Warn(ctx, fmt.Sprintf("Space %s not found during Read, removing from state", spaceUUID))
+		resp.State.RemoveResource(ctx)
 		return
-	}
-	// Convert member access list to the terraform model
-	memberAccessList := []spaceMemberAccessBlockModel{}
-	for _, member := range spaceDetails.MemberAccess {
-		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
-			UserUUID:  types.StringValue(member.UserUUID),
-			SpaceRole: types.StringValue(string(member.SpaceRole)),
-		})
-	}
-	// Convert group access list to the terraform model
-	groupAccessList := []spaceGroupAccessBlockModel{}
-	for _, group := range spaceDetails.GroupAccess {
-		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
-			GroupUUID: types.StringValue(group.GroupUUID),
-			SpaceRole: types.StringValue(string(group.SpaceRole)),
-		})
 	}
 
 	// Update state from controller response
-	state.SpaceName = types.StringValue(spaceDetails.SpaceName)
-	state.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
-	// Handle parent space UUID from controller result
-	if spaceDetails.ParentSpaceUUID != nil {
-		state.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
-	} else {
-		state.ParentSpaceUUID = types.StringNull()
-	}
-	state.MemberAccessList = memberAccessList
-	state.GroupAccessList = groupAccessList
+	var newState spaceResourceModel
 
-	// Show the state
-	tflog.Debug(ctx, "************* State (Read end) *************", map[string]any{"state": state})
-	// Show the space name
-	tflog.Debug(ctx, "************* Space Name (Read end): ", map[string]any{"spaceName": state.SpaceName.ValueString()})
-	// Show length of member access list
-	tflog.Debug(ctx, "************* Member Access List (Read end): ", map[string]any{"length": len(state.MemberAccessList)})
-	// Show length of group access list
-	tflog.Debug(ctx, "************* Group Access List (Read end): ", map[string]any{"length": len(state.GroupAccessList)})
+	// Preserve fields that are computed once or managed by Terraform
+	newState.ID = currentState.ID
+	newState.ProjectUUID = currentState.ProjectUUID
+	newState.SpaceUUID = currentState.SpaceUUID
+	newState.CreatedAt = currentState.CreatedAt
+	newState.DeleteProtection = currentState.DeleteProtection
+	newState.LastUpdated = currentState.LastUpdated // Read does not update this TF-managed field
+
+	// Update fields from controller response
+	newState.SpaceName = types.StringValue(spaceDetailsFromController.SpaceName)
+	newState.IsPrivate = types.BoolValue(spaceDetailsFromController.IsPrivate)
+	if spaceDetailsFromController.ParentSpaceUUID != nil {
+		newState.ParentSpaceUUID = types.StringValue(*spaceDetailsFromController.ParentSpaceUUID)
+	} else {
+		newState.ParentSpaceUUID = types.StringNull()
+	}
+
+	// Preserve MemberAccessList (access attribute) from current state (user's config)
+	newState.MemberAccessList = currentState.MemberAccessList
+
+	// Preserve GroupAccessList (group_access attribute) from current state (user's config)
+	newState.GroupAccessList = currentState.GroupAccessList
+
+	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
+	newState.MemberAccessListAll = convertToAllMemberAccessBlockModels(spaceDetailsFromController.RawMemberAccessList)
+	newState.GroupAccessListAll = convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList)
+
+	tflog.Debug(ctx, "************* New State (Read end) *************", map[string]any{"newState": newState})
 
 	// Set state
-	diags = resp.State.Set(ctx, state)
+	diags = resp.State.Set(ctx, newState)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan and state
-	var plan, state spaceResourceModel
+	var plan, oldState spaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &oldState)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Prepare data for controller
-	projectUUID := plan.ProjectUUID.ValueString()
-	spaceUUID := plan.SpaceUUID.ValueString()
+	projectUUID := plan.ProjectUUID.ValueString() // Should come from plan or state, must not change for update
+	spaceUUID := oldState.SpaceUUID.ValueString() // Must come from state
 	spaceName := plan.SpaceName.ValueString()
 	var isPrivate *bool
 	if !plan.IsPrivate.IsNull() && !plan.IsPrivate.IsUnknown() {
@@ -471,31 +552,31 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	var parentSpaceUUID *string
 	if !plan.ParentSpaceUUID.IsNull() && !plan.ParentSpaceUUID.IsUnknown() {
 		parentSpaceUUID = plan.ParentSpaceUUID.ValueStringPointer()
+	} else if plan.ParentSpaceUUID.IsNull() { // Explicitly setting to null means make it root
+		parentSpaceUUID = nil
 	}
 
-	// Determine if the space is currently or becoming nested from the ParentSpaceUUIDs
-	isCurrentlyNestedSpace := !state.ParentSpaceUUID.IsNull() && !state.ParentSpaceUUID.IsUnknown()
-	isBecomingNestedSpace := parentSpaceUUID != nil
+	// Determine if the planned space will be nested
+	// This check is needed to decide whether to send access lists to the controller
+	isPlannedSpaceNested := parentSpaceUUID != nil
 
-	// Convert member access list from plan to controller format
 	newMemberAccess := []controllers.SpaceAccessMemberRequest{}
-	// Only process access for root spaces or spaces becoming root spaces
-	if !isBecomingNestedSpace {
+	// Only process access for root spaces in the plan
+	if !isPlannedSpaceNested {
 		for _, access := range plan.MemberAccessList {
 			newMemberAccess = append(newMemberAccess, controllers.SpaceAccessMemberRequest{
 				BaseSpaceAccessMember: controllers.BaseSpaceAccessMember{
 					UserUUID:  access.UserUUID.ValueString(),
 					SpaceRole: models.SpaceMemberRole(access.SpaceRole.ValueString()),
 				},
-				IsOrganizationAdmin: false,
+				IsOrganizationAdmin: false, // Assuming this is always false for direct management
 			})
 		}
 	}
 
-	// Convert group access list to controller format
 	newGroupAccess := []controllers.SpaceGroupAccess{}
-	// Only process group access for root spaces or spaces becoming root spaces
-	if !isBecomingNestedSpace {
+	// Only process group access for root spaces in the plan
+	if !isPlannedSpaceNested {
 		for _, access := range plan.GroupAccessList {
 			newGroupAccess = append(newGroupAccess, controllers.SpaceGroupAccess{
 				GroupUUID: access.GroupUUID.ValueString(),
@@ -504,18 +585,19 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 	}
 
-	// Log transition information for debugging
-	tflog.Debug(ctx, "Space transition details", map[string]any{
-		"currentIsNested":  isCurrentlyNestedSpace,
-		"isBecomingNested": isBecomingNestedSpace,
-		"parentInPlan":     plan.ParentSpaceUUID.ValueString(),
-		"parentInState":    state.ParentSpaceUUID.ValueString(),
-		"accessListCount":  len(plan.MemberAccessList),
-		"groupAccessCount": len(plan.GroupAccessList),
+	tflog.Debug(ctx, "Space update parameters", map[string]any{
+		"projectUUID":     projectUUID,
+		"spaceUUID":       spaceUUID,
+		"spaceName":       spaceName,
+		"isPrivate":       isPrivate,
+		"parentSpaceUUID": parentSpaceUUID,
+		"newMemberAccess": newMemberAccess,
+		"newGroupAccess":  newGroupAccess,
 	})
 
 	// Update space using controller
-	spaceDetails, errors := r.spaceController.UpdateSpace(
+	// The controller will handle the logic of moving the space and managing access based on space type
+	updatedSpaceDetails, controllerErrors := r.spaceController.UpdateSpace(
 		projectUUID,
 		spaceUUID,
 		spaceName,
@@ -525,115 +607,51 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		newGroupAccess,
 	)
 
-	// Handle errors from controller
-	if len(errors) > 0 {
-		for _, err := range errors {
-			resp.Diagnostics.AddWarning("Warning during space update", err.Error())
+	if len(controllerErrors) > 0 {
+		for _, err := range controllerErrors {
+			resp.Diagnostics.AddError("Error during space update", err.Error())
 		}
+		return // Stop if controller reported errors
 	}
 
-	if spaceDetails == nil {
-		resp.Diagnostics.AddError(
-			"Error updating space",
-			"Could not update space, controller returned nil result",
-		)
+	if updatedSpaceDetails == nil {
+		resp.Diagnostics.AddError("Error updating space", "Controller returned nil result after update")
 		return
 	}
 
-	// Log new space status
-	tflog.Debug(ctx, "Updated space details", map[string]any{
-		"parentSpaceUUID":   spaceDetails.ParentSpaceUUID,
-		"memberAccessCount": len(spaceDetails.MemberAccess),
-		"groupAccessCount":  len(spaceDetails.GroupAccess),
-	})
-
-	// Update state with values from controller for space attributes
+	// Populate the state with values returned by the controller (which reflect the final API state)
 	var updatedState spaceResourceModel
-	updatedState.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", spaceDetails.ProjectUUID, spaceDetails.SpaceUUID))
-	updatedState.ProjectUUID = types.StringValue(spaceDetails.ProjectUUID)
-	updatedState.SpaceUUID = types.StringValue(spaceDetails.SpaceUUID)
-	updatedState.SpaceName = types.StringValue(spaceDetails.SpaceName)
-	updatedState.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
+	updatedState.ID = oldState.ID
+	updatedState.ProjectUUID = oldState.ProjectUUID // ProjectUUID cannot change
+	updatedState.SpaceUUID = oldState.SpaceUUID     // SpaceUUID cannot change
 
-	// Handle parent space UUID
-	if spaceDetails.ParentSpaceUUID != nil {
-		updatedState.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
+	updatedState.SpaceName = types.StringValue(updatedSpaceDetails.SpaceName)
+	updatedState.IsPrivate = types.BoolValue(updatedSpaceDetails.IsPrivate)
+
+	if updatedSpaceDetails.ParentSpaceUUID != nil {
+		updatedState.ParentSpaceUUID = types.StringValue(*updatedSpaceDetails.ParentSpaceUUID)
 	} else {
 		updatedState.ParentSpaceUUID = types.StringNull()
 	}
 
-	// Preserve deletion protection from state
-	updatedState.DeleteProtection = state.DeleteProtection
-
-	// Update timestamps - We only update lastUpdated, keep createdAt from state
-	updatedState.CreatedAt = state.CreatedAt
+	updatedState.DeleteProtection = plan.DeleteProtection // From plan
+	updatedState.CreatedAt = oldState.CreatedAt           // Preserve creation timestamp
 	updatedState.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Determine if the updated space is nested
-	isNestedSpace := spaceDetails.ParentSpaceUUID != nil
+	// Populate MemberAccessList (access attribute) directly from plan
+	updatedState.MemberAccessList = plan.MemberAccessList
 
-	// Populate member access list from controller result
-	memberAccessList := []spaceMemberAccessBlockModel{}
-	tflog.Debug(ctx, "Processing member access list from controller result in Update")
+	// Populate GroupAccessList (group_access attribute) directly from plan
+	updatedState.GroupAccessList = plan.GroupAccessList
 
-	// For nested spaces, we don't populate access lists as they can't be managed
-	if !isNestedSpace {
-		for _, member := range spaceDetails.MemberAccess {
-			tflog.Debug(ctx, "Processing member", map[string]any{
-				"userUuid":        member.UserUUID,
-				"hasDirectAccess": member.HasDirectAccess,
-				"spaceRole":       member.SpaceRole,
-				"inheritedFrom":   member.InheritedFrom,
-			})
+	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
+	updatedState.MemberAccessListAll = convertToAllMemberAccessBlockModels(updatedSpaceDetails.RawMemberAccessList)
+	updatedState.GroupAccessListAll = convertToGroupAccessBlockModels(updatedSpaceDetails.RawGroupAccessList)
 
-			// Convert pointer fields to types.Bool/String, handling nil
-			var hasDirectAccess types.Bool
-			if member.HasDirectAccess != nil {
-				hasDirectAccess = types.BoolValue(*member.HasDirectAccess)
-			} else {
-				hasDirectAccess = types.BoolNull()
-			}
-
-			var inheritedFrom types.String
-			if member.InheritedFrom != nil {
-				inheritedFrom = types.StringValue(*member.InheritedFrom)
-			} else {
-				inheritedFrom = types.StringNull()
-			}
-
-			// Only include members based on the controller's filtered list (which now includes only managed types)
-			memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
-				UserUUID:        types.StringValue(member.UserUUID),
-				SpaceRole:       types.StringValue(string(member.SpaceRole)),
-				HasDirectAccess: hasDirectAccess,
-				InheritedFrom:   inheritedFrom,
-			})
-		}
-		tflog.Debug(ctx, "Filtered member access list after setting state in Update", map[string]any{"count": len(memberAccessList)})
-
-		// Populate group access list from controller result
-		groupAccessList := []spaceGroupAccessBlockModel{}
-		tflog.Debug(ctx, "Processing group access list from controller result in Update")
-		for _, group := range spaceDetails.GroupAccess {
-			tflog.Debug(ctx, "Processing group", map[string]any{"groupUuid": group.GroupUUID, "spaceRole": group.SpaceRole})
-			groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
-				GroupUUID: types.StringValue(group.GroupUUID),
-				SpaceRole: types.StringValue(string(group.SpaceRole)),
-			})
-		}
-		updatedState.GroupAccessList = groupAccessList
-		tflog.Debug(ctx, "Group access list after setting state in Update", map[string]any{"count": len(updatedState.GroupAccessList)})
-	} else {
-		tflog.Debug(ctx, "Skipping access lists for nested space in Update")
-		// Empty the access lists for nested spaces since they can't be managed
-		updatedState.GroupAccessList = []spaceGroupAccessBlockModel{}
-	}
-
-	updatedState.MemberAccessList = memberAccessList
+	tflog.Debug(ctx, "Updated state after API calls", map[string]any{"updatedState": updatedState})
 
 	// Set state
-	diags := resp.State.Set(ctx, updatedState)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, updatedState)...)
 }
 
 func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -662,83 +680,79 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	tflog.Info(ctx, fmt.Sprintf("Deleted space %s", spaceUUID))
 }
 
+// ImportSpace imports an existing space by its resource ID.
 func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import space using controller
-	spaceDetails, err := r.spaceController.ImportSpace(req.ID)
+	// Fetch space details from the controller
+	spaceDetailsFromController, err := r.spaceController.ImportSpace(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing space",
-			"Could not import space: "+err.Error(),
+			fmt.Sprintf("Could not retrieve space for ID %s: %s", req.ID, err.Error()),
 		)
 		return
 	}
 
-	// Set the resource attributes
-	resourceID := fmt.Sprintf("projects/%s/spaces/%s", spaceDetails.ProjectUUID, spaceDetails.SpaceUUID)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), resourceID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), spaceDetails.ProjectUUID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), spaceDetails.SpaceUUID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), spaceDetails.SpaceName)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("is_private"), spaceDetails.IsPrivate)...)
+	// Set the resource attributes from the controller's SpaceDetails
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), spaceDetailsFromController.ProjectUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_uuid"), spaceDetailsFromController.SpaceUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), spaceDetailsFromController.SpaceName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("is_private"), spaceDetailsFromController.IsPrivate)...)
 
 	// Set deletion protection to true by default for imported resources
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("deletion_protection"), true)...)
 
 	// Handle parent space UUID
-	if spaceDetails.ParentSpaceUUID != nil {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("parent_space_uuid"), *spaceDetails.ParentSpaceUUID)...)
-	}
-
-	// Determine if the imported space is nested
-	isNestedSpace := spaceDetails.ParentSpaceUUID != nil
-
-	// Only set access information for root (non-nested) spaces
-	if !isNestedSpace {
-		// Set member access list
-		memberAccessList := []spaceMemberAccessBlockModel{}
-		for _, member := range spaceDetails.MemberAccess {
-			// Convert pointer fields to types.Bool/String, handling nil
-			var hasDirectAccess types.Bool
-			if member.HasDirectAccess != nil {
-				hasDirectAccess = types.BoolValue(*member.HasDirectAccess)
-			} else {
-				hasDirectAccess = types.BoolNull()
-			}
-
-			var inheritedFrom types.String
-			if member.InheritedFrom != nil {
-				inheritedFrom = types.StringValue(*member.InheritedFrom)
-			} else {
-				inheritedFrom = types.StringNull()
-			}
-
-			// Only include members based on the controller's filtered list (which now includes only managed types)
-			memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
-				UserUUID:        types.StringValue(member.UserUUID),
-				SpaceRole:       types.StringValue(string(member.SpaceRole)),
-				HasDirectAccess: hasDirectAccess,
-				InheritedFrom:   inheritedFrom,
-			})
-		}
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), memberAccessList)...)
-
-		// Set group access list
-		groupAccessList := []spaceGroupAccessBlockModel{}
-		for _, group := range spaceDetails.GroupAccess {
-			groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
-				GroupUUID: types.StringValue(group.GroupUUID),
-				SpaceRole: types.StringValue(string(group.SpaceRole)),
-			})
-		}
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access"), groupAccessList)...)
+	// The ParentSpaceUUID in SpaceDetails is *string. Convert to types.String
+	var parentSpaceUUID types.String
+	if spaceDetailsFromController.ParentSpaceUUID != nil {
+		parentSpaceUUID = types.StringValue(*spaceDetailsFromController.ParentSpaceUUID)
 	} else {
-		// For nested spaces, set empty access lists
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), []spaceMemberAccessBlockModel{})...)
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access"), []spaceGroupAccessBlockModel{})...)
+		parentSpaceUUID = types.StringNull()
 	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("parent_space_uuid"), parentSpaceUUID)...)
+
+	// Determine if the imported space is nested based on the ParentSpaceUUID
+	// Check if parentSpaceUUID (types.String) is not null and not unknown
+	isImportedSpaceNested := !parentSpaceUUID.IsNull() && !parentSpaceUUID.IsUnknown()
+
+	// Populate 'access' with direct members (only relevant for root spaces)
+	directMemberAccessListForImport := []spaceMemberAccessBlockModel{}
+	// This condition was incorrect, using the raw *string type instead of types.String
+	// if !spaceDetailsFromController.ParentSpaceUUID.IsNull() && !spaceDetailsFromController.ParentSpaceUUID.IsUnknown() && spaceDetailsFromController.SpaceAccessMembers != nil {
+	// Corrected condition using the types.String variable and the correct raw list field
+	if !isImportedSpaceNested && spaceDetailsFromController.RawMemberAccessList != nil {
+		for _, member := range spaceDetailsFromController.RawMemberAccessList {
+			if member.HasDirectAccess {
+				directMemberAccessListForImport = append(directMemberAccessListForImport, spaceMemberAccessBlockModel{
+					UserUUID:  types.StringValue(member.UserUUID),
+					SpaceRole: types.StringValue(string(member.SpaceRole)),
+					// HasDirectAccess and InheritedFrom are not part of 'access' input schema, so not set here.
+				})
+			}
+		}
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), directMemberAccessListForImport)...)
+
+	// Populate 'access_all' with all members
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access_all"), convertToAllMemberAccessBlockModels(spaceDetailsFromController.RawMemberAccessList))...)
+
+	// Populate 'group_access' (only relevant for root spaces or if API provides explicit flag)
+	// Assuming API doesn't distinguish explicit group grants, populate with all groups from API result for root spaces.
+	// For nested spaces, this block should be empty as access is inherited.
+	groupAccessListForImport := []spaceGroupAccessBlockModel{}
+	if !isImportedSpaceNested && spaceDetailsFromController.RawGroupAccessList != nil {
+		// For root spaces, populate group_access with all groups returned by the API
+		groupAccessListForImport = convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList)
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access"), groupAccessListForImport)...)
+
+	// Populate 'group_access_all' with all groups from API result
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access_all"), convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList))...)
 
 	// Set timestamps
+	// Use the CreatedAt from the controller's SpaceDetails, and set LastUpdated to now
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), spaceDetailsFromController.CreatedAt.Format(time.RFC850))...)
 	currentTime := types.StringValue(time.Now().Format(time.RFC850))
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), currentTime)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("last_updated"), currentTime)...)
 }

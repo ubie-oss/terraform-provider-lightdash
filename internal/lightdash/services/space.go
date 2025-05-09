@@ -205,3 +205,13 @@ func (s *SpaceService) RemoveGroupFromSpace(projectUuid, spaceUuid, groupUuid st
 
 	return s.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid)
 }
+
+// GetChildSpaces returns all child spaces of a space
+func (s *SpaceService) GetChildSpaces(projectUuid, spaceUuid string) ([]api.ChildSpace, error) {
+	space, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get space details: %w", err)
+	}
+
+	return space.ChildSpaces, nil
+}
