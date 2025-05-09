@@ -100,7 +100,6 @@ func NewSpaceController(client *api.Client) *SpaceController {
 		organizationGroupsService:  services.NewOrganizationGroupsService(client),
 
 		projectService: services.NewProjectService(client),
-		// authenticatedUserService:   services.NewAuthenticatedUserService(client), // Keep it commented out for now as it's unused
 	}
 }
 
@@ -351,16 +350,6 @@ func (c *SpaceController) GetSpace(projectUUID, spaceUUID string) (*SpaceDetails
 	return spaceDetails, nil
 }
 
-// GetRawSpaceData exposes the underlying spaceService.GetSpace method
-func (c *SpaceController) GetRawSpaceData(projectUUID, spaceUUID string) (*api.GetSpaceV1Results, error) {
-	return c.spaceService.GetSpace(projectUUID, spaceUUID)
-}
-
-// ExtractSpaceResourceID exposes the underlying spaceService.ExtractSpaceResourceID method
-func (c *SpaceController) ExtractSpaceResourceID(resourceID string) (projectUuid string, spaceUuid string, err error) {
-	return c.spaceService.ExtractSpaceResourceID(resourceID)
-}
-
 // UpdateSpace updates a space based on whether it's a root or nested space and if its parent is changing.
 // It orchestrates calls to specific update/move functions.
 func (c *SpaceController) UpdateSpace(
@@ -405,7 +394,6 @@ func (c *SpaceController) UpdateSpace(
 			spaceUUID,
 			spaceName,
 			parentSpaceUUID,
-			currentSpaceDetails,
 		)
 	} else if !isCurrentlyRootSpace && isBecomingRootSpace {
 		// Scenario 3: Nested space becoming a root space - Move to root and then apply access controls.
@@ -595,7 +583,6 @@ func (c *SpaceController) moveRootToNestedSpace(
 	spaceUUID string,
 	spaceName string,
 	parentSpaceUUID *string,
-	currentSpaceDetails *SpaceDetails, // nolint: govet
 ) (*SpaceDetails, []error) {
 	// Update name and move to parent via the service layer
 	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, nil, parentSpaceUUID)
@@ -677,42 +664,6 @@ func (c *SpaceController) updateNestedSpace(
 	return updatedSpaceDetails, nil
 }
 
-// Convert API SpaceAccessMember to SpaceAccessMemberResponse for comparison
-func convertAPIMemberToResponse(apiMembers []api.SpaceAccessMember) []SpaceAccessMemberResponse {
-	var responseMembers []SpaceAccessMemberResponse
-	for _, member := range apiMembers {
-		// Ensure pointers are not nil for consistency, although API returns non-pointer bool/string
-		hasDirectAccess := member.HasDirectAccess
-		inheritedRole := member.InheritedRole
-		inheritedFrom := member.InheritedFrom
-		projectRole := member.ProjectRole
-
-		responseMembers = append(responseMembers, SpaceAccessMemberResponse{
-			BaseSpaceAccessMember: BaseSpaceAccessMember{
-				UserUUID:  member.UserUUID,
-				SpaceRole: member.SpaceRole,
-			},
-			HasDirectAccess: &hasDirectAccess,
-			InheritedRole:   &inheritedRole,
-			InheritedFrom:   &inheritedFrom,
-			ProjectRole:     &projectRole,
-		})
-	}
-	return responseMembers
-}
-
-// Convert API SpaceAccessGroup to SpaceGroupAccess for comparison
-func convertAPIGroupToSpaceGroupAccess(apiGroups []api.SpaceAccessGroup) []SpaceGroupAccess {
-	var spaceGroupAccessList []SpaceGroupAccess
-	for _, group := range apiGroups {
-		spaceGroupAccessList = append(spaceGroupAccessList, SpaceGroupAccess{
-			GroupUUID: group.GroupUUID,
-			SpaceRole: group.SpaceRole,
-		})
-	}
-	return spaceGroupAccessList
-}
-
 // updateRootSpace updates the properties and access settings for a root-level space.
 // This is used when a space remains a root space during an update.
 func (c *SpaceController) updateRootSpace(
@@ -765,4 +716,40 @@ func (c *SpaceController) updateRootSpace(
 	}
 
 	return finalSpaceDetails, errors
+}
+
+// Convert API SpaceAccessMember to SpaceAccessMemberResponse for comparison
+func convertAPIMemberToResponse(apiMembers []api.SpaceAccessMember) []SpaceAccessMemberResponse {
+	var responseMembers []SpaceAccessMemberResponse
+	for _, member := range apiMembers {
+		// Ensure pointers are not nil for consistency, although API returns non-pointer bool/string
+		hasDirectAccess := member.HasDirectAccess
+		inheritedRole := member.InheritedRole
+		inheritedFrom := member.InheritedFrom
+		projectRole := member.ProjectRole
+
+		responseMembers = append(responseMembers, SpaceAccessMemberResponse{
+			BaseSpaceAccessMember: BaseSpaceAccessMember{
+				UserUUID:  member.UserUUID,
+				SpaceRole: member.SpaceRole,
+			},
+			HasDirectAccess: &hasDirectAccess,
+			InheritedRole:   &inheritedRole,
+			InheritedFrom:   &inheritedFrom,
+			ProjectRole:     &projectRole,
+		})
+	}
+	return responseMembers
+}
+
+// Convert API SpaceAccessGroup to SpaceGroupAccess for comparison
+func convertAPIGroupToSpaceGroupAccess(apiGroups []api.SpaceAccessGroup) []SpaceGroupAccess {
+	var spaceGroupAccessList []SpaceGroupAccess
+	for _, group := range apiGroups {
+		spaceGroupAccessList = append(spaceGroupAccessList, SpaceGroupAccess{
+			GroupUUID: group.GroupUUID,
+			SpaceRole: group.SpaceRole,
+		})
+	}
+	return spaceGroupAccessList
 }
