@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -142,6 +143,11 @@ func (d *organizationGroupsDataSource) Read(ctx context.Context, req datasource.
 		}
 		fetchedGroups = append(fetchedGroups, fetchedGroup)
 	}
+
+	// Sort the groups by group UUID
+	sort.Slice(fetchedGroups, func(i, j int) bool {
+		return fetchedGroups[i].GroupUuid.ValueString() < fetchedGroups[j].GroupUuid.ValueString()
+	})
 
 	// Set resource ID
 	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/groups", state.OrganizationUuid.ValueString()))

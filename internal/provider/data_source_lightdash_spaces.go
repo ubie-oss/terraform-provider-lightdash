@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -140,6 +141,7 @@ func (d *spacesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// Map response body to model
+	updatedSpaces := []spaceModel{}
 	for _, space := range spaces {
 		// Even if the parent space UUID is empty, we want to set it to null
 		parentSpace := types.StringNull()
@@ -153,8 +155,13 @@ func (d *spacesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			SpaceName:       types.StringValue(space.SpaceName),
 			IsPrivate:       types.BoolValue(space.IsPrivate),
 		}
-		state.Spaces = append(state.Spaces, spaceState)
+		updatedSpaces = append(updatedSpaces, spaceState)
 	}
+	// Sort the spaces by space UUID
+	sort.Slice(updatedSpaces, func(i, j int) bool {
+		return updatedSpaces[i].SpaceUUID.ValueString() < updatedSpaces[j].SpaceUUID.ValueString()
+	})
+	state.Spaces = updatedSpaces
 
 	// Set resource ID
 	state_id := fmt.Sprintf("organizations/%s/projects/%s/spaces",

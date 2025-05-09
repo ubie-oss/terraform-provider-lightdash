@@ -31,6 +31,8 @@ func NewSpaceService(client *api.Client) *SpaceService {
 	return &SpaceService{client: client}
 }
 
+// Space Management Methods
+
 // CreateSpace creates a new space with specified properties
 func (s *SpaceService) CreateSpace(projectUuid, spaceName string, isPrivate bool, parentSpaceUuid *string) (*api.CreateSpaceV1Results, error) {
 	return s.client.CreateSpaceV1(projectUuid, spaceName, isPrivate, parentSpaceUuid)
@@ -41,29 +43,33 @@ func (s *SpaceService) GetSpace(projectUuid, spaceUuid string) (*api.GetSpaceV1R
 	return s.client.GetSpaceV1(projectUuid, spaceUuid)
 }
 
-// DeleteSpace deletes a space
-func (s *SpaceService) DeleteSpace(projectUuid, spaceUuid string) error {
-	return s.client.DeleteSpaceV1(projectUuid, spaceUuid)
-}
-
 // UpdateSpace updates the space's name, privacy, and optionally its parent space.
-// projectUuid is required for both UpdateSpaceV1 and MoveSpaceV1 API calls.
+// For root spaces, it can update name, privacy, and optionally move to become a nested space.
+// For nested spaces, it can only update name and parent space (move to another parent or become a root space).
+// parentSpaceUuidPointer == nil means the space should be a root space.
+// isPrivate == nil means the privacy setting should not be changed.
 func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isPrivate *bool, parentSpaceUuidPointer *string) (*api.UpdateSpaceV1Results, error) {
-	// Update the space's name, privacy, and parent (if provided)
-	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuidPointer)
+	// First get current space details to determine if it's root or nested
+	currentSpace, err := s.GetSpace(projectUuid, spaceUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get current space details: %w", err)
 	}
 
-	// If parentSpaceUuid is provided and isn't the same as the updatedSpace's parentSpaceUUID, move the space to the new parent
-	isSameParentSpaceUUID := compareTwoStringPointers(parentSpaceUuidPointer, updatedSpace.ParentSpaceUUID)
-	if !isSameParentSpaceUUID {
-		err := s.client.MoveSpaceV1(projectUuid, spaceUuid, parentSpaceUuidPointer)
-		if err != nil {
-			return nil, err
-		}
-		// Override the parentSpaceUUID in the updatedSpace to the new parentSpaceUUID
-		updatedSpace.ParentSpaceUUID = parentSpaceUuidPointer
+	// Check if this is a nested space
+	isCurrentlyNestedSpace := currentSpace.ParentSpaceUUID != nil
+
+	// For nested spaces, only update name if privacy change is requested
+	// (because privacy can't be changed for nested spaces)
+	if isCurrentlyNestedSpace && isPrivate != nil {
+		// Log that we're ignoring privacy change for nested spaces
+		// Not returning error to avoid breaking existing configurations
+		return s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, nil, parentSpaceUuidPointer)
+	}
+
+	// Update space properties based on the space type
+	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuidPointer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update space properties: %w", err)
 	}
 
 	return updatedSpace, nil
@@ -74,30 +80,33 @@ func (s *SpaceService) RenameSpace(projectUuid, spaceUuid, newSpaceName string) 
 	return s.client.UpdateSpaceV1(projectUuid, spaceUuid, newSpaceName, nil, nil)
 }
 
-// AddUserToSpace grants a user access to a space with the specified role
-func (s *SpaceService) AddUserToSpace(projectUuid, spaceUuid, userUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceShareToUserV1(projectUuid, spaceUuid, userUuid, role)
+// DeleteSpace deletes a space
+func (s *SpaceService) DeleteSpace(projectUuid, spaceUuid string) error {
+	return s.client.DeleteSpaceV1(projectUuid, spaceUuid)
 }
 
-// RemoveUserFromSpace revokes a user's access to a space
-func (s *SpaceService) RemoveUserFromSpace(projectUuid, spaceUuid, userUuid string) error {
-	return s.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, userUuid)
+// MoveSpace moves a space to a new parent space
+// parentSpaceUuidPointer == nil means the space should become a root space
+func (s *SpaceService) MoveSpace(projectUuid, spaceUuid string, parentSpaceUuidPointer *string) error {
+	// Get the current space details to check the current parent
+	currentSpace, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return fmt.Errorf("failed to get current space details: %w", err)
+	}
+
+	// Compare the desired parent with the current parent
+	isSameParentSpaceUUID := compareTwoStringPointers(parentSpaceUuidPointer, currentSpace.ParentSpaceUUID)
+
+	// Only move the space if the parent is different
+	if !isSameParentSpaceUUID {
+		return s.client.MoveSpaceV1(projectUuid, spaceUuid, parentSpaceUuidPointer)
+	}
+
+	// No move needed, return nil
+	return nil
 }
 
-// AddGroupToSpace grants a group access to a space with the specified role
-func (s *SpaceService) AddGroupToSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceShareToGroupV1(projectUuid, spaceUuid, groupUuid, role)
-}
-
-// UpdateGroupAccessInSpace updates a group's role in a space
-func (s *SpaceService) UpdateGroupAccessInSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
-}
-
-// RemoveGroupFromSpace revokes a group's access to a space
-func (s *SpaceService) RemoveGroupFromSpace(projectUuid, spaceUuid, groupUuid string) error {
-	return s.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid)
-}
+// Resource ID Handling Methods
 
 // GetSpaceResourceID returns the formatted resource ID for a space
 func (s *SpaceService) GetSpaceResourceID(projectUuid, spaceUuid string) string {
@@ -115,17 +124,84 @@ func (s *SpaceService) ExtractSpaceResourceID(resourceID string) (projectUuid st
 	return groups[0], groups[1], nil
 }
 
-// Helper functions
+// Access Management Methods
 
-// compareTwoStringPointers compares two string pointers and returns true if they are the same
-func compareTwoStringPointers(a, b *string) bool {
-	// If both are nil, they are the same
-	if a == nil && b == nil {
-		return true
+// AddUserToSpace grants a user access to a space with the specified role
+// NOTE: Should only be called for root spaces
+func (s *SpaceService) AddUserToSpace(projectUuid, spaceUuid, userUuid string, role models.SpaceMemberRole) error {
+	// Check if this is a nested space
+	space, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return fmt.Errorf("failed to get space details: %w", err)
 	}
-	// If both are not nil and have the same value, they are the same
-	if a != nil && b != nil && *a == *b {
-		return true
+
+	if space.ParentSpaceUUID != nil {
+		return fmt.Errorf("cannot add user to nested space: space access is inherited from parent")
 	}
-	return false
+
+	return s.client.AddSpaceShareToUserV1(projectUuid, spaceUuid, userUuid, role)
+}
+
+// RemoveUserFromSpace revokes a user's access to a space
+// NOTE: Should only be called for root spaces
+func (s *SpaceService) RemoveUserFromSpace(projectUuid, spaceUuid, userUuid string) error {
+	// Check if this is a nested space
+	space, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return fmt.Errorf("failed to get space details: %w", err)
+	}
+
+	if space.ParentSpaceUUID != nil {
+		return fmt.Errorf("cannot remove user from nested space: space access is inherited from parent")
+	}
+
+	return s.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, userUuid)
+}
+
+// AddGroupToSpace grants a group access to a space with the specified role
+// NOTE: Should only be called for root spaces
+func (s *SpaceService) AddGroupToSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
+	// Check if this is a nested space
+	space, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return fmt.Errorf("failed to get space details: %w", err)
+	}
+
+	if space.ParentSpaceUUID != nil {
+		return fmt.Errorf("cannot add group to nested space: space access is inherited from parent")
+	}
+
+	return s.client.AddSpaceShareToGroupV1(projectUuid, spaceUuid, groupUuid, role)
+}
+
+// UpdateGroupAccessInSpace updates a group's role in a space
+// NOTE: Should only be called for root spaces
+func (s *SpaceService) UpdateGroupAccessInSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
+	// Check if this is a nested space
+	space, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return fmt.Errorf("failed to get space details: %w", err)
+	}
+
+	if space.ParentSpaceUUID != nil {
+		return fmt.Errorf("cannot update group access in nested space: space access is inherited from parent")
+	}
+
+	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
+}
+
+// RemoveGroupFromSpace revokes a group's access to a space
+// NOTE: Should only be called for root spaces
+func (s *SpaceService) RemoveGroupFromSpace(projectUuid, spaceUuid, groupUuid string) error {
+	// Check if this is a nested space
+	space, err := s.GetSpace(projectUuid, spaceUuid)
+	if err != nil {
+		return fmt.Errorf("failed to get space details: %w", err)
+	}
+
+	if space.ParentSpaceUUID != nil {
+		return fmt.Errorf("cannot remove group from nested space: space access is inherited from parent")
+	}
+
+	return s.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid)
 }

@@ -26,6 +26,11 @@ import (
 type SpaceAccessMember struct {
 	UserUUID  string                 `json:"userUuid"`
 	SpaceRole models.SpaceMemberRole `json:"role"`
+	// Additional fields from GetSpaceV1 API response
+	HasDirectAccess bool   `json:"hasDirectAccess"`
+	InheritedRole   string `json:"inheritedRole"`
+	InheritedFrom   string `json:"inheritedFrom"`
+	ProjectRole     string `json:"projectRole"`
 }
 
 type SpaceAccessGroup struct {

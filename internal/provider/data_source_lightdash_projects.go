@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -129,14 +130,20 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response body to model
+	updatedProjects := []nestedProjectModel{}
 	for _, project := range projects {
 		projectState := nestedProjectModel{
 			ProjectUUID: types.StringValue(project.ProjectUUID),
 			ProjectName: types.StringValue(project.ProjectName),
 			ProjectType: types.StringValue(project.ProjectType),
 		}
-		state.Projects = append(state.Projects, projectState)
+		updatedProjects = append(updatedProjects, projectState)
 	}
+	// Sort the projects by project UUID
+	sort.Slice(updatedProjects, func(i, j int) bool {
+		return updatedProjects[i].ProjectUUID.ValueString() < updatedProjects[j].ProjectUUID.ValueString()
+	})
+	state.Projects = updatedProjects
 
 	// Set resource ID
 	state_id := fmt.Sprintf("organizations/%s/projects", state.OrganizationUUID)

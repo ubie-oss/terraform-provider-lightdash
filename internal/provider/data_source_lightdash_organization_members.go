@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -152,6 +153,11 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 		}
 		newMembers = append(newMembers, fetchedMember)
 	}
+
+	// Sort the members by user UUID
+	sort.Slice(newMembers, func(i, j int) bool {
+		return newMembers[i].UserUuid.ValueString() < newMembers[j].UserUuid.ValueString()
+	})
 
 	// log the number of new members
 	tflog.Info(ctx, fmt.Sprintf("Updated organization members: %d", len(newMembers)))
