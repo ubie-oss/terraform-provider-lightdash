@@ -76,9 +76,9 @@ func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isP
 }
 
 // RenameSpace updates only the name of a space
-func (s *SpaceService) RenameSpace(projectUuid, spaceUuid, newSpaceName string) (*api.UpdateSpaceV1Results, error) {
-	return s.client.UpdateSpaceV1(projectUuid, spaceUuid, newSpaceName, nil, nil)
-}
+// func (s *SpaceService) RenameSpace(projectUuid, spaceUuid, newSpaceName string) (*api.UpdateSpaceV1Results, error) {
+// 	return s.client.UpdateSpaceV1(projectUuid, spaceUuid, newSpaceName, nil, nil)
+// }
 
 // DeleteSpace deletes a space
 func (s *SpaceService) DeleteSpace(projectUuid, spaceUuid string) error {

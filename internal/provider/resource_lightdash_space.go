@@ -244,6 +244,15 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Show the plan
+	tflog.Debug(ctx, "************* Plan (Create start) *************", map[string]any{"plan": plan})
+	// Show the space name
+	tflog.Debug(ctx, "************* Space Name (Create start): ", map[string]any{"spaceName": plan.SpaceName.ValueString()})
+	// Show length of member access list
+	tflog.Debug(ctx, "************* Member Access List (Create start): ", map[string]any{"length": len(plan.MemberAccessList)})
+	// Show length of group access list
+	tflog.Debug(ctx, "************* Group Access List (Create start): ", map[string]any{"length": len(plan.GroupAccessList)})
+
 	// Prepare data for controller
 	projectUUID := plan.ProjectUUID.ValueString()
 	spaceName := plan.SpaceName.ValueString()
@@ -281,6 +290,17 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
+	// log the parameters of CreateSpace
+	tflog.Debug(ctx, "************* CreateSpace parameters *************",
+		map[string]any{
+			"projectUUID":     projectUUID,
+			"spaceName":       spaceName,
+			"isPrivate":       isPrivate,
+			"parentSpaceUUID": parentSpaceUUID,
+			"memberAccess":    memberAccess,
+			"groupAccess":     groupAccess,
+		})
+
 	// Create space using controller
 	spaceDetails, errors := r.spaceController.CreateSpace(
 		projectUUID,
@@ -296,14 +316,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		for _, err := range errors {
 			resp.Diagnostics.AddWarning("Warning during space creation", err.Error())
 		}
-	}
-
-	if spaceDetails == nil {
-		resp.Diagnostics.AddError(
-			"Error creating space",
-			"Could not create space, controller returned nil result",
-		)
-		return
 	}
 
 	// Populate the state with values returned by the controller (which reflects the API response)
@@ -333,61 +345,32 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Populate member access list from controller result (API response)
 	memberAccessList := []spaceMemberAccessBlockModel{}
-	tflog.Debug(ctx, "Processing member access list from controller result in Create")
-
-	// For nested spaces, we don't populate access lists as they can't be managed
-	if !isNestedSpace {
-		for _, member := range spaceDetails.MemberAccess {
-			tflog.Debug(ctx, "Processing member for state", map[string]any{
-				"userUuid":        member.UserUUID,
-				"spaceRole":       member.SpaceRole,
-				"hasDirectAccess": member.HasDirectAccess,
-				"inheritedFrom":   member.InheritedFrom,
-			})
-
-			// Convert pointer fields from controller to types.Bool/String, handling nil
-			var hasDirectAccess types.Bool
-			if member.HasDirectAccess != nil {
-				hasDirectAccess = types.BoolValue(*member.HasDirectAccess)
-			} else {
-				hasDirectAccess = types.BoolNull()
-			}
-
-			var inheritedFrom types.String
-			if member.InheritedFrom != nil {
-				inheritedFrom = types.StringValue(*member.InheritedFrom)
-			} else {
-				inheritedFrom = types.StringNull()
-			}
-
-			memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
-				UserUUID:        types.StringValue(member.UserUUID),
-				SpaceRole:       types.StringValue(string(member.SpaceRole)),
-				HasDirectAccess: hasDirectAccess,
-				InheritedFrom:   inheritedFrom,
-			})
-		}
-		tflog.Debug(ctx, "Member access list populated in state in Create", map[string]any{"count": len(memberAccessList)})
-
-		// Populate group access list from controller result
-		groupAccessList := []spaceGroupAccessBlockModel{}
-		tflog.Debug(ctx, "Processing group access list from controller result in Create")
-		for _, group := range spaceDetails.GroupAccess {
-			tflog.Debug(ctx, "Processing group", map[string]any{"groupUuid": group.GroupUUID, "spaceRole": group.SpaceRole})
-			groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
-				GroupUUID: types.StringValue(group.GroupUUID),
-				SpaceRole: types.StringValue(string(group.SpaceRole)),
-			})
-		}
-		state.GroupAccessList = groupAccessList
-		tflog.Debug(ctx, "Group access list populated in state in Create", map[string]any{"count": len(state.GroupAccessList)})
-	} else {
-		tflog.Debug(ctx, "Skipping access lists for nested space in Create")
-		// Leave access lists empty for nested spaces
-		state.GroupAccessList = []spaceGroupAccessBlockModel{}
+	for _, member := range spaceDetails.MemberAccess {
+		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
+			UserUUID:  types.StringValue(member.UserUUID),
+			SpaceRole: types.StringValue(string(member.SpaceRole)),
+		})
 	}
-
 	state.MemberAccessList = memberAccessList
+
+	// Populate group access list from controller result (API response)
+	groupAccessList := []spaceGroupAccessBlockModel{}
+	for _, group := range spaceDetails.GroupAccess {
+		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
+			GroupUUID: types.StringValue(group.GroupUUID),
+			SpaceRole: types.StringValue(string(group.SpaceRole)),
+		})
+	}
+	state.GroupAccessList = groupAccessList
+
+	// Show the state
+	tflog.Debug(ctx, "************* State (Create end) *************", map[string]any{"state": state})
+	// Show the space name
+	tflog.Debug(ctx, "************* Space Name (Create end): ", map[string]any{"spaceName": state.SpaceName.ValueString()})
+	// Show length of member access list
+	tflog.Debug(ctx, "************* Member Access List (Create end): ", map[string]any{"length": len(state.MemberAccessList)})
+	// Show length of group access list
+	tflog.Debug(ctx, "************* Group Access List (Create end): ", map[string]any{"length": len(state.GroupAccessList)})
 
 	// Set state
 	diags = resp.State.Set(ctx, state)
@@ -403,6 +386,15 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	// Show the state
+	tflog.Debug(ctx, "************* State (Read start) *************", map[string]any{"state": state})
+	// Show the space name
+	tflog.Debug(ctx, "************* Space Name (Read start): ", map[string]any{"spaceName": state.SpaceName.ValueString()})
+	// Show length of member access list
+	tflog.Debug(ctx, "************* Member Access List (Read start): ", map[string]any{"length": len(state.MemberAccessList)})
+	// Show length of group access list
+	tflog.Debug(ctx, "************* Group Access List (Read start): ", map[string]any{"length": len(state.GroupAccessList)})
+
 	// Get space details from controller (API)
 	projectUUID := state.ProjectUUID.ValueString()
 	spaceUUID := state.SpaceUUID.ValueString()
@@ -415,80 +407,43 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		)
 		return
 	}
+	// Convert member access list to the terraform model
+	memberAccessList := []spaceMemberAccessBlockModel{}
+	for _, member := range spaceDetails.MemberAccess {
+		memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
+			UserUUID:  types.StringValue(member.UserUUID),
+			SpaceRole: types.StringValue(string(member.SpaceRole)),
+		})
+	}
+	// Convert group access list to the terraform model
+	groupAccessList := []spaceGroupAccessBlockModel{}
+	for _, group := range spaceDetails.GroupAccess {
+		groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
+			GroupUUID: types.StringValue(group.GroupUUID),
+			SpaceRole: types.StringValue(string(group.SpaceRole)),
+		})
+	}
 
 	// Update state from controller response
 	state.SpaceName = types.StringValue(spaceDetails.SpaceName)
 	state.IsPrivate = types.BoolValue(spaceDetails.IsPrivate)
-
 	// Handle parent space UUID from controller result
 	if spaceDetails.ParentSpaceUUID != nil {
 		state.ParentSpaceUUID = types.StringValue(*spaceDetails.ParentSpaceUUID)
 	} else {
 		state.ParentSpaceUUID = types.StringNull()
 	}
-
-	// Determine if the space is nested
-	isNestedSpace := spaceDetails.ParentSpaceUUID != nil
-
-	// Populate member access list from controller result (which reflects the API)
-	// Filter to include only members with direct access managed by this resource.
-	memberAccessList := []spaceMemberAccessBlockModel{}
-	tflog.Debug(ctx, "Processing member access list from controller result in Read")
-
-	// For nested spaces, we don't populate access lists as they can't be managed
-	if !isNestedSpace {
-		for _, member := range spaceDetails.MemberAccess {
-			tflog.Debug(ctx, "Processing member", map[string]any{
-				"userUuid":        member.UserUUID,
-				"hasDirectAccess": member.HasDirectAccess,
-				"spaceRole":       member.SpaceRole,
-				"inheritedFrom":   member.InheritedFrom,
-			})
-
-			// Convert pointer fields to types.Bool/String, handling nil
-			var hasDirectAccess types.Bool
-			if member.HasDirectAccess != nil {
-				hasDirectAccess = types.BoolValue(*member.HasDirectAccess)
-			} else {
-				hasDirectAccess = types.BoolNull()
-			}
-
-			var inheritedFrom types.String
-			if member.InheritedFrom != nil {
-				inheritedFrom = types.StringValue(*member.InheritedFrom)
-			} else {
-				inheritedFrom = types.StringNull()
-			}
-
-			// Only include members based on the controller's filtered list (which now includes only managed types)
-			memberAccessList = append(memberAccessList, spaceMemberAccessBlockModel{
-				UserUUID:        types.StringValue(member.UserUUID),
-				SpaceRole:       types.StringValue(string(member.SpaceRole)),
-				HasDirectAccess: hasDirectAccess,
-				InheritedFrom:   inheritedFrom,
-			})
-		}
-		tflog.Debug(ctx, "Filtered member access list after setting state in Read", map[string]any{"count": len(memberAccessList)})
-
-		// Populate group access list from controller result
-		groupAccessList := []spaceGroupAccessBlockModel{}
-		tflog.Debug(ctx, "Processing group access list from controller result in Read")
-		for _, group := range spaceDetails.GroupAccess {
-			tflog.Debug(ctx, "Processing group", map[string]any{"groupUuid": group.GroupUUID, "spaceRole": group.SpaceRole})
-			groupAccessList = append(groupAccessList, spaceGroupAccessBlockModel{
-				GroupUUID: types.StringValue(group.GroupUUID),
-				SpaceRole: types.StringValue(string(group.SpaceRole)),
-			})
-		}
-		state.GroupAccessList = groupAccessList
-		tflog.Debug(ctx, "Group access list after setting state in Read", map[string]any{"count": len(state.GroupAccessList)})
-	} else {
-		tflog.Debug(ctx, "Skipping access lists for nested space in Read")
-		// Empty the access lists for nested spaces since they can't be managed
-		state.GroupAccessList = []spaceGroupAccessBlockModel{}
-	}
-
 	state.MemberAccessList = memberAccessList
+	state.GroupAccessList = groupAccessList
+
+	// Show the state
+	tflog.Debug(ctx, "************* State (Read end) *************", map[string]any{"state": state})
+	// Show the space name
+	tflog.Debug(ctx, "************* Space Name (Read end): ", map[string]any{"spaceName": state.SpaceName.ValueString()})
+	// Show length of member access list
+	tflog.Debug(ctx, "************* Member Access List (Read end): ", map[string]any{"length": len(state.MemberAccessList)})
+	// Show length of group access list
+	tflog.Debug(ctx, "************* Group Access List (Read end): ", map[string]any{"length": len(state.GroupAccessList)})
 
 	// Set state
 	diags = resp.State.Set(ctx, state)
