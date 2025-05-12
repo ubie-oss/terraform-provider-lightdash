@@ -299,6 +299,16 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// If parent_space_uuid is set, access and group_access must be empty or no elements
+	// At the time of implementing, nested spaces inherit access from the root space.
+	// So, it is impossible to set access or group_access when parent_space_uuid is set.
+	if !config.ParentSpaceUUID.IsNull() {
+		if (!config.MemberAccessList.IsNull() && len(config.MemberAccessList.Elements()) > 0) ||
+			(!config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0) {
+			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, access and group_access must be empty")
+		}
+	}
 }
 
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
