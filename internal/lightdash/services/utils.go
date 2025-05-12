@@ -35,16 +35,3 @@ func ExtractStringsByPattern(input, pattern string) ([]string, error) {
 	// Return all capture groups (skip the first element which is the full match)
 	return matches[1:], nil
 }
-
-// compareTwoStringPointers compares two string pointers and returns true if they are the same
-func compareTwoStringPointers(a, b *string) bool {
-	// If both are nil, they are the same
-	if a == nil && b == nil {
-		return true
-	}
-	// If both are not nil and have the same value, they are the same
-	if a != nil && b != nil && *a == *b {
-		return true
-	}
-	return false
-}

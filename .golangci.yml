@@ -14,7 +14,7 @@
 
 # Visit https://golangci-lint.run/ for usage documentation
 # and information on other useful linters
-version: "2"
+version: 2
 linters:
   enable:
     - copyloopvar
@@ -38,6 +38,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - internal/provider/provider_test.go
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
