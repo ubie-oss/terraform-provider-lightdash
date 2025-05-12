@@ -21,26 +21,39 @@ import (
 	"net/http"
 )
 
-type MoveSpaceV1Request struct {
-	ParentSpaceUUID *string `json:"parentSpaceUuid,omitempty"`
+type MoveSpaceV2Request struct {
+	Item struct {
+		UUID        string `json:"uuid"`
+		Type        string `json:"type"`
+		ContentType string `json:"contentType"`
+	} `json:"item"`
+	Action struct {
+		Type            string `json:"type"`
+		TargetSpaceUUID string `json:"targetSpaceUuid"`
+	} `json:"action"`
 }
 
-type MoveSpaceV1Response struct {
+type MoveSpaceV2Response struct {
 	Status string `json:"status"`
 }
 
-func (c *Client) MoveSpaceV1(projectUuid string, spaceUuid string, parentSpaceUuid *string) error {
-	// Create the request body, including parentSpaceUuid if provided
-	data := MoveSpaceV1Request{}
-	if parentSpaceUuid != nil {
-		data.ParentSpaceUUID = parentSpaceUuid
+// MoveSpaceV2 moves a space to a new parent space using the v2 API
+func (c *Client) MoveSpaceV2(projectUuid string, spaceUuid string, parentSpaceUuid *string) error {
+	if parentSpaceUuid == nil {
+		return fmt.Errorf("parentSpaceUuid must not be nil for v2 move API")
 	}
+	data := MoveSpaceV2Request{}
+	data.Item.UUID = spaceUuid
+	data.Item.Type = "space"
+	data.Item.ContentType = "space"
+	data.Action.Type = "move"
+	data.Action.TargetSpaceUUID = *parentSpaceUuid
+
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal MoveSpaceV1Request: %w", err)
+		return fmt.Errorf("failed to marshal MoveSpaceV2Request: %w", err)
 	}
-	// Create the request
-	path := fmt.Sprintf("%s/api/v1/projects/%s/spaces/%s/move", c.HostUrl, projectUuid, spaceUuid)
+	path := fmt.Sprintf("%s/api/v2/content/%s/move", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("POST", path, bytes.NewReader(marshalled))
 	if err != nil {
 		return fmt.Errorf("failed to create new request: %w", err)
@@ -51,7 +64,7 @@ func (c *Client) MoveSpaceV1(projectUuid string, spaceUuid string, parentSpaceUu
 		return fmt.Errorf("request failed: %w", err)
 	}
 	// Marshal the response
-	response := MoveSpaceV1Response{}
+	response := MoveSpaceV2Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal response: %w", err)

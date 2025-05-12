@@ -80,7 +80,11 @@ func (s *SpaceService) MoveSpace(projectUuid, spaceUuid string, parentSpaceUuidP
 
 	// Only move the space if the parent is different
 	if !isSameParentSpaceUUID {
-		return s.client.MoveSpaceV1(projectUuid, spaceUuid, parentSpaceUuidPointer)
+		if parentSpaceUuidPointer != nil {
+			return s.client.MoveSpaceV2(projectUuid, spaceUuid, parentSpaceUuidPointer)
+		}
+		// If moving to root, v2 API does not support this; handle accordingly (could be a no-op or error)
+		return fmt.Errorf("moving a space to root (parentSpaceUuidPointer == nil) is not supported by the v2 move API")
 	}
 
 	// No move needed, return nil
