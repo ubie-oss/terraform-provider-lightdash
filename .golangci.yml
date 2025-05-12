@@ -14,7 +14,7 @@
 
 # Visit https://golangci-lint.run/ for usage documentation
 # and information on other useful linters
-version: 2
+version: "2"
 linters:
   enable:
     - copyloopvar
