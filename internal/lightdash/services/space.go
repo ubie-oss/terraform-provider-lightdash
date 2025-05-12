@@ -43,46 +43,22 @@ func (s *SpaceService) GetSpace(projectUuid, spaceUuid string) (*api.GetSpaceV1R
 	return s.client.GetSpaceV1(projectUuid, spaceUuid)
 }
 
-// UpdateSpaceProperties updates just the space properties without changing access controls
-func (s *SpaceService) UpdateSpaceProperties(projectUuid, spaceUuid, spaceName string, isPrivate *bool, parentSpaceUuid *string) (*api.UpdateSpaceV1Results, error) {
-	return s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuid)
-}
-
-// UpdateSpace updates the space's name, privacy, and optionally its parent space.
-// For root spaces, it can update name, privacy, and optionally move to become a nested space.
-// For nested spaces, it can only update name and parent space (move to another parent or become a root space).
-// parentSpaceUuidPointer == nil means the space should be a root space.
-// isPrivate == nil means the privacy setting should not be changed.
-func (s *SpaceService) UpdateSpace(projectUuid, spaceUuid, spaceName string, isPrivate *bool, parentSpaceUuidPointer *string) (*api.UpdateSpaceV1Results, error) {
-	// First get current space details to determine if it's root or nested
-	currentSpace, err := s.GetSpace(projectUuid, spaceUuid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current space details: %w", err)
-	}
-
-	// Check if this is a nested space
-	isCurrentlyNestedSpace := currentSpace.ParentSpaceUUID != nil
-
-	// For nested spaces, only update name if privacy change is requested
-	// (because privacy can't be changed for nested spaces)
-	if isCurrentlyNestedSpace && isPrivate != nil {
-		// Log that we're ignoring privacy change for nested spaces
-		// Not returning error to avoid breaking existing configurations
-		return s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, nil, parentSpaceUuidPointer)
-	}
-
-	// Update space properties based on the space type
-	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate, parentSpaceUuidPointer)
+// UpdateRootSpace updates the space properties for a root space
+func (s *SpaceService) UpdateRootSpace(projectUuid, spaceUuid, spaceName string, isPrivate *bool) (*api.UpdateSpaceV1Results, error) {
+	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update space properties: %w", err)
 	}
-
 	return updatedSpace, nil
 }
 
-// RenameSpace updates only the name of a space
-func (s *SpaceService) RenameSpace(projectUuid, spaceUuid, newSpaceName string) (*api.UpdateSpaceV1Results, error) {
-	return s.client.UpdateSpaceV1(projectUuid, spaceUuid, newSpaceName, nil, nil)
+// UpdateNestedSpace updates the space properties for a nested space
+func (s *SpaceService) UpdateNestedSpace(projectUuid, spaceUuid string, spaceName string, parentSpaceUuidPointer *string) (*api.UpdateSpaceV1Results, error) {
+	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update nested space: %w", err)
+	}
+	return updatedSpace, nil
 }
 
 // DeleteSpace deletes a space

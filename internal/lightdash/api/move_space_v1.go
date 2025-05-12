@@ -31,7 +31,7 @@ type MoveSpaceV1Response struct {
 
 func (c *Client) MoveSpaceV1(projectUuid string, spaceUuid string, parentSpaceUuid *string) error {
 	// Create the request body, including parentSpaceUuid if provided
-	data := UpdateSpaceV1Request{}
+	data := MoveSpaceV1Request{}
 	if parentSpaceUuid != nil {
 		data.ParentSpaceUUID = parentSpaceUuid
 	}

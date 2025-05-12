@@ -223,12 +223,11 @@ func (c *SpaceController) UpdateSpace(
 	isCurrentlyRootSpace := currentSpaceDetails.ParentSpaceUUID == nil
 	isBecomingRootSpace := options.ParentSpaceUUID == nil
 
-	var updatedSpaceDetails *models.SpaceDetails
 	var errors []error
 
 	if isCurrentlyRootSpace && isBecomingRootSpace {
 		// Scenario 1: Remains a root space - Update properties and access.
-		updatedSpaceDetails, errors = c.updateRootSpace(
+		errors = c.updateRootSpace(
 			options.ProjectUUID,
 			options.SpaceUUID,
 			options.SpaceName,
@@ -241,7 +240,7 @@ func (c *SpaceController) UpdateSpace(
 	} else if isCurrentlyRootSpace && !isBecomingRootSpace {
 		// Scenario 2: Root space becoming a nested space - Update name and move.
 		// Access controls will be inherited from the new parent and any direct access will be ignored by the API.
-		updatedSpaceDetails, errors = c.moveRootToNestedSpace(
+		errors = c.moveRootToNestedSpace(
 			options.ProjectUUID,
 			options.SpaceUUID,
 			options.SpaceName,
@@ -250,7 +249,7 @@ func (c *SpaceController) UpdateSpace(
 	} else if !isCurrentlyRootSpace && isBecomingRootSpace {
 		// Scenario 3: Nested space becoming a root space - Move to root and then apply access controls.
 		// The space will initially inherit project access, and then direct access can be set.
-		updatedSpaceDetails, errors = c.moveNestedToRootSpace(
+		errors = c.moveNestedToRootSpace(
 			options.ProjectUUID,
 			options.SpaceUUID,
 			options.SpaceName,
@@ -263,7 +262,7 @@ func (c *SpaceController) UpdateSpace(
 		// Scenario 4: Nested space staying nested (either same parent or different parent).
 		// Only name and parent space can be updated via the API for nested spaces.
 		// Access controls and privacy are inherited and cannot be managed.
-		updatedSpaceDetails, errors = c.updateNestedSpace(
+		errors = c.updateNestedSpace(
 			options.ProjectUUID,
 			options.SpaceUUID,
 			options.SpaceName,
@@ -276,7 +275,13 @@ func (c *SpaceController) UpdateSpace(
 		return nil, errors
 	}
 
-	return updatedSpaceDetails, nil
+	// Get the final space details to return the complete state
+	actualUpdatedSpaceDetails, err := c.GetSpace(options.ProjectUUID, options.SpaceUUID)
+	if err != nil {
+		return nil, []error{fmt.Errorf("failed to get final space details after update: %w", err)}
+	}
+
+	return actualUpdatedSpaceDetails, nil
 }
 
 // DeleteSpace deletes a space if deletion protection is disabled.
@@ -616,13 +621,13 @@ func (c *SpaceController) updateRootSpace(
 	newMemberAccess []SpaceAccessMemberRequest,
 	newGroupAccess []SpaceGroupAccess,
 	currentSpaceDetails *models.SpaceDetails,
-) (*models.SpaceDetails, []error) {
+) []error {
 	var errors []error
 
 	// 1. Update the space properties via the service layer
-	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, isPrivate, parentSpaceUUID)
+	_, err := c.spaceService.UpdateRootSpace(projectUUID, spaceUUID, spaceName, isPrivate)
 	if err != nil {
-		return nil, []error{fmt.Errorf("failed to update space properties: %w", err)}
+		return []error{fmt.Errorf("failed to update space properties: %w", err)}
 	}
 
 	// Convert models.SpaceAccessMember to SpaceAccessMemberResponse for member access management
@@ -672,16 +677,7 @@ func (c *SpaceController) updateRootSpace(
 	)
 	errors = append(errors, groupErrors...)
 
-	// 4. After updating properties and managing direct access, fetch the complete space details from the API.
-	// Use the updated GetSpace method that populates raw access lists.
-	finalSpaceDetails, err := c.GetSpace(projectUUID, spaceUUID)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("failed to retrieve space details after root space update: %w", err))
-		// If fetching the final state fails, we should still return any previous errors
-		return nil, errors
-	}
-
-	return finalSpaceDetails, errors
+	return errors
 }
 
 // updateNestedSpace updates the properties for a nested space.
@@ -692,22 +688,22 @@ func (c *SpaceController) updateNestedSpace(
 	spaceUUID string,
 	spaceName string,
 	parentSpaceUUID *string,
-) (*models.SpaceDetails, []error) {
+) []error {
 	// Update only the name and parent space UUID for nested spaces via the service layer
 	// isPrivate is passed as nil because it cannot be updated for nested spaces.
-	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, nil, parentSpaceUUID)
+	// Pass the parentSpaceUUID to the service layer to handle moves between nested spaces
+	_, err := c.spaceService.UpdateNestedSpace(projectUUID, spaceUUID, spaceName, parentSpaceUUID)
 	if err != nil {
-		return nil, []error{fmt.Errorf("failed to update nested space %s: %w", spaceUUID, err)}
+		return []error{fmt.Errorf("failed to update nested space %s: %w", spaceUUID, err)}
 	}
 
-	// Retrieve the updated space details to return the final state.
-	// Use the updated GetSpace method that populates raw access lists.
-	updatedSpaceDetails, err := c.GetSpace(projectUUID, spaceUUID)
+	// Move the space to the new parent space
+	err = c.spaceService.MoveSpace(projectUUID, spaceUUID, parentSpaceUUID)
 	if err != nil {
-		return nil, []error{fmt.Errorf("failed to retrieve updated nested space details %s: %w", spaceUUID, err)}
+		return []error{fmt.Errorf("failed to move nested space %s to parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
 	}
 
-	return updatedSpaceDetails, nil
+	return nil
 }
 
 // moveRootToNestedSpace handles moving a root space to become a nested space.
@@ -718,21 +714,14 @@ func (c *SpaceController) moveRootToNestedSpace(
 	spaceUUID string,
 	spaceName string,
 	parentSpaceUUID *string,
-) (*models.SpaceDetails, []error) {
+) []error {
 	// Update name and move to parent via the service layer
-	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, nil, parentSpaceUUID)
+	_, err := c.spaceService.UpdateRootSpace(projectUUID, spaceUUID, spaceName, nil)
 	if err != nil {
-		return nil, []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
+		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
 	}
 
-	// After moving to nested, get final space details to return the updated state.
-	// Use the updated GetSpace method that populates raw access lists.
-	finalSpaceDetails, err := c.GetSpace(projectUUID, spaceUUID)
-	if err != nil {
-		return nil, []error{fmt.Errorf("failed to retrieve space details %s after moving to nested: %w", spaceUUID, err)}
-	}
-
-	return finalSpaceDetails, nil
+	return nil
 }
 
 // moveNestedToRootSpace handles moving a nested space to become a root space.
@@ -745,30 +734,18 @@ func (c *SpaceController) moveNestedToRootSpace(
 	newMemberAccess []SpaceAccessMemberRequest,
 	newGroupAccess []SpaceGroupAccess,
 	_ *models.SpaceDetails, // Not used, but kept for API consistency
-) (*models.SpaceDetails, []error) {
-	// 1. First, update the space to make it a root space (no parent) via the service layer
-	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, isPrivate, nil)
-	if err != nil {
-		return nil, []error{fmt.Errorf("failed to move nested space %s to root: %w", spaceUUID, err)}
+) []error {
+	// 1. Move the space to the root space via the service layer
+	err1 := c.spaceService.MoveSpace(projectUUID, spaceUUID, nil)
+	if err1 != nil {
+		return []error{fmt.Errorf("failed to move nested space %s to root: %w", spaceUUID, err1)}
 	}
 
-	// 2. Now, set up the access permissions since it's becoming a root space.
-	// Get the updated space details first to pass to UpdateRootSpace.
-	updatedSpaceDetails, err := c.GetSpace(projectUUID, spaceUUID)
-	if err != nil {
-		return nil, []error{fmt.Errorf("failed to get space details %s after moving to root: %w", spaceUUID, err)}
+	// 2. Update the space to make it a root space (no parent) via the service layer
+	_, err2 := c.spaceService.UpdateRootSpace(projectUUID, spaceUUID, spaceName, isPrivate)
+	if err2 != nil {
+		return []error{fmt.Errorf("failed to move nested space %s to root: %w", spaceUUID, err2)}
 	}
 
-	// Use UpdateRootSpace to manage member and group access.
-	// UpdateRootSpace will fetch the final state after updates.
-	return c.updateRootSpace(
-		projectUUID,
-		spaceUUID,
-		spaceName,
-		isPrivate,
-		nil, // explicitly nil as it's now a root space
-		newMemberAccess,
-		newGroupAccess,
-		updatedSpaceDetails, // Pass the details obtained after moving to root (contains raw access lists)
-	)
+	return nil
 }

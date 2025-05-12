@@ -16,8 +16,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestUpdateSpaceV1Request_MarshalJSON(t *testing.T) {
@@ -366,5 +372,307 @@ func TestUpdateSpaceV1Results_FieldAssignment(t *testing.T) {
 				t.Errorf("expected IsPrivate %v, got %v", tc.expected.IsPrivate, results.IsPrivate)
 			}
 		})
+	}
+}
+
+func TestClient_UpdateSpaceV1(t *testing.T) {
+	// Define a dummy response body for the mock server
+	dummyResponseBody := `{"status": "ok", "results": {"organizationUuid": "org-uuid", "projectUuid": "proj-uuid", "uuid": "space-uuid", "name": "Updated Space", "isPrivate": false}}`
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check the request method and path
+		if r.Method != "PATCH" {
+			t.Errorf("Expected PATCH request, got %s", r.Method)
+		}
+		expectedPath := "/api/v1/projects/test-project-uuid/spaces/test-space-uuid"
+		if r.URL.Path != expectedPath {
+			t.Errorf("Expected request path %s, got %s", expectedPath, r.URL.Path)
+		}
+
+		// Check the request body
+		var requestBody UpdateSpaceV1Request
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil {
+			t.Fatalf("Failed to decode request body: %v", err)
+		}
+
+		expectedRequestBody := UpdateSpaceV1Request{
+			Name:      "Updated Space",
+			IsPrivate: false,
+		}
+
+		// Compare the decoded request body with the expected body
+		if !reflect.DeepEqual(requestBody, expectedRequestBody) {
+			t.Errorf("Request body mismatch:\n%s", cmp.Diff(expectedRequestBody, requestBody))
+		}
+
+		// Write the dummy response
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, dummyResponseBody)
+	}))
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	client := NewClient(server.URL, "dummy-token")
+
+	// Call the API function
+	spaceName := "Updated Space"
+	isPrivate := false
+	var isPrivatePtr *bool
+	isPrivatePtr = &isPrivate
+
+	// The UpdateSpaceV1 function should not take parentSpaceUuid as an argument
+	// It only updates name and isPrivate
+	resp, err := client.UpdateSpaceV1("test-project-uuid", "test-space-uuid", spaceName, isPrivatePtr)
+
+	// Check for errors
+	if err != nil {
+		t.Fatalf("UpdateSpaceV1 failed: %v", err)
+	}
+
+	// Define the expected results
+	expectedResults := &UpdateSpaceV1Results{
+		OrganizationUUID: "org-uuid",
+		ProjectUUID:      "proj-uuid",
+		SpaceUUID:        "space-uuid",
+		SpaceName:        "Updated Space",
+		IsPrivate:        false,
+		ParentSpaceUUID:  nil, // The API response should return the *actual* parent UUID
+	}
+
+	// Compare the received results with the expected results
+	if !reflect.DeepEqual(resp, expectedResults) {
+		t.Errorf("Response results mismatch:\n%s", cmp.Diff(expectedResults, resp))
+	}
+}
+
+// Add a test case for updating only the name
+func TestClient_UpdateSpaceV1_OnlyName(t *testing.T) {
+	// Define a dummy response body for the mock server
+	dummyResponseBody := `{"status": "ok", "results": {"organizationUuid": "org-uuid", "projectUuid": "proj-uuid", "uuid": "space-uuid", "name": "Name Only Update", "isPrivate": true}}`
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check the request method and path
+		if r.Method != "PATCH" {
+			t.Errorf("Expected PATCH request, got %s", r.Method)
+		}
+		expectedPath := "/api/v1/projects/test-project-uuid/spaces/test-space-uuid"
+		if r.URL.Path != expectedPath {
+			t.Errorf("Expected request path %s, got %s", expectedPath, r.URL.Path)
+		}
+
+		// Check the request body
+		var requestBody UpdateSpaceV1Request
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil {
+			t.Fatalf("Failed to decode request body: %v", err)
+		}
+
+		expectedRequestBody := UpdateSpaceV1Request{
+			Name: "Name Only Update",
+			// IsPrivate is omitted or set to default in the request if not provided
+		}
+
+		// Compare the decoded request body with the expected body (ignore default/omitted fields)
+		// We only check the fields explicitly set in the request body in this test case
+		if requestBody.Name != expectedRequestBody.Name {
+			t.Errorf("Request body name mismatch: Expected %s, got %s", expectedRequestBody.Name, requestBody.Name)
+		}
+
+		// Write the dummy response
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, dummyResponseBody)
+	}))
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	client := NewClient(server.URL, "dummy-token")
+
+	// Call the API function with only the name provided
+	spaceName := "Name Only Update"
+	resp, err := client.UpdateSpaceV1("test-project-uuid", "test-space-uuid", spaceName, nil)
+
+	// Check for errors
+	if err != nil {
+		t.Fatalf("UpdateSpaceV1 failed: %v", err)
+	}
+
+	// Define the expected results
+	expectedResults := &UpdateSpaceV1Results{
+		OrganizationUUID: "org-uuid",
+		ProjectUUID:      "proj-uuid",
+		SpaceUUID:        "space-uuid",
+		SpaceName:        "Name Only Update", // The API response should return the actual privacy setting
+		IsPrivate:        true,
+		ParentSpaceUUID:  nil, // The API response should return the actual parent UUID
+	}
+
+	// Compare the received results with the expected results
+	// Use cmp.Diff for a detailed diff
+	if !cmp.Equal(resp, expectedResults) {
+		t.Errorf("Response results mismatch:\n%s", cmp.Diff(expectedResults, resp))
+	}
+}
+
+// Add a test case for updating only isPrivate
+func TestClient_UpdateSpaceV1_OnlyIsPrivate(t *testing.T) {
+	// Define a dummy response body for the mock server
+	dummyResponseBody := `{"status": "ok", "results": {"organizationUuid": "org-uuid", "projectUuid": "proj-uuid", "uuid": "space-uuid", "name": "Original Name", "isPrivate": false}}`
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check the request method and path
+		if r.Method != "PATCH" {
+			t.Errorf("Expected PATCH request, got %s", r.Method)
+		}
+		expectedPath := "/api/v1/projects/test-project-uuid/spaces/test-space-uuid"
+		if r.URL.Path != expectedPath {
+			t.Errorf("Expected request path %s, got %s", expectedPath, r.URL.Path)
+		}
+
+		// Check the request body
+		var requestBody UpdateSpaceV1Request
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil {
+			t.Fatalf("Failed to decode request body: %v", err)
+		}
+
+		expectedRequestBody := UpdateSpaceV1Request{
+			// Name is omitted or set to default in the request if not provided
+			IsPrivate: false,
+		}
+
+		// Compare the decoded request body with the expected body (ignore default/omitted fields)
+		// We only check the fields explicitly set in the request body in this test case
+		if requestBody.IsPrivate != expectedRequestBody.IsPrivate {
+			t.Errorf("Request body isPrivate mismatch: Expected %t, got %t", expectedRequestBody.IsPrivate, requestBody.IsPrivate)
+		}
+
+		// Write the dummy response
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, dummyResponseBody)
+	}))
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	client := NewClient(server.URL, "dummy-token")
+
+	// Call the API function with only isPrivate provided
+	isPrivate := false
+	var isPrivatePtr *bool
+	isPrivatePtr = &isPrivate
+	resp, err := client.UpdateSpaceV1("test-project-uuid", "test-space-uuid", "Original Name", isPrivatePtr)
+
+	// Check for errors
+	if err != nil {
+		t.Fatalf("UpdateSpaceV1 failed: %v", err)
+	}
+
+	// Define the expected results
+	expectedResults := &UpdateSpaceV1Results{
+		OrganizationUUID: "org-uuid",
+		ProjectUUID:      "proj-uuid",
+		SpaceUUID:        "space-uuid",
+		SpaceName:        "Original Name", // The API response should return the actual name
+		IsPrivate:        false,
+		ParentSpaceUUID:  nil, // The API response should return the actual parent UUID
+	}
+
+	// Compare the received results with the expected results
+	// Use cmp.Diff for a detailed diff
+	if !cmp.Equal(resp, expectedResults) {
+		t.Errorf("Response results mismatch:\n%s", cmp.Diff(expectedResults, resp))
+	}
+}
+
+// Add a test case for when the API returns an error
+func TestClient_UpdateSpaceV1_APIError(t *testing.T) {
+	// Create a mock HTTP server that returns an error status code
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, `{"status": "error", "error": {"message": "Internal server error"}}`)
+	}))
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	client := NewClient(server.URL, "dummy-token")
+
+	// Call the API function
+	spaceName := "Should Not Matter"
+	resp, err := client.UpdateSpaceV1("test-project-uuid", "test-space-uuid", spaceName, nil)
+
+	// Check for errors
+	if err == nil {
+		t.Fatalf("Expected an error, but got none. Response: %+v", resp)
+	}
+
+	// Check if the error message is as expected (or contains the expected substring)
+	expectedErrorSubstring := "request failed"
+	if !strings.Contains(err.Error(), expectedErrorSubstring) {
+		t.Errorf("Expected error message to contain '%s', but got '%s'", expectedErrorSubstring, err.Error())
+	}
+}
+
+// Add a test case for when the response body is invalid JSON
+func TestClient_UpdateSpaceV1_InvalidJSON(t *testing.T) {
+	// Create a mock HTTP server that returns invalid JSON
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `invalid json}`)
+	}))
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	client := NewClient(server.URL, "dummy-token")
+
+	// Call the API function
+	spaceName := "Should Not Matter"
+	resp, err := client.UpdateSpaceV1("test-project-uuid", "test-space-uuid", spaceName, nil)
+
+	// Check for errors
+	if err == nil {
+		t.Fatalf("Expected an error, but got none. Response: %+v", resp)
+	}
+
+	// Check if the error message is related to unmarshalling JSON
+	expectedErrorSubstring := "failed to unmarshal response"
+	if !strings.Contains(err.Error(), expectedErrorSubstring) {
+		t.Errorf("Expected error message to contain '%s', but got '%s'", expectedErrorSubstring, err.Error())
+	}
+}
+
+// Add a test case for when the API response results are missing required fields
+func TestClient_UpdateSpaceV1_MissingRequiredFields(t *testing.T) {
+	// Define a dummy response body with missing required fields (e.g., SpaceUUID)
+	dummyResponseBody := `{"status": "ok", "results": {"organizationUuid": "org-uuid", "projectUuid": "proj-uuid", "name": "Updated Space", "isPrivate": false}}`
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, dummyResponseBody)
+	}))
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	client := NewClient(server.URL, "dummy-token")
+
+	// Call the API function
+	spaceName := "Updated Space"
+	isPrivate := false
+	var isPrivatePtr *bool
+	isPrivatePtr = &isPrivate
+	resp, err := client.UpdateSpaceV1("test-project-uuid", "test-space-uuid", spaceName, isPrivatePtr)
+
+	// Check for errors
+	if err == nil {
+		t.Fatalf("Expected an error, but got none. Response: %+v", resp)
+	}
+
+	// Check if the error message is related to missing UUID
+	expectedErrorSubstring := "space UUID is nil"
+	if !strings.Contains(err.Error(), expectedErrorSubstring) {
+		t.Errorf("Expected error message to contain '%s', but got '%s'", expectedErrorSubstring, err.Error())
 	}
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/controllers"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
-	"github.com/ubie-oss/terraform-provider-lightdash/internal/provider/plan_modifiers"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -185,9 +184,6 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the space.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					plan_modifiers.SetLastUpdatedOnUpdate(),
-				},
 			},
 			"access_all": schema.ListNestedAttribute{
 				MarkdownDescription: "This block displays the complete list of users with access to the space, including those with direct access, inherited access, and organization administrators." +
@@ -653,19 +649,26 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	tflog.Debug(ctx, "Space updated", map[string]any{"spaceDetails": updatedSpaceDetails})
 
+	// Fetch the space again to get the latest details
+	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating space", "Controller returned nil space details")
+		return
+	}
+
 	// Populate the state with values returned by the controller (which reflect the final API state)
 	var updatedState spaceResourceModel
 	updatedState.ID = oldState.ID
 	updatedState.ProjectUUID = oldState.ProjectUUID // ProjectUUID cannot change
 	updatedState.SpaceUUID = oldState.SpaceUUID     // SpaceUUID cannot change
 
-	updatedState.SpaceName = types.StringValue(updatedSpaceDetails.SpaceName)
-	updatedState.IsPrivate = types.BoolValue(updatedSpaceDetails.IsPrivate)
+	updatedState.SpaceName = types.StringValue(fetchedSpaceDetails.SpaceName)
+	updatedState.IsPrivate = types.BoolValue(fetchedSpaceDetails.IsPrivate)
 
-	if updatedSpaceDetails.ParentSpaceUUID != nil {
-		updatedState.ParentSpaceUUID = types.StringValue(*updatedSpaceDetails.ParentSpaceUUID)
-	} else {
+	if plan.ParentSpaceUUID.IsNull() {
 		updatedState.ParentSpaceUUID = types.StringNull()
+	} else {
+		updatedState.ParentSpaceUUID = types.StringValue(plan.ParentSpaceUUID.ValueString())
 	}
 
 	updatedState.DeleteProtection = plan.DeleteProtection // From plan
@@ -686,13 +689,13 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
-	memberAccessList, memberAccessDiags := convertToAllMemberAccessList(updatedSpaceDetails.SpaceAccessMembers)
+	memberAccessList, memberAccessDiags := convertToAllMemberAccessList(fetchedSpaceDetails.SpaceAccessMembers)
 	resp.Diagnostics.Append(memberAccessDiags...)
 	if !memberAccessDiags.HasError() {
 		updatedState.MemberAccessListAll = memberAccessList
 	}
 
-	groupAccessList, groupAccessDiags := convertToGroupAccessList(updatedSpaceDetails.SpaceAccessGroups)
+	groupAccessList, groupAccessDiags := convertToGroupAccessList(fetchedSpaceDetails.SpaceAccessGroups)
 	resp.Diagnostics.Append(groupAccessDiags...)
 	if !groupAccessDiags.HasError() {
 		updatedState.GroupAccessListAll = groupAccessList
