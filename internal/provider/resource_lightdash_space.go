@@ -862,11 +862,9 @@ func convertToAllMemberAccessList(members []models.SpaceAccessMember) (types.Lis
 		// Direct access is a boolean field, not a method
 		var hasDirectAccessVal = types.BoolValue(member.HasDirectAccess)
 
-		var inheritedFromVal types.String
+		inheritedFromVal := types.StringNull()
 		if member.InheritedFrom != "" {
 			inheritedFromVal = types.StringValue(member.InheritedFrom)
-		} else {
-			inheritedFromVal = types.StringNull()
 		}
 
 		element, elemDiags := types.ObjectValue(
