@@ -32,6 +32,7 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/controllers"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/provider/plan_modifiers"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -128,7 +129,8 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"\n- Access controls for nested spaces are inherited from their parent space and cannot be managed individually " +
 			"\n- Visibility (public/private) for nested spaces is inherited from their parent space and cannot be changed " +
 			"\n- When a space is moved from root level to nested (or vice versa), its access controls will change accordingly " +
-			"\n- For nested spaces, the `access` and `group_access` blocks will be empty in Terraform state as they cannot be managed",
+			"\n- For nested spaces, the `access` and `group_access` blocks will be empty in Terraform state as they cannot be managed" +
+			"\n- Attempting to set `is_private`, `access`, or `group_access` for a nested space will result in validation errors because nested spaces automatically inherit these properties from their parent space",
 		Description: "Lightdash space",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -184,7 +186,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Description: "Timestamp of the last Terraform update of the space.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					plan_modifiers.SetLastUpdatedOnUpdate(),
 				},
 			},
 			"access_all": schema.ListNestedAttribute{
@@ -300,13 +302,24 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 		return
 	}
 
-	// If parent_space_uuid is set, access and group_access must be empty or no elements
-	// At the time of implementing, nested spaces inherit access from the root space.
-	// So, it is impossible to set access or group_access when parent_space_uuid is set.
+	// The available options are different for root and nested spaces.
 	if !config.ParentSpaceUUID.IsNull() {
-		if (!config.MemberAccessList.IsNull() && len(config.MemberAccessList.Elements()) > 0) ||
-			(!config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0) {
-			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, access and group_access must be empty")
+		// Nested spaces inherit visibility from the parent space.
+		// So, it is impossible to set is_private for nested spaces.
+		if !config.IsPrivate.IsNull() {
+			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, is_private must be empty")
+		}
+
+		// Nested spaces inherit access from the parent space.
+		// So, it is impossible to set access or group_access when parent_space_uuid is set.
+		if !config.MemberAccessList.IsNull() && len(config.MemberAccessList.Elements()) > 0 {
+			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, member access list must be empty")
+		}
+
+		// Nested spaces inherit access from the parent space.
+		// So, it is impossible to set access or group_access when parent_space_uuid is set.
+		if !config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0 {
+			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, group access list must be empty")
 		}
 	}
 }
@@ -320,11 +333,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Show the plan
-	tflog.Debug(ctx, "************* Plan (Create start) *************", map[string]any{"plan": plan})
-	// Show the space name
-	tflog.Debug(ctx, "************* Space Name (Create start): ", map[string]any{"spaceName": plan.SpaceName.ValueString()})
-
 	// Extract access list data from Set types
 	memberAccessSlice, memberAccessDiags := extractMemberAccessFromSet(plan.MemberAccessList)
 	resp.Diagnostics.Append(memberAccessDiags...)
@@ -337,11 +345,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Show length of member access list
-	tflog.Debug(ctx, "************* Member Access List (Create start): ", map[string]any{"length": len(memberAccessSlice)})
-	// Show length of group access list
-	tflog.Debug(ctx, "************* Group Access List (Create start): ", map[string]any{"length": len(groupAccessSlice)})
 
 	// Prepare data for controller
 	projectUUID := plan.ProjectUUID.ValueString()
@@ -380,16 +383,14 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
-	// log the parameters of CreateSpace
-	tflog.Debug(ctx, "************* CreateSpace parameters *************",
-		map[string]any{
-			"projectUUID":     projectUUID,
-			"spaceName":       spaceName,
-			"isPrivate":       isPrivate,
-			"parentSpaceUUID": parentSpaceUUID,
-			"memberAccess":    memberAccess,
-			"groupAccess":     groupAccess,
-		})
+	tflog.Debug(ctx, "Creating space: ", map[string]any{
+		"projectUUID":     projectUUID,
+		"spaceName":       spaceName,
+		"isPrivate":       isPrivate,
+		"parentSpaceUUID": parentSpaceUUID,
+		"memberAccess":    memberAccess,
+		"groupAccess":     groupAccess,
+	})
 
 	// Create space using controller with options struct
 	options := controllers.CreateSpaceOptions{
@@ -414,8 +415,10 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		resp.Diagnostics.AddError("Error during space creation", "Controller returned nil space details")
 		return
 	}
+	tflog.Debug(ctx, "Space created", map[string]any{"spaceDetails": createdSpaceDetails})
 
 	// Get the space to fetch all the space access
+	tflog.Debug(ctx, "Fetching space", map[string]any{"projectUUID": projectUUID, "spaceUUID": createdSpaceDetails.SpaceUUID})
 	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, createdSpaceDetails.SpaceUUID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error during space creation", "Controller returned nil space details")
@@ -469,11 +472,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		state.GroupAccessListAll = groupAccessList
 	}
 
-	// Show the state
-	tflog.Debug(ctx, "************* State (Create end) *************", map[string]any{"state": state})
-	// Show the space name
-	tflog.Debug(ctx, "************* Space Name (Create end): ", map[string]any{"spaceName": state.SpaceName.ValueString()})
-
 	// Set state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -488,11 +486,11 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	tflog.Debug(ctx, "************* Current State (Read start) *************", map[string]any{"currentState": currentState})
-
 	// Get space details from API using controller
 	projectUUID := currentState.ProjectUUID.ValueString()
 	spaceUUID := currentState.SpaceUUID.ValueString()
+
+	tflog.Debug(ctx, "Fetching space", map[string]any{"projectUUID": projectUUID, "spaceUUID": spaceUUID})
 
 	// Use controller's GetSpace which returns SpaceDetails with raw lists
 	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
@@ -503,6 +501,8 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	tflog.Debug(ctx, "Fetched space details", map[string]any{"spaceDetails": fetchedSpaceDetails})
 
 	// Update state from controller response
 	var newState spaceResourceModel
@@ -542,8 +542,6 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if !groupAccessDiags.HasError() {
 		newState.GroupAccessListAll = groupAccessList
 	}
-
-	tflog.Debug(ctx, "************* New State (Read end) *************", map[string]any{"newState": newState})
 
 	// Set state
 	diags = resp.State.Set(ctx, newState)
@@ -653,6 +651,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	tflog.Debug(ctx, "Space updated", map[string]any{"spaceDetails": updatedSpaceDetails})
+
 	// Populate the state with values returned by the controller (which reflect the final API state)
 	var updatedState spaceResourceModel
 	updatedState.ID = oldState.ID
@@ -698,8 +698,6 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		updatedState.GroupAccessListAll = groupAccessList
 	}
 
-	tflog.Debug(ctx, "Updated state after API calls", map[string]any{"updatedState": updatedState})
-
 	// Set state
 	resp.Diagnostics.Append(resp.State.Set(ctx, updatedState)...)
 }
@@ -718,6 +716,8 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	spaceUUID := state.SpaceUUID.ValueString()
 	deletionProtection := state.DeleteProtection.ValueBool()
 
+	tflog.Debug(ctx, "Deleting space", map[string]any{"projectUUID": projectUUID, "spaceUUID": spaceUUID, "deletionProtection": deletionProtection})
+
 	err := r.spaceController.DeleteSpace(
 		controllers.DeleteSpaceOptions{
 			ProjectUUID:        projectUUID,
@@ -733,17 +733,18 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("Deleted space %s", spaceUUID))
+	tflog.Debug(ctx, "Space deleted", map[string]any{"projectUUID": projectUUID, "spaceUUID": spaceUUID})
 }
 
 // ImportSpace imports an existing space by its resource ID.
 func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	importSpaceOptions := controllers.ImportSpaceOptions{
+		ResourceID: req.ID,
+	}
+	tflog.Debug(ctx, "Importing space", map[string]any{"importSpaceOptions": importSpaceOptions})
+
 	// Fetch space details from the controller
-	spaceDetailsFromController, err := r.spaceController.ImportSpace(
-		controllers.ImportSpaceOptions{
-			ResourceID: req.ID,
-		},
-	)
+	spaceDetailsFromController, err := r.spaceController.ImportSpace(importSpaceOptions)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing space",

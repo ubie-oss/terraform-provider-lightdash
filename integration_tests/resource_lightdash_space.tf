@@ -83,12 +83,26 @@ resource "lightdash_space" "test_parent_space" {
   is_private   = true
 
   deletion_protection = false
+
+  group_access {
+    group_uuid = lightdash_group.test1.group_uuid
+    space_role = "admin"
+  }
+
+  group_access {
+    group_uuid = lightdash_group.test2.group_uuid
+    space_role = "admin"
+  }
+
+  depends_on = [
+    lightdash_project_role_member.test_admin_user,
+    lightdash_project_role_member.test_member_user,
+  ]
 }
 
 resource "lightdash_space" "test_child_space_1" {
   project_uuid      = var.test_lightdash_project_uuid
   name              = "zzz_test_child_space_1"
-  is_private        = true
   parent_space_uuid = lightdash_space.test_parent_space.space_uuid
 
   deletion_protection = false
@@ -97,7 +111,6 @@ resource "lightdash_space" "test_child_space_1" {
 resource "lightdash_space" "test_child_space_2" {
   project_uuid      = var.test_lightdash_project_uuid
   name              = "zzz_test_child_space_2"
-  is_private        = true
   parent_space_uuid = lightdash_space.test_parent_space.space_uuid
   # We test to switch the parent space
   # parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
@@ -108,7 +121,6 @@ resource "lightdash_space" "test_child_space_2" {
 resource "lightdash_space" "test_grandchild_space" {
   project_uuid      = var.test_lightdash_project_uuid
   name              = "zzz_test_grandchild_space"
-  is_private        = true
   parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
 
   deletion_protection = false

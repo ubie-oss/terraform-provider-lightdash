@@ -20,11 +20,13 @@ resource "lightdash_space" "test_privacte" {
   deletion_protection = false
 
   access {
-    user_uuid = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+    user_uuid  = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+    space_role = "editor"
   }
 
   access {
-    user_uuid = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+    user_uuid  = "xxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxx"
+    space_role = "viewer"
   }
 }
 
@@ -38,18 +40,18 @@ resource "lightdash_space" "test_parent_space" {
   deletion_protection = false
 }
 
+// Nested spaces inherit visibility and access from the root space.
 resource "lightdash_space" "test_child_space" {
   project_uuid        = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
   parent_space_uuid   = lightdash_space.test_parent_space.space_uuid
   name                = "zzz_test_child_space"
-  is_private          = true
   deletion_protection = false
 }
 
+// Nested spaces inherit visibility and access from the root space.
 resource "lightdash_space" "test_grandchild_space" {
   project_uuid        = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
   parent_space_uuid   = lightdash_space.test_child_space.space_uuid
   name                = "zzz_test_grandchild_space"
-  is_private          = true
   deletion_protection = false
 }
