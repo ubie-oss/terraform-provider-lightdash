@@ -16,7 +16,6 @@ package controllers
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -78,19 +77,6 @@ type SpaceGroupAccess struct {
 	SpaceRole models.SpaceMemberRole // The role the group has in the space
 }
 
-// SpaceDetails contains all the details of a space returned by the GetSpace API.
-// Note: For nested spaces, MemberAccess and GroupAccess lists will be empty as access is inherited.
-type SpaceDetails struct {
-	ProjectUUID         string
-	SpaceUUID           string
-	ParentSpaceUUID     *string
-	SpaceName           string
-	IsPrivate           bool
-	CreatedAt           time.Time
-	RawMemberAccessList []api.SpaceAccessMember // Full list from API for access_all
-	RawGroupAccessList  []api.SpaceAccessGroup  // Full list from API for group_access_all
-}
-
 // NewSpaceController creates a new SpaceController
 func NewSpaceController(client *api.Client) *SpaceController {
 	return &SpaceController{
@@ -112,12 +98,12 @@ func (c *SpaceController) CreateSpace(
 	parentSpaceUUID *string,
 	memberAccess []SpaceAccessMemberRequest,
 	groupAccess []SpaceGroupAccess,
-) (*SpaceDetails, []error) {
+) (*models.SpaceDetails, []error) {
 
 	// Check if this will be a nested space (has parent space UUID)
 	isNestedSpace := parentSpaceUUID != nil
 
-	var createdSpaceDetails *SpaceDetails
+	var createdSpaceDetails *models.SpaceDetails
 	var errors []error
 
 	if isNestedSpace {
@@ -139,7 +125,7 @@ func (c *SpaceController) createRootSpace(
 	isPrivate bool,
 	memberAccess []SpaceAccessMemberRequest,
 	groupAccess []SpaceGroupAccess,
-) (*SpaceDetails, []error) {
+) (*models.SpaceDetails, []error) {
 	var errors []error
 
 	// 1. Validate the input
@@ -213,7 +199,7 @@ func (c *SpaceController) createRootSpace(
 		// Check if the member already has space access through any means (direct, group, etc.)
 		memberHasAccess := false
 		// Iterate through the raw member access list from the actual space details
-		for _, actualSpaceAccess := range actualSpace.RawMemberAccessList {
+		for _, actualSpaceAccess := range actualSpace.SpaceAccessMembers {
 			if actualSpaceAccess.UserUUID == member.UserUUID {
 				memberHasAccess = true
 				// TODO: Consider logging a warning if access already exists but role differs from plan?
@@ -263,7 +249,7 @@ func (c *SpaceController) createNestedSpace(
 	parentSpaceUUID *string,
 	memberAccess []SpaceAccessMemberRequest,
 	groupAccess []SpaceGroupAccess,
-) (*SpaceDetails, []error) {
+) (*models.SpaceDetails, []error) {
 
 	// 1. Validate inputs - ensure no space access is specified for nested spaces
 	var errors []error
@@ -298,54 +284,57 @@ func (c *SpaceController) createNestedSpace(
 // GetSpace retrieves the details of a space by its project and space UUIDs.
 // For root spaces, it populates MemberAccess and GroupAccess with all members/groups returned by API.
 // Filtering for direct access (for the 'access' attribute in Terraform) is handled in the resource layer.
-func (c *SpaceController) GetSpace(projectUUID, spaceUUID string) (*SpaceDetails, error) {
+func (c *SpaceController) GetSpace(projectUUID, spaceUUID string) (*models.SpaceDetails, error) {
 	// Get space details from the service layer
 	space, err := c.spaceService.GetSpace(projectUUID, spaceUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get space: %w", err)
 	}
 
-	// Process members
-	memberAccessList := []SpaceAccessMemberResponse{}
+	// Convert API SpaceAccessMember to models.SpaceAccessMember
+	spaceAccessMembers := []models.SpaceAccessMember{}
 	for _, member := range space.SpaceAccessMembers {
-		// Convert to SpaceAccessMemberResponse from models.SpaceAccessMember
-		spaceAccessMemberResponse := SpaceAccessMemberResponse{
-			BaseSpaceAccessMember: BaseSpaceAccessMember{
-				UserUUID:  member.UserUUID,
-				SpaceRole: member.SpaceRole,
-			},
-			HasDirectAccess: &member.HasDirectAccess,
-			InheritedRole:   &member.InheritedRole,
-			InheritedFrom:   &member.InheritedFrom,
-			ProjectRole:     &member.ProjectRole,
-		}
-
-		// Add all members from the API response - Filtering for 'access' is done in the resource layer
-		memberAccessList = append(memberAccessList, spaceAccessMemberResponse)
+		spaceAccessMembers = append(spaceAccessMembers, models.SpaceAccessMember{
+			UserUUID:        member.UserUUID,
+			SpaceRole:       member.SpaceRole,
+			HasDirectAccess: member.HasDirectAccess,
+			InheritedRole:   member.InheritedRole,
+			InheritedFrom:   member.InheritedFrom,
+			ProjectRole:     member.ProjectRole,
+		})
 	}
 
-	// Process group access - Add all groups from the API response
-	groupAccessList := []SpaceGroupAccess{}
+	// Convert API SpaceAccessGroup to models.SpaceAccessGroup
+	spaceAccessGroups := []models.SpaceAccessGroup{}
 	for _, group := range space.SpaceAccessGroups {
-		groupAccessList = append(groupAccessList, SpaceGroupAccess{
+		spaceAccessGroups = append(spaceAccessGroups, models.SpaceAccessGroup{
 			GroupUUID: group.GroupUUID,
 			SpaceRole: group.SpaceRole,
 		})
 	}
 
-	// Build result SpaceDetails object
-	spaceDetails := &SpaceDetails{
-		ProjectUUID:         space.ProjectUUID,
-		SpaceUUID:           space.SpaceUUID,
-		ParentSpaceUUID:     space.ParentSpaceUUID,
-		SpaceName:           space.SpaceName,
-		IsPrivate:           space.IsPrivate,
-		CreatedAt:           time.Now(),               // Populate CreatedAt here in the controller for SpaceDetails
-		RawMemberAccessList: space.SpaceAccessMembers, // Store raw lists
-		RawGroupAccessList:  space.SpaceAccessGroups,  // Store raw lists
+	// Convert API ChildSpace to models.ChildSpace
+	childSpaces := []models.ChildSpace{}
+	for _, child := range space.ChildSpaces {
+		childSpaces = append(childSpaces, models.ChildSpace{
+			SpaceUUID:  child.SpaceUUID,
+			SpaceName:  child.Name,
+			IsPrivate:  child.IsPrivate,
+			AccessList: []models.SpaceAccessMember{}, // API doesn't provide access list for child spaces
+		})
 	}
 
-	// The resource layer will handle deriving 'access' and 'group_access' from the raw lists
+	// Build result SpaceDetails object
+	spaceDetails := &models.SpaceDetails{
+		ProjectUUID:        space.ProjectUUID,
+		SpaceUUID:          space.SpaceUUID,
+		ParentSpaceUUID:    space.ParentSpaceUUID,
+		SpaceName:          space.SpaceName,
+		IsPrivate:          space.IsPrivate,
+		SpaceAccessMembers: spaceAccessMembers,
+		SpaceAccessGroups:  spaceAccessGroups,
+		ChildSpaces:        childSpaces,
+	}
 
 	return spaceDetails, nil
 }
@@ -360,7 +349,7 @@ func (c *SpaceController) UpdateSpace(
 	parentSpaceUUID *string,
 	newMemberAccess []SpaceAccessMemberRequest,
 	newGroupAccess []SpaceGroupAccess,
-) (*SpaceDetails, []error) {
+) (*models.SpaceDetails, []error) {
 	// Get the current space details to determine if it's a root or nested space.
 	currentSpaceDetails, err := c.GetSpace(projectUUID, spaceUUID)
 	if err != nil {
@@ -371,7 +360,7 @@ func (c *SpaceController) UpdateSpace(
 	isCurrentlyRootSpace := currentSpaceDetails.ParentSpaceUUID == nil
 	isBecomingRootSpace := parentSpaceUUID == nil
 
-	var updatedSpaceDetails *SpaceDetails
+	var updatedSpaceDetails *models.SpaceDetails
 	var errors []error
 
 	if isCurrentlyRootSpace && isBecomingRootSpace {
@@ -448,7 +437,7 @@ func (c *SpaceController) DeleteSpace(projectUUID string, spaceUUID string, dele
 
 // ImportSpace imports an existing space by its resource ID.
 // It retrieves the space details and access settings.
-func (c *SpaceController) ImportSpace(resourceID string) (*SpaceDetails, error) {
+func (c *SpaceController) ImportSpace(resourceID string) (*models.SpaceDetails, error) {
 	// Extract project and space UUIDs from the resource ID string
 	projectUUID, spaceUUID, err := c.spaceService.ExtractSpaceResourceID(resourceID)
 	if err != nil {
@@ -583,7 +572,7 @@ func (c *SpaceController) moveRootToNestedSpace(
 	spaceUUID string,
 	spaceName string,
 	parentSpaceUUID *string,
-) (*SpaceDetails, []error) {
+) (*models.SpaceDetails, []error) {
 	// Update name and move to parent via the service layer
 	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, nil, parentSpaceUUID)
 	if err != nil {
@@ -609,8 +598,8 @@ func (c *SpaceController) moveNestedToRootSpace(
 	isPrivate *bool,
 	newMemberAccess []SpaceAccessMemberRequest,
 	newGroupAccess []SpaceGroupAccess,
-	currentSpaceDetails *SpaceDetails,
-) (*SpaceDetails, []error) {
+	_ *models.SpaceDetails, // Not used, but kept for API consistency
+) (*models.SpaceDetails, []error) {
 	// 1. First, update the space to make it a root space (no parent) via the service layer
 	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, isPrivate, nil)
 	if err != nil {
@@ -646,7 +635,7 @@ func (c *SpaceController) updateNestedSpace(
 	spaceUUID string,
 	spaceName string,
 	parentSpaceUUID *string,
-) (*SpaceDetails, []error) {
+) (*models.SpaceDetails, []error) {
 	// Update only the name and parent space UUID for nested spaces via the service layer
 	// isPrivate is passed as nil because it cannot be updated for nested spaces.
 	_, err := c.spaceService.UpdateSpace(projectUUID, spaceUUID, spaceName, nil, parentSpaceUUID)
@@ -674,8 +663,8 @@ func (c *SpaceController) updateRootSpace(
 	parentSpaceUUID *string, // Should be nil for root spaces - explicitly set to nil in UpdateSpace calls this function.
 	newMemberAccess []SpaceAccessMemberRequest,
 	newGroupAccess []SpaceGroupAccess,
-	currentSpaceDetails *SpaceDetails,
-) (*SpaceDetails, []error) {
+	currentSpaceDetails *models.SpaceDetails,
+) (*models.SpaceDetails, []error) {
 	var errors []error
 
 	// 1. Update the space properties via the service layer
@@ -684,9 +673,34 @@ func (c *SpaceController) updateRootSpace(
 		return nil, []error{fmt.Errorf("failed to update space properties: %w", err)}
 	}
 
-	// Convert raw lists from current state to processed types for access management functions
-	currentProcessedMemberAccess := convertAPIMemberToResponse(currentSpaceDetails.RawMemberAccessList)
-	currentProcessedGroupAccess := convertAPIGroupToSpaceGroupAccess(currentSpaceDetails.RawGroupAccessList)
+	// Convert models.SpaceAccessMember to SpaceAccessMemberResponse for member access management
+	currentProcessedMemberAccess := []SpaceAccessMemberResponse{}
+	for _, member := range currentSpaceDetails.SpaceAccessMembers {
+		hasDirectAccess := member.HasDirectAccess
+		inheritedRole := member.InheritedRole
+		inheritedFrom := member.InheritedFrom
+		projectRole := member.ProjectRole
+
+		currentProcessedMemberAccess = append(currentProcessedMemberAccess, SpaceAccessMemberResponse{
+			BaseSpaceAccessMember: BaseSpaceAccessMember{
+				UserUUID:  member.UserUUID,
+				SpaceRole: member.SpaceRole,
+			},
+			HasDirectAccess: &hasDirectAccess,
+			InheritedRole:   &inheritedRole,
+			InheritedFrom:   &inheritedFrom,
+			ProjectRole:     &projectRole,
+		})
+	}
+
+	// Convert models.SpaceAccessGroup to SpaceGroupAccess for group access management
+	currentProcessedGroupAccess := []SpaceGroupAccess{}
+	for _, group := range currentSpaceDetails.SpaceAccessGroups {
+		currentProcessedGroupAccess = append(currentProcessedGroupAccess, SpaceGroupAccess{
+			GroupUUID: group.GroupUUID,
+			SpaceRole: group.SpaceRole,
+		})
+	}
 
 	// 2. Manage member access (add/update/remove direct access)
 	memberErrors := c.manageRootSpaceMemberAccess(
@@ -716,40 +730,4 @@ func (c *SpaceController) updateRootSpace(
 	}
 
 	return finalSpaceDetails, errors
-}
-
-// Convert API SpaceAccessMember to SpaceAccessMemberResponse for comparison
-func convertAPIMemberToResponse(apiMembers []api.SpaceAccessMember) []SpaceAccessMemberResponse {
-	var responseMembers []SpaceAccessMemberResponse
-	for _, member := range apiMembers {
-		// Ensure pointers are not nil for consistency, although API returns non-pointer bool/string
-		hasDirectAccess := member.HasDirectAccess
-		inheritedRole := member.InheritedRole
-		inheritedFrom := member.InheritedFrom
-		projectRole := member.ProjectRole
-
-		responseMembers = append(responseMembers, SpaceAccessMemberResponse{
-			BaseSpaceAccessMember: BaseSpaceAccessMember{
-				UserUUID:  member.UserUUID,
-				SpaceRole: member.SpaceRole,
-			},
-			HasDirectAccess: &hasDirectAccess,
-			InheritedRole:   &inheritedRole,
-			InheritedFrom:   &inheritedFrom,
-			ProjectRole:     &projectRole,
-		})
-	}
-	return responseMembers
-}
-
-// Convert API SpaceAccessGroup to SpaceGroupAccess for comparison
-func convertAPIGroupToSpaceGroupAccess(apiGroups []api.SpaceAccessGroup) []SpaceGroupAccess {
-	var spaceGroupAccessList []SpaceGroupAccess
-	for _, group := range apiGroups {
-		spaceGroupAccessList = append(spaceGroupAccessList, SpaceGroupAccess{
-			GroupUUID: group.GroupUUID,
-			SpaceRole: group.SpaceRole,
-		})
-	}
-	return spaceGroupAccessList
 }

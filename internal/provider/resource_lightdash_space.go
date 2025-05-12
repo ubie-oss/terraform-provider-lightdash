@@ -41,8 +41,8 @@ var (
 	_ resource.ResourceWithImportState = &spaceResource{}
 )
 
-// Helper function to convert API SpaceAccessMember to spaceMemberAccessBlockModel for access_all
-func convertToAllMemberAccessBlockModels(apiMembers []api.SpaceAccessMember) []spaceMemberAccessBlockModel {
+// Helper function to convert models.SpaceAccessMember to spaceMemberAccessBlockModel for access_all
+func convertToAllMemberAccessBlockModels(apiMembers []models.SpaceAccessMember) []spaceMemberAccessBlockModel {
 	var blockModels []spaceMemberAccessBlockModel
 	if apiMembers == nil {
 		return blockModels
@@ -67,8 +67,8 @@ func convertToAllMemberAccessBlockModels(apiMembers []api.SpaceAccessMember) []s
 	return blockModels
 }
 
-// Helper function to convert API SpaceAccessGroup to spaceGroupAccessBlockModel
-func convertToGroupAccessBlockModels(apiGroups []api.SpaceAccessGroup) []spaceGroupAccessBlockModel {
+// Helper function to convert models.SpaceAccessGroup to spaceGroupAccessBlockModel
+func convertToGroupAccessBlockModels(apiGroups []models.SpaceAccessGroup) []spaceGroupAccessBlockModel {
 	var blockModels []spaceGroupAccessBlockModel
 	if apiGroups == nil {
 		return blockModels
@@ -412,7 +412,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		})
 
 	// Create space using controller
-	spaceDetailsFromController, controllerErrors := r.spaceController.CreateSpace(
+	createdSpaceDetails, controllerErrors := r.spaceController.CreateSpace(
 		projectUUID,
 		spaceName,
 		isPrivate,
@@ -429,44 +429,45 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	if spaceDetailsFromController == nil {
+	if createdSpaceDetails == nil {
+		resp.Diagnostics.AddError("Error during space creation", "Controller returned nil space details")
+		return
+	}
+
+	// Get the space to fetch all the space access
+	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, createdSpaceDetails.SpaceUUID)
+	if err != nil {
 		resp.Diagnostics.AddError("Error during space creation", "Controller returned nil space details")
 		return
 	}
 
 	// Populate the state with values returned by the controller (which reflects the API response)
 	var state spaceResourceModel
-	state.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", spaceDetailsFromController.ProjectUUID, spaceDetailsFromController.SpaceUUID))
-	state.ProjectUUID = types.StringValue(spaceDetailsFromController.ProjectUUID)
-	state.SpaceUUID = types.StringValue(spaceDetailsFromController.SpaceUUID)
-	state.SpaceName = types.StringValue(spaceDetailsFromController.SpaceName)
-	state.IsPrivate = types.BoolValue(spaceDetailsFromController.IsPrivate)
-
+	state.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", createdSpaceDetails.ProjectUUID, createdSpaceDetails.SpaceUUID))
+	state.ProjectUUID = types.StringValue(createdSpaceDetails.ProjectUUID)
+	state.SpaceUUID = types.StringValue(createdSpaceDetails.SpaceUUID)
+	state.SpaceName = types.StringValue(createdSpaceDetails.SpaceName)
+	state.IsPrivate = types.BoolValue(createdSpaceDetails.IsPrivate)
 	// Handle parent space UUID from controller result
-	if spaceDetailsFromController.ParentSpaceUUID != nil {
-		state.ParentSpaceUUID = types.StringValue(*spaceDetailsFromController.ParentSpaceUUID)
+	if createdSpaceDetails.ParentSpaceUUID != nil {
+		state.ParentSpaceUUID = types.StringValue(*createdSpaceDetails.ParentSpaceUUID)
 	} else {
 		state.ParentSpaceUUID = types.StringNull()
 	}
-
 	// Preserve deletion protection from plan - this is a Terraform setting
 	state.DeleteProtection = plan.DeleteProtection
-
 	// Set timestamps
 	// Use the CreatedAt from the controller's SpaceDetails, and set LastUpdated to now
-	state.CreatedAt = types.StringValue(spaceDetailsFromController.CreatedAt.Format(time.RFC850))
 	currentTime := types.StringValue(time.Now().Format(time.RFC850))
+	state.CreatedAt = currentTime
 	state.LastUpdated = currentTime
-
 	// Populate MemberAccessList (access attribute) directly from plan
 	state.MemberAccessList = plan.MemberAccessList
-
 	// Populate GroupAccessList from controller result (what was actually applied)
 	state.GroupAccessList = plan.GroupAccessList
-
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data returned by controller
-	state.MemberAccessListAll = convertToAllMemberAccessBlockModels(spaceDetailsFromController.RawMemberAccessList)
-	state.GroupAccessListAll = convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList)
+	state.MemberAccessListAll = convertToAllMemberAccessBlockModels(fetchedSpaceDetails.SpaceAccessMembers)
+	state.GroupAccessListAll = convertToGroupAccessBlockModels(fetchedSpaceDetails.SpaceAccessGroups)
 
 	// Show the state
 	tflog.Debug(ctx, "************* State (Create end) *************", map[string]any{"state": state})
@@ -498,7 +499,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	spaceUUID := currentState.SpaceUUID.ValueString()
 
 	// Use controller's GetSpace which returns SpaceDetails with raw lists
-	spaceDetailsFromController, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
+	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
 	if err != nil {
 		// If the space is not found, remove it from state
 		// TODO: Check for specific "not found" error type if available
@@ -519,10 +520,10 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	newState.LastUpdated = currentState.LastUpdated // Read does not update this TF-managed field
 
 	// Update fields from controller response
-	newState.SpaceName = types.StringValue(spaceDetailsFromController.SpaceName)
-	newState.IsPrivate = types.BoolValue(spaceDetailsFromController.IsPrivate)
-	if spaceDetailsFromController.ParentSpaceUUID != nil {
-		newState.ParentSpaceUUID = types.StringValue(*spaceDetailsFromController.ParentSpaceUUID)
+	newState.SpaceName = types.StringValue(fetchedSpaceDetails.SpaceName)
+	newState.IsPrivate = types.BoolValue(fetchedSpaceDetails.IsPrivate)
+	if fetchedSpaceDetails.ParentSpaceUUID != nil {
+		newState.ParentSpaceUUID = types.StringValue(*fetchedSpaceDetails.ParentSpaceUUID)
 	} else {
 		newState.ParentSpaceUUID = types.StringNull()
 	}
@@ -534,8 +535,8 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	newState.GroupAccessList = currentState.GroupAccessList
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
-	newState.MemberAccessListAll = convertToAllMemberAccessBlockModels(spaceDetailsFromController.RawMemberAccessList)
-	newState.GroupAccessListAll = convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList)
+	newState.MemberAccessListAll = convertToAllMemberAccessBlockModels(fetchedSpaceDetails.SpaceAccessMembers)
+	newState.GroupAccessListAll = convertToGroupAccessBlockModels(fetchedSpaceDetails.SpaceAccessGroups)
 
 	tflog.Debug(ctx, "************* New State (Read end) *************", map[string]any{"newState": newState})
 
@@ -658,8 +659,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	updatedState.GroupAccessList = plan.GroupAccessList
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
-	updatedState.MemberAccessListAll = convertToAllMemberAccessBlockModels(updatedSpaceDetails.RawMemberAccessList)
-	updatedState.GroupAccessListAll = convertToGroupAccessBlockModels(updatedSpaceDetails.RawGroupAccessList)
+	updatedState.MemberAccessListAll = convertToAllMemberAccessBlockModels(updatedSpaceDetails.SpaceAccessMembers)
+	updatedState.GroupAccessListAll = convertToGroupAccessBlockModels(updatedSpaceDetails.SpaceAccessGroups)
 
 	tflog.Debug(ctx, "Updated state after API calls", map[string]any{"updatedState": updatedState})
 
@@ -734,8 +735,8 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	// This condition was incorrect, using the raw *string type instead of types.String
 	// if !spaceDetailsFromController.ParentSpaceUUID.IsNull() && !spaceDetailsFromController.ParentSpaceUUID.IsUnknown() && spaceDetailsFromController.SpaceAccessMembers != nil {
 	// Corrected condition using the types.String variable and the correct raw list field
-	if !isImportedSpaceNested && spaceDetailsFromController.RawMemberAccessList != nil {
-		for _, member := range spaceDetailsFromController.RawMemberAccessList {
+	if !isImportedSpaceNested && spaceDetailsFromController.SpaceAccessMembers != nil {
+		for _, member := range spaceDetailsFromController.SpaceAccessMembers {
 			if member.HasDirectAccess {
 				directMemberAccessListForImport = append(directMemberAccessListForImport, spaceMemberAccessBlockModel{
 					UserUUID:  types.StringValue(member.UserUUID),
@@ -748,24 +749,25 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), directMemberAccessListForImport)...)
 
 	// Populate 'access_all' with all members
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access_all"), convertToAllMemberAccessBlockModels(spaceDetailsFromController.RawMemberAccessList))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access_all"), convertToAllMemberAccessBlockModels(spaceDetailsFromController.SpaceAccessMembers))...)
 
 	// Populate 'group_access' (only relevant for root spaces or if API provides explicit flag)
 	// Assuming API doesn't distinguish explicit group grants, populate with all groups from API result for root spaces.
 	// For nested spaces, this block should be empty as access is inherited.
 	groupAccessListForImport := []spaceGroupAccessBlockModel{}
-	if !isImportedSpaceNested && spaceDetailsFromController.RawGroupAccessList != nil {
+	if !isImportedSpaceNested && spaceDetailsFromController.SpaceAccessGroups != nil {
 		// For root spaces, populate group_access with all groups returned by the API
-		groupAccessListForImport = convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList)
+		groupAccessListForImport = convertToGroupAccessBlockModels(spaceDetailsFromController.SpaceAccessGroups)
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access"), groupAccessListForImport)...)
 
 	// Populate 'group_access_all' with all groups from API result
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access_all"), convertToGroupAccessBlockModels(spaceDetailsFromController.RawGroupAccessList))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access_all"), convertToGroupAccessBlockModels(spaceDetailsFromController.SpaceAccessGroups))...)
 
 	// Set timestamps
 	// Use the CreatedAt from the controller's SpaceDetails, and set LastUpdated to now
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), spaceDetailsFromController.CreatedAt.Format(time.RFC850))...)
+	// As mentioned, CreatedAt is not expected from Lightdash, so we'll use current time
 	currentTime := types.StringValue(time.Now().Format(time.RFC850))
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), currentTime)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("last_updated"), currentTime)...)
 }
