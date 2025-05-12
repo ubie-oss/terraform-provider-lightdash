@@ -42,6 +42,12 @@ func (s *SpaceMemberAccess) GetSpaceAccessType() *string {
 	return &member
 }
 
+// HasDirectSpaceMemberAccess returns true if the member has direct access to the space
+func (s *SpaceMemberAccess) HasDirectSpaceMemberAccess() bool {
+	return s.HasDirectAccess != nil && *s.HasDirectAccess &&
+		(s.InheritedFrom == nil || *s.InheritedFrom != "group")
+}
+
 // SpaceGroupAccess represents a group's access to a space
 type SpaceGroupAccess struct {
 	GroupUUID string
@@ -56,6 +62,16 @@ type SpaceAccessMember struct {
 	InheritedRole   string
 	InheritedFrom   string
 	ProjectRole     string
+}
+
+// HasDirectMemberAccess returns true if the member has direct access to the space
+func (s *SpaceAccessMember) HasDirectMemberAccess() bool {
+	return s.HasDirectAccess && s.InheritedFrom != "group"
+}
+
+// IsAccessInherited returns true if access is inherited
+func (s *SpaceAccessMember) IsAccessInherited() bool {
+	return !s.HasDirectAccess || s.InheritedFrom != ""
 }
 
 // SpaceAccessGroup represents a group's access to a space as returned by the API
@@ -83,4 +99,47 @@ type SpaceDetails struct {
 	SpaceAccessMembers []SpaceAccessMember // Full list from API for access_all
 	SpaceAccessGroups  []SpaceAccessGroup  // Full list from API for group_access_all
 	ChildSpaces        []ChildSpace        // Child spaces, if any
+}
+
+// IsNestedSpace returns true if the space is nested (has a parent)
+func (s *SpaceDetails) IsNestedSpace() bool {
+	return s.ParentSpaceUUID != nil
+}
+
+// GetDirectMemberAccess returns only the members with direct access to the space
+func (s *SpaceDetails) GetDirectMemberAccess() []SpaceAccessMember {
+	var directMembers []SpaceAccessMember
+
+	for _, member := range s.SpaceAccessMembers {
+		if member.HasDirectMemberAccess() {
+			directMembers = append(directMembers, member)
+		}
+	}
+
+	return directMembers
+}
+
+// GetMemberByUUID returns a member by UUID, or nil if not found
+func (s *SpaceDetails) GetMemberByUUID(userUUID string) *SpaceAccessMember {
+	for i, member := range s.SpaceAccessMembers {
+		if member.UserUUID == userUUID {
+			return &s.SpaceAccessMembers[i]
+		}
+	}
+	return nil
+}
+
+// GetGroupByUUID returns a group by UUID, or nil if not found
+func (s *SpaceDetails) GetGroupByUUID(groupUUID string) *SpaceAccessGroup {
+	for i, group := range s.SpaceAccessGroups {
+		if group.GroupUUID == groupUUID {
+			return &s.SpaceAccessGroups[i]
+		}
+	}
+	return nil
+}
+
+// ResourceID returns the formatted resource ID for a space
+func (s *SpaceDetails) ResourceID() string {
+	return "projects/" + s.ProjectUUID + "/spaces/" + s.SpaceUUID
 }

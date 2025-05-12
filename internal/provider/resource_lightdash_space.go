@@ -391,15 +391,16 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 			"groupAccess":     groupAccess,
 		})
 
-	// Create space using controller
-	createdSpaceDetails, controllerErrors := r.spaceController.CreateSpace(
-		projectUUID,
-		spaceName,
-		isPrivate,
-		parentSpaceUUID,
-		memberAccess,
-		groupAccess,
-	)
+	// Create space using controller with options struct
+	options := controllers.CreateSpaceOptions{
+		ProjectUUID:     projectUUID,
+		SpaceName:       spaceName,
+		IsPrivate:       isPrivate,
+		ParentSpaceUUID: parentSpaceUUID,
+		MemberAccess:    memberAccess,
+		GroupAccess:     groupAccess,
+	}
+	createdSpaceDetails, controllerErrors := r.spaceController.CreateSpace(options)
 
 	// Handle errors from controller
 	if len(controllerErrors) > 0 {
@@ -629,13 +630,15 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Update space using controller
 	// The controller will handle the logic of moving the space and managing access based on space type
 	updatedSpaceDetails, controllerErrors := r.spaceController.UpdateSpace(
-		projectUUID,
-		spaceUUID,
-		spaceName,
-		isPrivate,
-		parentSpaceUUID,
-		newMemberAccess,
-		newGroupAccess,
+		controllers.UpdateSpaceOptions{
+			ProjectUUID:     projectUUID,
+			SpaceUUID:       spaceUUID,
+			SpaceName:       spaceName,
+			IsPrivate:       isPrivate,
+			ParentSpaceUUID: parentSpaceUUID,
+			MemberAccess:    newMemberAccess,
+			GroupAccess:     newGroupAccess,
+		},
 	)
 
 	if len(controllerErrors) > 0 {
@@ -715,7 +718,13 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	spaceUUID := state.SpaceUUID.ValueString()
 	deletionProtection := state.DeleteProtection.ValueBool()
 
-	err := r.spaceController.DeleteSpace(projectUUID, spaceUUID, deletionProtection)
+	err := r.spaceController.DeleteSpace(
+		controllers.DeleteSpaceOptions{
+			ProjectUUID:        projectUUID,
+			SpaceUUID:          spaceUUID,
+			DeletionProtection: deletionProtection,
+		},
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting space",
@@ -730,7 +739,11 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 // ImportSpace imports an existing space by its resource ID.
 func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Fetch space details from the controller
-	spaceDetailsFromController, err := r.spaceController.ImportSpace(req.ID)
+	spaceDetailsFromController, err := r.spaceController.ImportSpace(
+		controllers.ImportSpaceOptions{
+			ResourceID: req.ID,
+		},
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing space",
@@ -767,7 +780,7 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	directMemberAccessListForImport := []spaceMemberAccessBlockModel{}
 	if !isImportedSpaceNested && spaceDetailsFromController.SpaceAccessMembers != nil {
 		for _, member := range spaceDetailsFromController.SpaceAccessMembers {
-			if member.HasDirectAccess {
+			if member.HasDirectMemberAccess() {
 				directMemberAccessListForImport = append(directMemberAccessListForImport, spaceMemberAccessBlockModel{
 					UserUUID:  types.StringValue(member.UserUUID),
 					SpaceRole: types.StringValue(string(member.SpaceRole)),
@@ -845,6 +858,7 @@ func convertToAllMemberAccessList(members []models.SpaceAccessMember) (types.Lis
 
 	elements := make([]attr.Value, 0, len(members))
 	for _, member := range members {
+		// Direct access is a boolean field, not a method
 		var hasDirectAccessVal = types.BoolValue(member.HasDirectAccess)
 
 		var inheritedFromVal types.String
