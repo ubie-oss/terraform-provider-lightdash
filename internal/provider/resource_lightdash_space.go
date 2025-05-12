@@ -41,21 +41,6 @@ var (
 	_ resource.ResourceWithImportState = &spaceResource{}
 )
 
-// Helper function to convert Controller SpaceGroupAccess to spaceGroupAccessBlockModel
-func convertControllerGroupAccessToBlockModels(controllerGroups []controllers.SpaceGroupAccess) []spaceGroupAccessBlockModel {
-	var blockModels []spaceGroupAccessBlockModel
-	if controllerGroups == nil {
-		return blockModels
-	}
-	for _, group := range controllerGroups {
-		blockModels = append(blockModels, spaceGroupAccessBlockModel{
-			GroupUUID: types.StringValue(group.GroupUUID),
-			SpaceRole: types.StringValue(string(group.SpaceRole)),
-		})
-	}
-	return blockModels
-}
-
 func NewSpaceResource() resource.Resource {
 	return &spaceResource{}
 }
