@@ -345,6 +345,17 @@ func (r *spaceResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.spaceController = controllers.NewSpaceController(client)
 }
 
+// TODO implement the config validation
+// func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+// 	// Retrieve values from plan
+// 	var config spaceResourceModel
+// 	diags := req.Config.Get(ctx, &config)
+// 	resp.Diagnostics.Append(diags...)
+// 	if resp.Diagnostics.HasError() {
+// 		return
+// 	}
+// }
+
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
 	var plan spaceResourceModel
