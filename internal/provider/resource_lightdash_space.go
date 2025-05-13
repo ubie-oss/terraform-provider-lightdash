@@ -314,75 +314,34 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Extract access list data from Set types
-	memberAccessSlice, memberAccessDiags := extractMemberAccessFromSet(plan.MemberAccessList)
-	resp.Diagnostics.Append(memberAccessDiags...)
+	// Extract member access details from the 'access' block
+	memberAccess := []spaceMemberAccessBlockModel{}
+	diags = plan.MemberAccessList.ElementsAs(ctx, &memberAccess, false)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	groupAccessSlice, groupAccessDiags := extractGroupAccessFromSet(plan.GroupAccessList)
-	resp.Diagnostics.Append(groupAccessDiags...)
+	// Extract group access details from the 'group_access' block
+	groupAccess := []spaceGroupAccessBlockModel{}
+	diags = plan.GroupAccessList.ElementsAs(ctx, &groupAccess, false)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Prepare data for controller
-	projectUUID := plan.ProjectUUID.ValueString()
-	spaceName := plan.SpaceName.ValueString()
-	isPrivate := plan.IsPrivate.ValueBool()
-	var parentSpaceUUID *string
-	if !plan.ParentSpaceUUID.IsNull() && !plan.ParentSpaceUUID.IsUnknown() {
-		parentSpaceUUID = plan.ParentSpaceUUID.ValueStringPointer()
+	// Construct the options for the create operation
+	createOptions := controllers.CreateSpaceOptions{
+		ProjectUUID:     plan.ProjectUUID.ValueString(),
+		SpaceName:       plan.SpaceName.ValueString(),
+		IsPrivate:       plan.IsPrivate.ValueBool(),
+		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
+		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
+		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format
 	}
 
-	// Determine if this will be a nested space from the plan's parent_space_uuid
-	isNestedSpace := parentSpaceUUID != nil
-
-	// Convert member access list from plan to controller format
-	memberAccess := []controllers.SpaceAccessMemberRequest{}
-	if !isNestedSpace { // Only process access for root spaces
-		for _, access := range memberAccessSlice {
-			memberAccess = append(memberAccess, controllers.SpaceAccessMemberRequest{
-				BaseSpaceAccessMember: controllers.BaseSpaceAccessMember{
-					UserUUID:  access.UserUUID.ValueString(),
-					SpaceRole: models.SpaceMemberRole(access.SpaceRole.ValueString()),
-				},
-				IsOrganizationAdmin: false,
-			})
-		}
-	}
-
-	// Convert group access list to controller format
-	groupAccess := []controllers.SpaceGroupAccess{}
-	if !isNestedSpace { // Only process group access for root spaces
-		for _, access := range groupAccessSlice {
-			groupAccess = append(groupAccess, controllers.SpaceGroupAccess{
-				GroupUUID: access.GroupUUID.ValueString(),
-				SpaceRole: models.SpaceMemberRole(access.SpaceRole.ValueString()),
-			})
-		}
-	}
-
-	tflog.Debug(ctx, "Creating space: ", map[string]any{
-		"projectUUID":     projectUUID,
-		"spaceName":       spaceName,
-		"isPrivate":       isPrivate,
-		"parentSpaceUUID": parentSpaceUUID,
-		"memberAccess":    memberAccess,
-		"groupAccess":     groupAccess,
-	})
-
-	// Create space using controller with options struct
-	options := controllers.CreateSpaceOptions{
-		ProjectUUID:     projectUUID,
-		SpaceName:       spaceName,
-		IsPrivate:       isPrivate,
-		ParentSpaceUUID: parentSpaceUUID,
-		MemberAccess:    memberAccess,
-		GroupAccess:     groupAccess,
-	}
-	createdSpaceDetails, controllerErrors := r.spaceController.CreateSpace(options)
+	// Create the space via the controller
+	createdSpaceDetails, controllerErrors := r.spaceController.CreateSpace(ctx, createOptions)
 
 	// Handle errors from controller
 	if len(controllerErrors) > 0 {
@@ -399,8 +358,8 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	tflog.Debug(ctx, "Space created", map[string]any{"spaceDetails": createdSpaceDetails})
 
 	// Get the space to fetch all the space access
-	tflog.Debug(ctx, "Fetching space", map[string]any{"projectUUID": projectUUID, "spaceUUID": createdSpaceDetails.SpaceUUID})
-	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, createdSpaceDetails.SpaceUUID)
+	tflog.Debug(ctx, "Fetching space", map[string]any{"projectUUID": createdSpaceDetails.ProjectUUID, "spaceUUID": createdSpaceDetails.SpaceUUID})
+	fetchedSpaceDetails, err := r.spaceController.GetSpace(ctx, createdSpaceDetails.ProjectUUID, createdSpaceDetails.SpaceUUID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error during space creation", "Controller returned nil space details")
 		return
@@ -426,19 +385,6 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	currentTime := types.StringValue(time.Now().Format(time.RFC850))
 	state.CreatedAt = currentTime
 	state.LastUpdated = currentTime
-
-	// Convert the slices to Set types for state
-	memberAccessSet, memberAccessSetDiags := convertToMemberAccessSet(memberAccessSlice)
-	resp.Diagnostics.Append(memberAccessSetDiags...)
-	if !resp.Diagnostics.HasError() {
-		state.MemberAccessList = memberAccessSet
-	}
-
-	groupAccessSet, groupAccessSetDiags := convertToGroupAccessSet(groupAccessSlice)
-	resp.Diagnostics.Append(groupAccessSetDiags...)
-	if !resp.Diagnostics.HasError() {
-		state.GroupAccessList = groupAccessSet
-	}
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data returned by controller
 	memberAccessList, memberAccessDiags := convertToAllMemberAccessList(fetchedSpaceDetails.SpaceAccessMembers)
@@ -474,7 +420,7 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	tflog.Debug(ctx, "Fetching space", map[string]any{"projectUUID": projectUUID, "spaceUUID": spaceUUID})
 
 	// Use controller's GetSpace which returns SpaceDetails with raw lists
-	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
+	fetchedSpaceDetails, err := r.spaceController.GetSpace(ctx, projectUUID, spaceUUID)
 	if err != nil {
 		// If the space is not found, remove it from state
 		// TODO: Check for specific "not found" error type if available
@@ -505,12 +451,6 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		newState.ParentSpaceUUID = types.StringNull()
 	}
 
-	// Preserve MemberAccessList (access attribute) from current state
-	newState.MemberAccessList = currentState.MemberAccessList
-
-	// Preserve GroupAccessList (group_access attribute) from current state
-	newState.GroupAccessList = currentState.GroupAccessList
-
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
 	memberAccessList, memberAccessDiags := convertToAllMemberAccessList(fetchedSpaceDetails.SpaceAccessMembers)
 	resp.Diagnostics.Append(memberAccessDiags...)
@@ -538,87 +478,36 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Extract access list data from Set types
-	memberAccessSlice, memberAccessDiags := extractMemberAccessFromSet(plan.MemberAccessList)
-	resp.Diagnostics.Append(memberAccessDiags...)
+	// Extract member access details from the 'access' block
+	memberAccess := []spaceMemberAccessBlockModel{}
+	diags := plan.MemberAccessList.ElementsAs(ctx, &memberAccess, false)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	groupAccessSlice, groupAccessDiags := extractGroupAccessFromSet(plan.GroupAccessList)
-	resp.Diagnostics.Append(groupAccessDiags...)
+	// Extract group access details from the 'group_access' block
+	groupAccess := []spaceGroupAccessBlockModel{}
+	diags = plan.GroupAccessList.ElementsAs(ctx, &groupAccess, false)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Prepare data for controller
-	projectUUID := plan.ProjectUUID.ValueString() // Should come from plan or state, must not change for update
-	spaceUUID := oldState.SpaceUUID.ValueString() // Must come from state
-	spaceName := plan.SpaceName.ValueString()
-	var isPrivate *bool
-	if !plan.IsPrivate.IsNull() && !plan.IsPrivate.IsUnknown() {
-		isPrivateVal := plan.IsPrivate.ValueBool()
-		isPrivate = &isPrivateVal
+	// Construct the options for the update operation
+	updateOptions := controllers.UpdateSpaceOptions{
+		ProjectUUID:     plan.ProjectUUID.ValueString(),
+		SpaceUUID:       plan.SpaceUUID.ValueString(),
+		SpaceName:       plan.SpaceName.ValueString(),
+		IsPrivate:       plan.IsPrivate.ValueBoolPointer(),
+		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
+		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
+		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format
 	}
-	var parentSpaceUUID *string
-	if !plan.ParentSpaceUUID.IsNull() && !plan.ParentSpaceUUID.IsUnknown() {
-		parentSpaceUUID = plan.ParentSpaceUUID.ValueStringPointer()
-	} else if plan.ParentSpaceUUID.IsNull() { // Explicitly setting to null means make it root
-		parentSpaceUUID = nil
-	}
-
-	// Determine if the planned space will be nested
-	// This check is needed to decide whether to send access lists to the controller
-	isPlannedSpaceNested := parentSpaceUUID != nil
-
-	newMemberAccess := []controllers.SpaceAccessMemberRequest{}
-	// Only process access for root spaces in the plan
-	if !isPlannedSpaceNested {
-		for _, access := range memberAccessSlice {
-			newMemberAccess = append(newMemberAccess, controllers.SpaceAccessMemberRequest{
-				BaseSpaceAccessMember: controllers.BaseSpaceAccessMember{
-					UserUUID:  access.UserUUID.ValueString(),
-					SpaceRole: models.SpaceMemberRole(access.SpaceRole.ValueString()),
-				},
-				IsOrganizationAdmin: false, // Assuming this is always false for direct management
-			})
-		}
-	}
-
-	newGroupAccess := []controllers.SpaceGroupAccess{}
-	// Only process group access for root spaces in the plan
-	if !isPlannedSpaceNested {
-		for _, access := range groupAccessSlice {
-			newGroupAccess = append(newGroupAccess, controllers.SpaceGroupAccess{
-				GroupUUID: access.GroupUUID.ValueString(),
-				SpaceRole: models.SpaceMemberRole(access.SpaceRole.ValueString()),
-			})
-		}
-	}
-
-	tflog.Debug(ctx, "Space update parameters", map[string]any{
-		"projectUUID":     projectUUID,
-		"spaceUUID":       spaceUUID,
-		"spaceName":       spaceName,
-		"isPrivate":       isPrivate,
-		"parentSpaceUUID": parentSpaceUUID,
-		"newMemberAccess": newMemberAccess,
-		"newGroupAccess":  newGroupAccess,
-	})
 
 	// Update space using controller
 	// The controller will handle the logic of moving the space and managing access based on space type
-	updatedSpaceDetails, controllerErrors := r.spaceController.UpdateSpace(
-		controllers.UpdateSpaceOptions{
-			ProjectUUID:     projectUUID,
-			SpaceUUID:       spaceUUID,
-			SpaceName:       spaceName,
-			IsPrivate:       isPrivate,
-			ParentSpaceUUID: parentSpaceUUID,
-			MemberAccess:    newMemberAccess,
-			GroupAccess:     newGroupAccess,
-		},
-	)
+	updatedSpaceDetails, controllerErrors := r.spaceController.UpdateSpace(ctx, updateOptions)
 
 	if len(controllerErrors) > 0 {
 		for _, err := range controllerErrors {
@@ -635,7 +524,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	tflog.Debug(ctx, "Space updated", map[string]any{"spaceDetails": updatedSpaceDetails})
 
 	// Fetch the space again to get the latest details
-	fetchedSpaceDetails, err := r.spaceController.GetSpace(projectUUID, spaceUUID)
+	fetchedSpaceDetails, err := r.spaceController.GetSpace(ctx, plan.ProjectUUID.ValueString(), plan.SpaceUUID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating space", "Controller returned nil space details")
 		return
@@ -661,13 +550,13 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	updatedState.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// Convert the slices to Set types for state
-	memberAccessSet, memberAccessSetDiags := convertToMemberAccessSet(memberAccessSlice)
+	memberAccessSet, memberAccessSetDiags := convertToMemberAccessSet(memberAccess)
 	resp.Diagnostics.Append(memberAccessSetDiags...)
 	if !resp.Diagnostics.HasError() {
 		updatedState.MemberAccessList = memberAccessSet
 	}
 
-	groupAccessSet, groupAccessSetDiags := convertToGroupAccessSet(groupAccessSlice)
+	groupAccessSet, groupAccessSetDiags := convertToGroupAccessSet(groupAccess)
 	resp.Diagnostics.Append(groupAccessSetDiags...)
 	if !resp.Diagnostics.HasError() {
 		updatedState.GroupAccessList = groupAccessSet
@@ -707,6 +596,7 @@ func (r *spaceResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	tflog.Debug(ctx, "Deleting space", map[string]any{"projectUUID": projectUUID, "spaceUUID": spaceUUID, "deletionProtection": deletionProtection})
 
 	err := r.spaceController.DeleteSpace(
+		ctx,
 		controllers.DeleteSpaceOptions{
 			ProjectUUID:        projectUUID,
 			SpaceUUID:          spaceUUID,
@@ -732,7 +622,7 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	tflog.Debug(ctx, "Importing space", map[string]any{"importSpaceOptions": importSpaceOptions})
 
 	// Fetch space details from the controller
-	spaceDetailsFromController, err := r.spaceController.ImportSpace(importSpaceOptions)
+	spaceDetailsFromController, err := r.spaceController.ImportSpace(ctx, importSpaceOptions)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing space",
@@ -769,7 +659,7 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	directMemberAccessListForImport := []spaceMemberAccessBlockModel{}
 	if !isImportedSpaceNested && spaceDetailsFromController.SpaceAccessMembers != nil {
 		for _, member := range spaceDetailsFromController.SpaceAccessMembers {
-			if member.HasDirectMemberAccess() {
+			if member.HasDirectSpaceMemberAccess() {
 				directMemberAccessListForImport = append(directMemberAccessListForImport, spaceMemberAccessBlockModel{
 					UserUUID:  types.StringValue(member.UserUUID),
 					SpaceRole: types.StringValue(string(member.SpaceRole)),
@@ -829,15 +719,18 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("last_updated"), currentTime)...)
 }
 
-// Remove the _ parameter since we no longer pass context
-func convertToAllMemberAccessList(members []models.SpaceAccessMember) (types.List, diag.Diagnostics) {
+// convertToAllMemberAccessList converts a list of models.SpaceMemberAccess to a types.List of SpaceAccessMember objects.
+func convertToAllMemberAccessList(members []models.SpaceMemberAccess) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
+
+	// Define the element type for the list
 	elementType := types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"user_uuid":         types.StringType,
 			"space_role":        types.StringType,
 			"has_direct_access": types.BoolType,
 			"inherited_from":    types.StringType,
+			"project_role":      types.StringType,
 		},
 	}
 
@@ -847,12 +740,20 @@ func convertToAllMemberAccessList(members []models.SpaceAccessMember) (types.Lis
 
 	elements := make([]attr.Value, 0, len(members))
 	for _, member := range members {
-		// Direct access is a boolean field, not a method
-		var hasDirectAccessVal = types.BoolValue(member.HasDirectAccess)
+		// Handle pointer fields
+		hasDirectAccessVal := types.BoolNull()
+		if member.HasDirectAccess != nil {
+			hasDirectAccessVal = types.BoolValue(*member.HasDirectAccess)
+		}
 
 		inheritedFromVal := types.StringNull()
-		if member.InheritedFrom != "" {
-			inheritedFromVal = types.StringValue(member.InheritedFrom)
+		if member.InheritedFrom != nil {
+			inheritedFromVal = types.StringValue(*member.InheritedFrom)
+		}
+
+		projectRoleVal := types.StringNull()
+		if member.ProjectRole != nil {
+			projectRoleVal = types.StringValue(*member.ProjectRole)
 		}
 
 		element, elemDiags := types.ObjectValue(
@@ -862,6 +763,7 @@ func convertToAllMemberAccessList(members []models.SpaceAccessMember) (types.Lis
 				"space_role":        types.StringValue(string(member.SpaceRole)),
 				"has_direct_access": hasDirectAccessVal,
 				"inherited_from":    inheritedFromVal,
+				"project_role":      projectRoleVal,
 			},
 		)
 		diags.Append(elemDiags...)
@@ -875,9 +777,11 @@ func convertToAllMemberAccessList(members []models.SpaceAccessMember) (types.Lis
 	return types.ListValueMust(elementType, elements), diags
 }
 
-// Remove the _ parameter since we no longer pass context
+// convertToGroupAccessList converts a list of models.SpaceAccessGroup to a types.List of SpaceAccessGroup objects.
 func convertToGroupAccessList(groups []models.SpaceAccessGroup) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
+
+	// Define the element type for the list
 	elementType := types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"group_uuid": types.StringType,
@@ -907,6 +811,28 @@ func convertToGroupAccessList(groups []models.SpaceAccessGroup) (types.List, dia
 	}
 
 	return types.ListValueMust(elementType, elements), diags
+}
+
+func convertToControllerMemberAccess(memberAccess []spaceMemberAccessBlockModel) []models.SpaceAccessMember {
+	controllerAccess := make([]models.SpaceAccessMember, 0, len(memberAccess))
+	for _, member := range memberAccess {
+		controllerAccess = append(controllerAccess, models.SpaceAccessMember{
+			UserUUID:  member.UserUUID.ValueString(),
+			SpaceRole: models.SpaceMemberRole(member.SpaceRole.ValueString()),
+		})
+	}
+	return controllerAccess
+}
+
+func convertToControllerGroupAccess(groupAccess []spaceGroupAccessBlockModel) []models.SpaceAccessGroup {
+	controllerAccess := make([]models.SpaceAccessGroup, 0, len(groupAccess))
+	for _, group := range groupAccess {
+		controllerAccess = append(controllerAccess, models.SpaceAccessGroup{
+			GroupUUID: group.GroupUUID.ValueString(),
+			SpaceRole: models.SpaceMemberRole(group.SpaceRole.ValueString()),
+		})
+	}
+	return controllerAccess
 }
 
 // Remove the _ parameter since we no longer pass context

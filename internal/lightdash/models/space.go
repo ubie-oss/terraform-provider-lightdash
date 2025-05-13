@@ -14,7 +14,13 @@
 
 package models
 
-// SpaceMemberAccess represents a user's access to a space
+// SpaceAccessMember represents the core information for a space access member used in requests.
+type SpaceAccessMember struct {
+	UserUUID  string
+	SpaceRole SpaceMemberRole
+}
+
+// SpaceMemberAccess represents a user's access to a space as returned by the API
 type SpaceMemberAccess struct {
 	UserUUID  string
 	SpaceRole SpaceMemberRole // Assuming SpaceMemberRole is also in models package
@@ -54,26 +60,6 @@ type SpaceGroupAccess struct {
 	SpaceRole SpaceMemberRole
 }
 
-// SpaceAccessMember represents a member's access to a space as returned by the API
-type SpaceAccessMember struct {
-	UserUUID        string
-	SpaceRole       SpaceMemberRole
-	HasDirectAccess bool
-	InheritedRole   string
-	InheritedFrom   string
-	ProjectRole     string
-}
-
-// HasDirectMemberAccess returns true if the member has direct access to the space
-func (s *SpaceAccessMember) HasDirectMemberAccess() bool {
-	return s.HasDirectAccess && s.InheritedFrom != "group"
-}
-
-// IsAccessInherited returns true if access is inherited
-func (s *SpaceAccessMember) IsAccessInherited() bool {
-	return !s.HasDirectAccess || s.InheritedFrom != ""
-}
-
 // SpaceAccessGroup represents a group's access to a space as returned by the API
 type SpaceAccessGroup struct {
 	GroupUUID string
@@ -85,7 +71,7 @@ type ChildSpace struct {
 	SpaceUUID  string
 	SpaceName  string
 	IsPrivate  bool
-	AccessList []SpaceAccessMember
+	AccessList []SpaceMemberAccess
 }
 
 // SpaceDetails contains all the details of a space returned by the GetSpace API.
@@ -96,7 +82,7 @@ type SpaceDetails struct {
 	ParentSpaceUUID    *string
 	SpaceName          string
 	IsPrivate          bool
-	SpaceAccessMembers []SpaceAccessMember // Full list from API for access_all
+	SpaceAccessMembers []SpaceMemberAccess // Full list from API for access_all
 	SpaceAccessGroups  []SpaceAccessGroup  // Full list from API for group_access_all
 	ChildSpaces        []ChildSpace        // Child spaces, if any
 }
@@ -107,11 +93,11 @@ func (s *SpaceDetails) IsNestedSpace() bool {
 }
 
 // GetDirectMemberAccess returns only the members with direct access to the space
-func (s *SpaceDetails) GetDirectMemberAccess() []SpaceAccessMember {
-	var directMembers []SpaceAccessMember
+func (s *SpaceDetails) GetDirectMemberAccess() []SpaceMemberAccess {
+	var directMembers []SpaceMemberAccess
 
 	for _, member := range s.SpaceAccessMembers {
-		if member.HasDirectMemberAccess() {
+		if member.HasDirectSpaceMemberAccess() {
 			directMembers = append(directMembers, member)
 		}
 	}
@@ -120,7 +106,7 @@ func (s *SpaceDetails) GetDirectMemberAccess() []SpaceAccessMember {
 }
 
 // GetMemberByUUID returns a member by UUID, or nil if not found
-func (s *SpaceDetails) GetMemberByUUID(userUUID string) *SpaceAccessMember {
+func (s *SpaceDetails) GetMemberByUUID(userUUID string) *SpaceMemberAccess {
 	for i, member := range s.SpaceAccessMembers {
 		if member.UserUUID == userUUID {
 			return &s.SpaceAccessMembers[i]

@@ -46,7 +46,7 @@ func (s *SpaceService) CreateSpace(projectUuid, spaceName string, isPrivate bool
 		SpaceName:          createdSpace.SpaceName,
 		IsPrivate:          createdSpace.IsPrivate,
 		ParentSpaceUUID:    parentSpaceUuid,
-		SpaceAccessMembers: []models.SpaceAccessMember{},
+		SpaceAccessMembers: []models.SpaceMemberAccess{},
 		SpaceAccessGroups:  []models.SpaceAccessGroup{},
 		ChildSpaces:        []models.ChildSpace{},
 	}
