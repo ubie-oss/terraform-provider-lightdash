@@ -125,7 +125,7 @@ func (s *SpaceService) RemoveUserFromSpace(projectUuid, spaceUuid, userUuid stri
 // AddGroupToSpace grants a group access to a space with the specified role
 // NOTE: Should only be called for root spaces
 func (s *SpaceService) AddGroupToSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceShareToGroupV1(projectUuid, spaceUuid, groupUuid, role)
+	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
 }
 
 // UpdateGroupAccessInSpace updates a group's role in a space
