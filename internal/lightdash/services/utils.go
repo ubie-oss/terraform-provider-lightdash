@@ -35,3 +35,14 @@ func ExtractStringsByPattern(input, pattern string) ([]string, error) {
 	// Return all capture groups (skip the first element which is the full match)
 	return matches[1:], nil
 }
+
+// compareParentSpaceUUID compares two parent space UUIDs
+func CompareParentSpaceUUID(parentSpaceUUID1, parentSpaceUUID2 *string) bool {
+	if parentSpaceUUID1 == nil && parentSpaceUUID2 == nil {
+		return true
+	}
+	if parentSpaceUUID1 == nil || parentSpaceUUID2 == nil {
+		return false
+	}
+	return *parentSpaceUUID1 == *parentSpaceUUID2
+}

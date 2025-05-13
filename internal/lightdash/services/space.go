@@ -69,7 +69,7 @@ func (s *SpaceService) UpdateRootSpace(projectUuid, spaceUuid, spaceName string,
 }
 
 // UpdateNestedSpace updates the space properties for a nested space
-func (s *SpaceService) UpdateNestedSpace(projectUuid, spaceUuid string, spaceName string, parentSpaceUuidPointer *string) (*api.UpdateSpaceV1Results, error) {
+func (s *SpaceService) UpdateNestedSpace(projectUuid, spaceUuid string, spaceName string) (*api.UpdateSpaceV1Results, error) {
 	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update nested space: %w", err)

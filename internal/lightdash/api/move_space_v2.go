@@ -39,9 +39,6 @@ type MoveSpaceV2Response struct {
 
 // MoveSpaceV2 moves a space to a new parent space using the v2 API
 func (c *Client) MoveSpaceV2(projectUuid string, spaceUuid string, parentSpaceUuid *string) error {
-	if parentSpaceUuid == nil {
-		return fmt.Errorf("parentSpaceUuid must not be nil for v2 move API")
-	}
 	data := MoveSpaceV2Request{}
 	data.Item.UUID = spaceUuid
 	data.Item.Type = "space"
@@ -51,23 +48,23 @@ func (c *Client) MoveSpaceV2(projectUuid string, spaceUuid string, parentSpaceUu
 
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal MoveSpaceV2Request: %w", err)
+		return fmt.Errorf("MoveSpaceV2(projectUuid=%s, spaceUuid=%s, parentSpaceUuid=%v): failed to marshal MoveSpaceV2Request: %w", projectUuid, spaceUuid, parentSpaceUuid, err)
 	}
 	path := fmt.Sprintf("%s/api/v2/content/%s/move", c.HostUrl, projectUuid)
 	req, err := http.NewRequest("POST", path, bytes.NewReader(marshalled))
 	if err != nil {
-		return fmt.Errorf("failed to create new request: %w", err)
+		return fmt.Errorf("MoveSpaceV2(projectUuid=%s, spaceUuid=%s, parentSpaceUuid=%v): failed to create new request: %w", projectUuid, spaceUuid, parentSpaceUuid, err)
 	}
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return fmt.Errorf("MoveSpaceV2(projectUuid=%s, spaceUuid=%s, parentSpaceUuid=%v): request failed: %w", projectUuid, spaceUuid, parentSpaceUuid, err)
 	}
 	// Marshal the response
 	response := MoveSpaceV2Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal response: %w", err)
+		return fmt.Errorf("MoveSpaceV2(projectUuid=%s, spaceUuid=%s, parentSpaceUuid=%v): failed to unmarshal response: %w", projectUuid, spaceUuid, parentSpaceUuid, err)
 	}
 	return nil
 }

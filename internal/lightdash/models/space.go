@@ -20,6 +20,18 @@ type SpaceAccessMember struct {
 	SpaceRole SpaceMemberRole
 }
 
+// SpaceGroupAccess represents a group's access to a space
+type SpaceGroupAccess struct {
+	GroupUUID string
+	SpaceRole SpaceMemberRole
+}
+
+// SpaceAccessGroup represents a group's access to a space as returned by the API
+type SpaceAccessGroup struct {
+	GroupUUID string
+	SpaceRole SpaceMemberRole
+}
+
 // SpaceMemberAccess represents a user's access to a space as returned by the API
 type SpaceMemberAccess struct {
 	UserUUID  string
@@ -54,18 +66,6 @@ func (s *SpaceMemberAccess) HasDirectSpaceMemberAccess() bool {
 		(s.InheritedFrom == nil || *s.InheritedFrom != "group")
 }
 
-// SpaceGroupAccess represents a group's access to a space
-type SpaceGroupAccess struct {
-	GroupUUID string
-	SpaceRole SpaceMemberRole
-}
-
-// SpaceAccessGroup represents a group's access to a space as returned by the API
-type SpaceAccessGroup struct {
-	GroupUUID string
-	SpaceRole SpaceMemberRole
-}
-
 // ChildSpace represents a nested space within a parent space
 type ChildSpace struct {
 	SpaceUUID  string
@@ -89,7 +89,7 @@ type SpaceDetails struct {
 
 // IsNestedSpace returns true if the space is nested (has a parent)
 func (s *SpaceDetails) IsNestedSpace() bool {
-	return s.ParentSpaceUUID != nil
+	return s.ParentSpaceUUID != nil && *s.ParentSpaceUUID != ""
 }
 
 // GetDirectMemberAccess returns only the members with direct access to the space
