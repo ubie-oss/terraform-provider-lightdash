@@ -29,8 +29,8 @@ func (s SpaceMemberRole) String() string {
 }
 
 // Check if a given string is a valid SpaceMemberRole
-func IsValidSpaceMemberRole(s string) bool {
-	switch SpaceMemberRole(s) {
+func (s SpaceMemberRole) IsValid() bool {
+	switch s {
 	case SPACE_VIEWER_ROLE,
 		SPACE_EDITOR_ROLE,
 		SPACE_ADMIN_ROLE:

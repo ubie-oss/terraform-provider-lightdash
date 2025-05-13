@@ -43,7 +43,7 @@ type AddSpaceGroupAccessResponse struct {
 func (c *Client) AddSpaceGroupAccessV1(
 	projectUuid string, spaceUuid string, groupUuid string, role models.SpaceMemberRole) error {
 	// Validate the role
-	if !models.IsValidSpaceMemberRole(role.String()) {
+	if !role.IsValid() {
 		return fmt.Errorf("invalid role: %s", role)
 	}
 

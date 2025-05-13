@@ -40,7 +40,7 @@ type AddProjectAccessToGroupResponse struct {
 
 func (c *Client) AddProjectAccessToGroupV1(projectUuid string, groupUuid string, role models.ProjectMemberRole) (*AddProjectAccessToGroupResults, error) {
 	// Validate the role
-	if !models.IsValidProjectMemberRole(role.String()) {
+	if !role.IsValid() {
 		return nil, fmt.Errorf("invalid role: %s", role)
 	}
 
