@@ -14,27 +14,9 @@
 
 package models
 
-type SpaceMemberRole string
-
-// List of ProjectMemberRole
-const (
-	SPACE_VIEWER_ROLE SpaceMemberRole = "viewer"
-	SPACE_EDITOR_ROLE SpaceMemberRole = "editor"
-	SPACE_ADMIN_ROLE  SpaceMemberRole = "admin"
-)
-
-// convert ProjectMemberRole to string
-func (s SpaceMemberRole) String() string {
-	return string(s)
-}
-
-// Check if a given string is a valid SpaceMemberRole
-func (s SpaceMemberRole) IsValid() bool {
-	switch s {
-	case SPACE_VIEWER_ROLE,
-		SPACE_EDITOR_ROLE,
-		SPACE_ADMIN_ROLE:
-		return true
-	}
-	return false
+type ProjectMember struct {
+	ProjectUUID string
+	UserUUID    string
+	Email       *string
+	ProjectRole ProjectMemberRole
 }

@@ -77,14 +77,19 @@ update-pre-commit:
 run-pre-commit:
 	pre-commit run --all-files
 
-plan-integration-tests:
-	cd ./integration_tests/ \
-		&& TF_LOG=1 terraform plan -var-file="testing.tfvars" 2>&1
+###################################################################
+# Integration Tests
+###################################################################
+integration-tests: build terraform-apply
 
-apply-integration-tests:
-	cd ./integration_tests/ \
-		&& TF_LOG=1 terraform apply -var-file="testing.tfvars" 2>&1
+terraform-init:
+	@make -C ./integration_tests/ terraform-init
 
-destroy-integration-tests:
-	cd ./integration_tests/ \
-		&& TF_LOG=1 terraform destroy -var-file="testing.tfvars" 2>&1
+terraform-apply:
+	@make -C ./integration_tests/ terraform-apply
+
+terraform-destroy:
+	@make -C ./integration_tests/ terraform-destroy
+
+terraform-show:
+	@make -C ./integration_tests/ terraform-show

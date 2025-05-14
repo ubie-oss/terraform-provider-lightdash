@@ -47,7 +47,7 @@ func TestIsValidSpaceMemberRole(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if IsValidSpaceMemberRole(test.role) != test.expected {
+		if SpaceMemberRole(test.role).IsValid() != test.expected {
 			t.Errorf("Expected %v for role %s", test.expected, test.role)
 		}
 	}

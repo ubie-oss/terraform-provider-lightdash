@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -121,6 +122,7 @@ func (d *projectMembersDataSource) Read(ctx context.Context, req datasource.Read
 	// Get project members
 	project_uuid := state.ProjectUUID.ValueString()
 	members, err := d.client.GetProjectAccessListV1(project_uuid)
+	updatedMembers := []projectMemberModel{}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Lightdash project",
@@ -135,9 +137,14 @@ func (d *projectMembersDataSource) Read(ctx context.Context, req datasource.Read
 			Email:       types.StringValue(member.Email),
 			ProjectRole: member.ProjectRole,
 		}
-		state.Members = append(state.Members, projectState)
+		updatedMembers = append(updatedMembers, projectState)
 	}
 	state.ProjectUUID = types.StringValue(project_uuid)
+	// Sort the members by user UUID
+	sort.Slice(updatedMembers, func(i, j int) bool {
+		return updatedMembers[i].UserUUID.ValueString() < updatedMembers[j].UserUUID.ValueString()
+	})
+	state.Members = updatedMembers
 
 	// Set resource ID
 	state_id := fmt.Sprintf("projects/%s/access", state.ProjectUUID.ValueString())

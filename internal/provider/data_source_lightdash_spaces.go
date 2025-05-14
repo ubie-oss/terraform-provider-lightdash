@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -39,18 +40,19 @@ type spacesDataSource struct {
 	client *api.Client
 }
 
-type nestedSpaceModel struct {
-	SpaceUUID types.String `tfsdk:"space_uuid"`
-	SpaceName types.String `tfsdk:"name"`
-	IsPrivate types.Bool   `tfsdk:"is_private"`
+type spaceModel struct {
+	ParentSpaceUUID types.String `tfsdk:"parent_space_uuid"`
+	SpaceUUID       types.String `tfsdk:"space_uuid"`
+	SpaceName       types.String `tfsdk:"name"`
+	IsPrivate       types.Bool   `tfsdk:"is_private"`
 }
 
 // projectDataSourceModel describes the data source data model.
 type spacesDataSourceModel struct {
-	ID               types.String       `tfsdk:"id"`
-	OrganizationUUID types.String       `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String       `tfsdk:"project_uuid"`
-	Spaces           []nestedSpaceModel `tfsdk:"spaces"`
+	ID               types.String `tfsdk:"id"`
+	OrganizationUUID types.String `tfsdk:"organization_uuid"`
+	ProjectUUID      types.String `tfsdk:"project_uuid"`
+	Spaces           []spaceModel `tfsdk:"spaces"`
 }
 
 func (d *spacesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -79,6 +81,11 @@ func (d *spacesDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"parent_space_uuid": schema.StringAttribute{
+							Description: "Parent space UUID of the Lightdash space. This attribute is nullable and will be empty if the space has no parent.",
+							Computed:    true,
+							Optional:    true,
+						},
 						"space_uuid": schema.StringAttribute{
 							Description: "Space UUID of the Lightdash space.",
 							Computed:    true,
@@ -134,14 +141,27 @@ func (d *spacesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// Map response body to model
+	updatedSpaces := []spaceModel{}
 	for _, space := range spaces {
-		spaceState := nestedSpaceModel{
-			SpaceUUID: types.StringValue(space.SpaceUUID),
-			SpaceName: types.StringValue(space.SpaceName),
-			IsPrivate: types.BoolValue(space.IsPrivate),
+		// Even if the parent space UUID is empty, we want to set it to null
+		parentSpace := types.StringNull()
+		if space.ParentSpaceUUID != nil {
+			parentSpace = types.StringValue(*space.ParentSpaceUUID)
 		}
-		state.Spaces = append(state.Spaces, spaceState)
+
+		spaceState := spaceModel{
+			ParentSpaceUUID: parentSpace,
+			SpaceUUID:       types.StringValue(space.SpaceUUID),
+			SpaceName:       types.StringValue(space.SpaceName),
+			IsPrivate:       types.BoolValue(space.IsPrivate),
+		}
+		updatedSpaces = append(updatedSpaces, spaceState)
 	}
+	// Sort the spaces by space UUID
+	sort.Slice(updatedSpaces, func(i, j int) bool {
+		return updatedSpaces[i].SpaceUUID.ValueString() < updatedSpaces[j].SpaceUUID.ValueString()
+	})
+	state.Spaces = updatedSpaces
 
 	// Set resource ID
 	state_id := fmt.Sprintf("organizations/%s/projects/%s/spaces",

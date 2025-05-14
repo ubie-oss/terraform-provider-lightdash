@@ -26,23 +26,38 @@ import (
 type SpaceAccessMember struct {
 	UserUUID  string                 `json:"userUuid"`
 	SpaceRole models.SpaceMemberRole `json:"role"`
+	// Additional fields from GetSpaceV1 API response
+	HasDirectAccess bool   `json:"hasDirectAccess"`
+	InheritedRole   string `json:"inheritedRole"`
+	InheritedFrom   string `json:"inheritedFrom"`
+	ProjectRole     string `json:"projectRole"`
 }
 
 type SpaceAccessGroup struct {
 	GroupUUID string                 `json:"groupUuid"`
 	GroupName string                 `json:"groupName"`
-	SpaceRole models.SpaceMemberRole `json:"role"`
+	SpaceRole models.SpaceMemberRole `json:"spaceRole"`
+}
+
+type ChildSpace struct {
+	OrganizationUuid string `json:"organizationUuid"`
+	ProjectUuid      string `json:"projectUuid"`
+	SpaceUUID        string `json:"uuid"`
+	Name             string `json:"name"`
+	IsPrivate        bool   `json:"isPrivate"`
 }
 
 type GetSpaceV1Results struct {
 	// The response doesn't contain the OrganizationUUID right now
 	// OrganizationUUID string              `json:"organizationUuid"`
 	ProjectUUID        string              `json:"projectUuid"`
+	ParentSpaceUUID    *string             `json:"parentSpaceUuid,omitempty"`
 	SpaceUUID          string              `json:"uuid"`
 	SpaceName          string              `json:"name"`
 	IsPrivate          bool                `json:"isPrivate"`
+	ChildSpaces        []ChildSpace        `json:"childSpaces"`
 	SpaceAccessMembers []SpaceAccessMember `json:"access"`
-	SpaceAccessGroups  []SpaceAccessGroup  `json:"groupAccess"`
+	SpaceAccessGroups  []SpaceAccessGroup  `json:"groupsAccess"`
 }
 
 type GetSpaceV1Response struct {

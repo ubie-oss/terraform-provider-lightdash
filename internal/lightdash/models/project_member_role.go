@@ -31,8 +31,8 @@ func (s ProjectMemberRole) String() string {
 }
 
 // Check if a given string is a valid ProjectMemberRole
-func IsValidProjectMemberRole(s string) bool {
-	switch ProjectMemberRole(s) {
+func (s ProjectMemberRole) IsValid() bool {
+	switch s {
 	case PROJECT_VIEWER_ROLE,
 		PROJECT_INTERACTIVE_VIEWER_ROLE,
 		PROJECT_EDITOR_ROLE,

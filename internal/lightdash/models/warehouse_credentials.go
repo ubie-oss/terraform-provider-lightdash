@@ -14,27 +14,18 @@
 
 package models
 
-type SpaceMemberRole string
+import "time"
 
-// List of ProjectMemberRole
-const (
-	SPACE_VIEWER_ROLE SpaceMemberRole = "viewer"
-	SPACE_EDITOR_ROLE SpaceMemberRole = "editor"
-	SPACE_ADMIN_ROLE  SpaceMemberRole = "admin"
-)
-
-// convert ProjectMemberRole to string
-func (s SpaceMemberRole) String() string {
-	return string(s)
+type CredentialsDetail struct {
+	Type string `json:"type"`
+	User string `json:"user,omitempty"`
 }
 
-// Check if a given string is a valid SpaceMemberRole
-func (s SpaceMemberRole) IsValid() bool {
-	switch s {
-	case SPACE_VIEWER_ROLE,
-		SPACE_EDITOR_ROLE,
-		SPACE_ADMIN_ROLE:
-		return true
-	}
-	return false
+type WarehouseCredentials struct {
+	Credentials CredentialsDetail `json:"credentials"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	Name        string            `json:"name"`
+	UserUUID    string            `json:"userUuid,omitempty"`
+	UUID        string            `json:"uuid"`
 }

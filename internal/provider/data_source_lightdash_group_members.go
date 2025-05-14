@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -124,6 +125,7 @@ func (d *groupMembersDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	group_uuid := state.GroupUUID.ValueString()
 	members, err := d.client.GetGroupMembersV1(group_uuid)
+	updatedMembers := []groupMemberModelForGroupMembers{}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to read Lightdash group members for group UUID: "+group_uuid,
@@ -135,8 +137,13 @@ func (d *groupMembersDataSource) Read(ctx context.Context, req datasource.ReadRe
 		member := groupMemberModelForGroupMembers{
 			UserUUID: types.StringValue(member.UserUUID),
 		}
-		state.Members = append(state.Members, member)
+		updatedMembers = append(updatedMembers, member)
 	}
+	// Sort the members by user UUID
+	sort.Slice(updatedMembers, func(i, j int) bool {
+		return updatedMembers[i].UserUUID.ValueString() < updatedMembers[j].UserUUID.ValueString()
+	})
+	state.Members = updatedMembers
 
 	// Set resource ID
 	state_id := fmt.Sprintf("organizations/%s/groups/%s/members",

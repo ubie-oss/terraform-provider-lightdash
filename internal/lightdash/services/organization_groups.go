@@ -31,6 +31,25 @@ func NewOrganizationGroupsService(client *api.Client) *OrganizationGroupsService
 	}
 }
 
+// GetGroup retrieves a single group by UUID
+func (s *OrganizationGroupsService) GetGroup(groupUUID string) (*models.OrganizationGroup, error) {
+	// Get the group from the API
+	group, err := s.client.GetGroupV1(groupUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get group with UUID %s: %w", groupUUID, err)
+	}
+
+	// Convert to the model
+	result := &models.OrganizationGroup{
+		OrganizationUUID: group.OrganizationUUID,
+		GroupUUID:        group.GroupUUID,
+		Name:             group.Name,
+		CreatedAt:        group.CreatedAt,
+	}
+
+	return result, nil
+}
+
 func (s *OrganizationGroupsService) GetOrganizationGroups() ([]models.OrganizationGroup, error) {
 	groupMap := make(map[string]models.OrganizationGroup)
 	page := 0

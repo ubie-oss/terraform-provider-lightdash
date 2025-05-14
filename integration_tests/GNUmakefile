@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "lightdash_spaces" "test" {
-  organization_uuid = data.lightdash_projects.test.organization_uuid
-  project_uuid      = var.test_lightdash_project_uuid
+.PHONY: terraform-init
+terraform-init:
+	terraform init
 
-  depends_on = [
-    lightdash_space.test_public,
-    lightdash_space.test_private,
+.PHONY: terraform-apply
+terraform-apply:
+	TF_LOG=DEBUG TF_LOG_PATH=tf-apply.log terraform apply -var-file="testing.tfvars"
+	# -target=lightdash_space.test_parent_space
 
-    lightdash_space.test_grandchild_space,
-  ]
-}
+.PHONY: terraform-destroy
+terraform-destroy:
+	TF_LOG=DEBUG TF_LOG_PATH=tf-destroy.log terraform destroy -var-file="testing.tfvars"
 
-output "lightdash_spaces__test" {
-  value = data.lightdash_spaces.test
-}
+.PHONY: terraform-show
+terraform-show:
+	terraform show
