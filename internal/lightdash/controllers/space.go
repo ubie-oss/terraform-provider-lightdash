@@ -298,7 +298,7 @@ func (c *SpaceController) DeleteSpace(ctx context.Context, options DeleteSpaceOp
 	}
 	childSpaces := space.ChildSpaces
 	if len(childSpaces) > 0 {
-		return fmt.Errorf("Cannot delete space %s: it has child spaces. Please delete the child spaces first", options.SpaceUUID)
+		return fmt.Errorf("cannot delete space %s: it has child spaces. Please delete the child spaces first", options.SpaceUUID)
 	}
 
 	// Delete the space via the service layer

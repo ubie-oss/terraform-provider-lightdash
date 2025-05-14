@@ -298,19 +298,19 @@ func (r *spaceResource) validateNestedSpaceConfig(ctx context.Context, config sp
 		// Nested spaces inherit visibility from the parent space.
 		// So, it is impossible to set is_private for nested spaces.
 		if !config.IsPrivate.IsNull() {
-			errors = append(errors, fmt.Errorf("Parent space UUID is set, is_private must be empty"))
+			errors = append(errors, fmt.Errorf("parent space UUID is set, is_private must be empty"))
 		}
 
 		// Nested spaces inherit access from the parent space.
 		// So, it is impossible to set access or group_access when parent_space_uuid is set.
 		if !config.MemberAccessList.IsNull() && len(config.MemberAccessList.Elements()) > 0 {
-			errors = append(errors, fmt.Errorf("Parent space UUID is set, member access list must be empty"))
+			errors = append(errors, fmt.Errorf("parent space UUID is set, member access list must be empty"))
 		}
 
 		// Nested spaces inherit access from the parent space.
 		// So, it is impossible to set access or group_access when parent_space_uuid is set.
 		if !config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0 {
-			errors = append(errors, fmt.Errorf("Parent space UUID is set, group access list must be empty"))
+			errors = append(errors, fmt.Errorf("parent space UUID is set, group access list must be empty"))
 		}
 	}
 	return errors
@@ -776,61 +776,6 @@ func convertToMemberAccessSet(memberAccess []spaceMemberAccessBlockModel) (types
 }
 
 // Remove the _ parameter since we no longer pass context
-func extractMemberAccessFromSet(memberAccessSet types.Set) ([]spaceMemberAccessBlockModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	var result []spaceMemberAccessBlockModel
-
-	if memberAccessSet.IsNull() || memberAccessSet.IsUnknown() {
-		return result, diags
-	}
-
-	for _, value := range memberAccessSet.Elements() {
-		// Extract the object from the set element
-		obj, ok := value.(types.Object)
-		if !ok {
-			diags.AddError("Type conversion error", "Failed to convert set element to Object type")
-			continue
-		}
-
-		// Get attributes map
-		attrs := obj.Attributes()
-
-		// Extract values using proper type conversion
-		userUUIDAttr, ok := attrs["user_uuid"]
-		if !ok {
-			diags.AddError("Missing attribute", "user_uuid attribute missing from access object")
-			continue
-		}
-
-		userUUID, ok := userUUIDAttr.(types.String)
-		if !ok {
-			diags.AddError("Type conversion error", "Failed to convert user_uuid to String type")
-			continue
-		}
-
-		spaceRoleAttr, ok := attrs["space_role"]
-		if !ok {
-			diags.AddError("Missing attribute", "space_role attribute missing from access object")
-			continue
-		}
-
-		spaceRole, ok := spaceRoleAttr.(types.String)
-		if !ok {
-			diags.AddError("Type conversion error", "Failed to convert space_role to String type")
-			continue
-		}
-
-		// Add to result
-		result = append(result, spaceMemberAccessBlockModel{
-			UserUUID:  userUUID,
-			SpaceRole: spaceRole,
-		})
-	}
-
-	return result, diags
-}
-
-// Remove the _ parameter since we no longer pass context
 func convertToGroupAccessSet(groupAccess []spaceGroupAccessBlockModel) (types.Set, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -860,61 +805,6 @@ func convertToGroupAccessSet(groupAccess []spaceGroupAccessBlockModel) (types.Se
 	}
 
 	return types.SetValueMust(elementType, elements), diags
-}
-
-// Remove the _ parameter since we no longer pass context
-func extractGroupAccessFromSet(groupAccessSet types.Set) ([]spaceGroupAccessBlockModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	var result []spaceGroupAccessBlockModel
-
-	if groupAccessSet.IsNull() || groupAccessSet.IsUnknown() {
-		return result, diags
-	}
-
-	for _, value := range groupAccessSet.Elements() {
-		// Extract the object from the set element
-		obj, ok := value.(types.Object)
-		if !ok {
-			diags.AddError("Type conversion error", "Failed to convert set element to Object type")
-			continue
-		}
-
-		// Get attributes map
-		attrs := obj.Attributes()
-
-		// Extract values using proper type conversion
-		groupUUIDAttr, ok := attrs["group_uuid"]
-		if !ok {
-			diags.AddError("Missing attribute", "group_uuid attribute missing from group_access object")
-			continue
-		}
-
-		groupUUID, ok := groupUUIDAttr.(types.String)
-		if !ok {
-			diags.AddError("Type conversion error", "Failed to convert group_uuid to String type")
-			continue
-		}
-
-		spaceRoleAttr, ok := attrs["space_role"]
-		if !ok {
-			diags.AddError("Missing attribute", "space_role attribute missing from group_access object")
-			continue
-		}
-
-		spaceRole, ok := spaceRoleAttr.(types.String)
-		if !ok {
-			diags.AddError("Type conversion error", "Failed to convert space_role to String type")
-			continue
-		}
-
-		// Add to result
-		result = append(result, spaceGroupAccessBlockModel{
-			GroupUUID: groupUUID,
-			SpaceRole: spaceRole,
-		})
-	}
-
-	return result, diags
 }
 
 // populateMemberAccessListSet converts a slice of spaceMemberAccessBlockModel to a types.Set.
