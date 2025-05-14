@@ -219,9 +219,6 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"user_uuid": schema.StringAttribute{
 							MarkdownDescription: "User UUID",
 							Required:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"space_role": schema.StringAttribute{
 							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
@@ -270,6 +267,8 @@ func (r *spaceResource) Configure(ctx context.Context, req resource.ConfigureReq
 
 // TODO implement the config validation
 func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var errors []error
+
 	// Retrieve values from plan
 	var config spaceResourceModel
 	diags := req.Config.Get(ctx, &config)
@@ -278,26 +277,43 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 		return
 	}
 
+	// Validate configuration for nested spaces
+	for _, error := range r.validateNestedSpaceConfig(ctx, config) {
+		errors = append(errors, error)
+	}
+
+	// TODO validate MemberAccessList and GroupAccessList
+	// NOTE WE don't understand how to instantiate the elements of the set in ValidateConfig
+
+	// Add errors to the response
+	for _, error := range errors {
+		resp.Diagnostics.AddError("Error during space creation", error.Error())
+	}
+}
+
+func (r *spaceResource) validateNestedSpaceConfig(ctx context.Context, config spaceResourceModel) []error {
+	var errors []error
 	// The available options are different for root and nested spaces.
 	if !config.ParentSpaceUUID.IsNull() {
 		// Nested spaces inherit visibility from the parent space.
 		// So, it is impossible to set is_private for nested spaces.
 		if !config.IsPrivate.IsNull() {
-			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, is_private must be empty")
+			errors = append(errors, fmt.Errorf("Parent space UUID is set, is_private must be empty"))
 		}
 
 		// Nested spaces inherit access from the parent space.
 		// So, it is impossible to set access or group_access when parent_space_uuid is set.
 		if !config.MemberAccessList.IsNull() && len(config.MemberAccessList.Elements()) > 0 {
-			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, member access list must be empty")
+			errors = append(errors, fmt.Errorf("Parent space UUID is set, member access list must be empty"))
 		}
 
 		// Nested spaces inherit access from the parent space.
 		// So, it is impossible to set access or group_access when parent_space_uuid is set.
 		if !config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0 {
-			resp.Diagnostics.AddError("Error during space creation", "Parent space UUID is set, group access list must be empty")
+			errors = append(errors, fmt.Errorf("Parent space UUID is set, group access list must be empty"))
 		}
 	}
+	return errors
 }
 
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
