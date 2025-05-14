@@ -89,7 +89,7 @@ type SpaceDetails struct {
 
 // IsNestedSpace returns true if the space is nested (has a parent)
 func (s *SpaceDetails) IsNestedSpace() bool {
-	return s.ParentSpaceUUID != nil && *s.ParentSpaceUUID != ""
+	return !IsEmptyStringPointer(s.ParentSpaceUUID)
 }
 
 // GetDirectMemberAccess returns only the members with direct access to the space

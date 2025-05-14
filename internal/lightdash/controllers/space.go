@@ -208,8 +208,14 @@ func (c *SpaceController) UpdateSpace(
 	}
 
 	// Check if the space is currently a root space (ParentSpaceUUID is nil) and if the plan indicates it should become root
-	isCurrentlyRootSpace := currentSpaceDetails.ParentSpaceUUID == nil
-	isBecomingRootSpace := options.ParentSpaceUUID == nil
+	isCurrentlyRootSpace := !currentSpaceDetails.IsNestedSpace()
+	isBecomingRootSpace := models.IsEmptyStringPointer(options.ParentSpaceUUID)
+	tflog.Debug(ctx, "(SpaceController.UpdateSpace) options", map[string]interface{}{
+		"options":              options,
+		"ParentSpaceUUID":      &options.ParentSpaceUUID,
+		"isCurrentlyRootSpace": isCurrentlyRootSpace,
+		"isBecomingRootSpace":  isBecomingRootSpace,
+	})
 
 	var errors []error
 

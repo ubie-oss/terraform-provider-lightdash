@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -66,9 +66,9 @@ type spaceResourceModel struct {
 	CreatedAt           types.String `tfsdk:"created_at"`
 	LastUpdated         types.String `tfsdk:"last_updated"`
 	MemberAccessList    types.Set    `tfsdk:"access"`
-	MemberAccessListAll types.List   `tfsdk:"access_all"`
+	MemberAccessListAll types.Map    `tfsdk:"access_all"`
 	GroupAccessList     types.Set    `tfsdk:"group_access"`
-	GroupAccessListAll  types.List   `tfsdk:"group_access_all"`
+	GroupAccessListAll  types.Map    `tfsdk:"group_access_all"`
 }
 
 // spaceMemberAccessBlockModel maps the member access data for the user input schema (access block)
@@ -136,7 +136,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"parent_space_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash parent space UUID. If set, creates a nested space that inherits access controls and visibility from its parent space.",
 				Optional:            true,
-				Computed:            true,
+				// Computed:            true,
 			},
 			"space_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash space UUID",
@@ -170,54 +170,55 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Description: "Timestamp of the last Terraform update of the space.",
 				Computed:    true,
 			},
-			"access_all": schema.ListNestedAttribute{
+			"access_all": schema.MapNestedAttribute{
 				MarkdownDescription: "This block displays the complete list of users with access to the space, including those with direct access, inherited access, and organization administrators." +
-					"It mirrors the API response for space access members and is read-only.",
+					"It mirrors the API response for space access members and is read-only. The map key is the user UUID.",
 				Computed: true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "User UUID",
-							Computed:            true,
-						},
 						"space_role": schema.StringAttribute{
 							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
 							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"has_direct_access": schema.BoolAttribute{
 							MarkdownDescription: "Indicates if the user has direct access to the space.",
 							Computed:            true,
+							PlanModifiers: []planmodifier.Bool{
+								boolplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"inherited_from": schema.StringAttribute{
 							MarkdownDescription: "Indicates where the user's access is inherited from (e.g., organization, project).",
 							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"project_role": schema.StringAttribute{
 							MarkdownDescription: "The user's role within the associated project.",
 							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
 			},
-			"group_access_all": schema.ListNestedAttribute{
+			"group_access_all": schema.MapNestedAttribute{
 				MarkdownDescription: "This block displays the complete list of groups with access to the space, including those with direct access and inherited access." +
-					"It mirrors the API response for space access groups and is read-only.",
+					"It mirrors the API response for space access groups and is read-only. The map key is the group UUID.",
 				Computed: true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"group_uuid": schema.StringAttribute{
-							MarkdownDescription: "Group UUID",
-							Computed:            true,
-						},
 						"space_role": schema.StringAttribute{
 							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
 							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -397,8 +398,13 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	state.LastUpdated = currentTime
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data returned by controller
-	state.MemberAccessListAll = r.populateAllMemberAccessList(ctx, fetchedSpaceDetails.SpaceAccessMembers, &resp.Diagnostics)
-	state.GroupAccessListAll = r.populateAllGroupAccessList(ctx, fetchedSpaceDetails.SpaceAccessGroups, &resp.Diagnostics)
+	memberAccessMap, memberDiags := convertToAllMemberAccessMap(fetchedSpaceDetails.SpaceAccessMembers)
+	resp.Diagnostics.Append(memberDiags...)
+	state.MemberAccessListAll = memberAccessMap
+
+	groupAccessMap, groupDiags := convertToGroupAccessMap(fetchedSpaceDetails.SpaceAccessGroups)
+	resp.Diagnostics.Append(groupDiags...)
+	state.GroupAccessListAll = groupAccessMap
 
 	// Populate MemberAccessList (direct access from plan)
 	state.MemberAccessList = r.populateMemberAccessListSet(ctx, memberAccess, &resp.Diagnostics)
@@ -471,8 +477,13 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	newState.GroupAccessList = currentState.GroupAccessList
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
-	newState.MemberAccessListAll = r.populateAllMemberAccessList(ctx, fetchedSpaceDetails.SpaceAccessMembers, &resp.Diagnostics)
-	newState.GroupAccessListAll = r.populateAllGroupAccessList(ctx, fetchedSpaceDetails.SpaceAccessGroups, &resp.Diagnostics)
+	memberAccessMap, memberDiags := convertToAllMemberAccessMap(fetchedSpaceDetails.SpaceAccessMembers)
+	resp.Diagnostics.Append(memberDiags...)
+	newState.MemberAccessListAll = memberAccessMap
+
+	groupAccessMap, groupDiags := convertToGroupAccessMap(fetchedSpaceDetails.SpaceAccessGroups)
+	resp.Diagnostics.Append(groupDiags...)
+	newState.GroupAccessListAll = groupAccessMap
 
 	// Set state
 	diags = resp.State.Set(ctx, newState)
@@ -487,6 +498,8 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	tflog.Debug(ctx, "Updating space", map[string]any{"plan": plan, "oldState": oldState})
 
 	// Extract member access details from the 'access' block
 	memberAccess := []spaceMemberAccessBlockModel{}
@@ -518,14 +531,12 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Update space using controller
 	// The controller will handle the logic of moving the space and managing access based on space type
 	updatedSpaceDetails, controllerErrors := r.spaceController.UpdateSpace(ctx, updateOptions)
-
 	if len(controllerErrors) > 0 {
 		for _, err := range controllerErrors {
 			resp.Diagnostics.AddError("Error during space update", err.Error())
 		}
 		return // Stop if controller reported errors
 	}
-
 	if updatedSpaceDetails == nil {
 		resp.Diagnostics.AddError("Error updating space", "Controller returned nil result after update")
 		return
@@ -533,21 +544,14 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	tflog.Debug(ctx, "Space updated", map[string]any{"spaceDetails": updatedSpaceDetails})
 
-	// Fetch the space again to get the latest details
-	fetchedSpaceDetails, err := r.spaceController.GetSpace(ctx, plan.ProjectUUID.ValueString(), plan.SpaceUUID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error updating space", "Controller returned nil space details")
-		return
-	}
-
 	// Populate the state with values returned by the controller (which reflect the final API state)
 	var updatedState spaceResourceModel
 	updatedState.ID = oldState.ID
 	updatedState.ProjectUUID = oldState.ProjectUUID // ProjectUUID cannot change
 	updatedState.SpaceUUID = oldState.SpaceUUID     // SpaceUUID cannot change
 
-	updatedState.SpaceName = types.StringValue(fetchedSpaceDetails.SpaceName)
-	updatedState.IsPrivate = types.BoolValue(fetchedSpaceDetails.IsPrivate)
+	updatedState.SpaceName = types.StringValue(updatedSpaceDetails.SpaceName)
+	updatedState.IsPrivate = types.BoolValue(updatedSpaceDetails.IsPrivate)
 
 	if plan.ParentSpaceUUID.IsNull() {
 		updatedState.ParentSpaceUUID = types.StringNull()
@@ -564,8 +568,13 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	updatedState.GroupAccessList = r.populateGroupAccessListSet(ctx, groupAccess, &resp.Diagnostics)
 
 	// Populate MemberAccessListAll and GroupAccessListAll from raw data in controller response
-	updatedState.MemberAccessListAll = r.populateAllMemberAccessList(ctx, fetchedSpaceDetails.SpaceAccessMembers, &resp.Diagnostics)
-	updatedState.GroupAccessListAll = r.populateAllGroupAccessList(ctx, fetchedSpaceDetails.SpaceAccessGroups, &resp.Diagnostics)
+	memberAccessMap, memberDiags := convertToAllMemberAccessMap(updatedSpaceDetails.SpaceAccessMembers)
+	resp.Diagnostics.Append(memberDiags...)
+	updatedState.MemberAccessListAll = memberAccessMap
+
+	groupAccessMap, groupDiags := convertToGroupAccessMap(updatedSpaceDetails.SpaceAccessGroups)
+	resp.Diagnostics.Append(groupDiags...)
+	updatedState.GroupAccessListAll = groupAccessMap
 
 	// Set state
 	diags = resp.State.Set(ctx, updatedState)
@@ -663,17 +672,17 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Convert direct member access list to Set for import
-	memberAccessSet, memberAccessSetDiags := convertToMemberAccessSet(directMemberAccessListForImport)
-	resp.Diagnostics.Append(memberAccessSetDiags...)
+	memberAccessList, memberDiags := convertToMemberAccessSet(directMemberAccessListForImport)
+	resp.Diagnostics.Append(memberDiags...)
 	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), memberAccessSet)...)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), memberAccessList)...)
 	}
 
 	// Populate 'access_all' with all members
-	memberAccessList, memberAccessDiags := convertToAllMemberAccessList(spaceDetailsFromController.SpaceAccessMembers)
-	resp.Diagnostics.Append(memberAccessDiags...)
-	if !memberAccessDiags.HasError() {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access_all"), memberAccessList)...)
+	memberAccessMap, memberDiags := convertToAllMemberAccessMap(spaceDetailsFromController.SpaceAccessMembers)
+	resp.Diagnostics.Append(memberDiags...)
+	if !memberDiags.HasError() {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access_all"), memberAccessMap)...)
 	}
 
 	// Populate 'group_access' (only relevant for root spaces or if API provides explicit flag)
@@ -698,10 +707,10 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Populate 'group_access_all' with all groups from API result
-	groupAccessList, groupAccessDiags := convertToGroupAccessList(spaceDetailsFromController.SpaceAccessGroups)
-	resp.Diagnostics.Append(groupAccessDiags...)
-	if !groupAccessDiags.HasError() {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access_all"), groupAccessList)...)
+	groupAccessMap, groupDiags := convertToGroupAccessMap(spaceDetailsFromController.SpaceAccessGroups)
+	resp.Diagnostics.Append(groupDiags...)
+	if !groupDiags.HasError() {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access_all"), groupAccessMap)...)
 	}
 
 	// Set timestamps
@@ -710,92 +719,6 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	currentTime := types.StringValue(time.Now().Format(time.RFC850))
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), currentTime)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("last_updated"), currentTime)...)
-}
-
-// convertToAllMemberAccessList converts a list of models.SpaceMemberAccess to a types.List of SpaceAccessMember objects.
-func convertToAllMemberAccessList(members []models.SpaceMemberAccess) (types.List, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	// Define the element type for the list
-	elementType := types.ObjectType{
-		AttrTypes: map[string]attr.Type{
-			"user_uuid":         types.StringType,
-			"space_role":        types.StringType,
-			"has_direct_access": types.BoolType,
-			"inherited_from":    types.StringType,
-			"project_role":      types.StringType,
-		},
-	}
-
-	elements := make([]attr.Value, 0, len(members))
-	for _, member := range members {
-		// Handle pointer fields
-		hasDirectAccessVal := types.BoolNull()
-		if member.HasDirectAccess != nil {
-			hasDirectAccessVal = types.BoolValue(*member.HasDirectAccess)
-		}
-
-		inheritedFromVal := types.StringNull()
-		if member.InheritedFrom != nil {
-			inheritedFromVal = types.StringValue(*member.InheritedFrom)
-		}
-
-		projectRoleVal := types.StringNull()
-		if member.ProjectRole != nil {
-			projectRoleVal = types.StringValue(*member.ProjectRole)
-		}
-
-		element, elemDiags := types.ObjectValue(
-			elementType.AttrTypes,
-			map[string]attr.Value{
-				"user_uuid":         types.StringValue(member.UserUUID),
-				"space_role":        types.StringValue(string(member.SpaceRole)),
-				"has_direct_access": hasDirectAccessVal,
-				"inherited_from":    inheritedFromVal,
-				"project_role":      projectRoleVal,
-			},
-		)
-		diags.Append(elemDiags...)
-		if elemDiags.HasError() {
-			continue
-		}
-
-		elements = append(elements, element)
-	}
-
-	return types.ListValueMust(elementType, elements), diags
-}
-
-// convertToGroupAccessList converts a list of models.SpaceAccessGroup to a types.List of SpaceAccessGroup objects.
-func convertToGroupAccessList(groups []models.SpaceAccessGroup) (types.List, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	// Define the element type for the list
-	elementType := types.ObjectType{
-		AttrTypes: map[string]attr.Type{
-			"group_uuid": types.StringType,
-			"space_role": types.StringType,
-		},
-	}
-
-	elements := make([]attr.Value, 0, len(groups))
-	for _, group := range groups {
-		element, elemDiags := types.ObjectValue(
-			elementType.AttrTypes,
-			map[string]attr.Value{
-				"group_uuid": types.StringValue(group.GroupUUID),
-				"space_role": types.StringValue(string(group.SpaceRole)),
-			},
-		)
-		diags.Append(elemDiags...)
-		if elemDiags.HasError() {
-			continue
-		}
-
-		elements = append(elements, element)
-	}
-
-	return types.ListValueMust(elementType, elements), diags
 }
 
 func convertToControllerMemberAccess(memberAccess []spaceMemberAccessBlockModel) []models.SpaceAccessMember {
@@ -1056,74 +979,86 @@ func (r *spaceResource) populateGroupAccessListSet(ctx context.Context, groups [
 	return groupAccessSet
 }
 
-// populateAllMemberAccessList converts a slice of models.SpaceMemberAccess to a types.List.
-// This is used for the 'access_all' block, representing all member access (direct and inherited).
-func (r *spaceResource) populateAllMemberAccessList(ctx context.Context, members []models.SpaceMemberAccess, diags *diag.Diagnostics) types.List {
-	if len(members) == 0 {
-		tflog.Debug(ctx, "populateAllMemberAccessList: No members to populate")
+// convertToAllMemberAccessMap converts a list of models.SpaceMemberAccess to a types.Map
+func convertToAllMemberAccessMap(members []models.SpaceMemberAccess) (types.Map, diag.Diagnostics) {
+	var diags diag.Diagnostics
 
-		// Return empty list with correct element type if input is empty
-		elementType := types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"user_uuid":         types.StringType,
-				"space_role":        types.StringType,
-				"has_direct_access": types.BoolType,
-				"inherited_from":    types.StringType,
-				"project_role":      types.StringType,
-			},
-		}
-		return types.ListValueMust(elementType, nil)
+	// Define the element type for the map values
+	elementType := types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"space_role":        types.StringType,
+			"has_direct_access": types.BoolType,
+			"inherited_from":    types.StringType,
+			"project_role":      types.StringType,
+		},
 	}
 
-	memberAccessList, conversionDiags := convertToAllMemberAccessList(members)
-	diags.Append(conversionDiags...)
-	if conversionDiags.HasError() {
-		// Ensure empty list with correct type if conversion failed
-		elementType := types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"user_uuid":         types.StringType,
-				"space_role":        types.StringType,
-				"has_direct_access": types.BoolType,
-				"inherited_from":    types.StringType,
-				"project_role":      types.StringType,
-			},
+	elements := make(map[string]attr.Value)
+	for _, member := range members {
+		// Handle pointer fields
+		hasDirectAccessVal := types.BoolNull()
+		if member.HasDirectAccess != nil {
+			hasDirectAccessVal = types.BoolValue(*member.HasDirectAccess)
 		}
-		return types.ListValueMust(elementType, nil)
-	}
-	tflog.Debug(ctx, "populateAllMemberAccessList: Populated member access list", map[string]any{"memberAccessList": memberAccessList})
 
-	return memberAccessList
+		inheritedFromVal := types.StringNull()
+		if member.InheritedFrom != nil {
+			inheritedFromVal = types.StringValue(*member.InheritedFrom)
+		}
+
+		projectRoleVal := types.StringNull()
+		if member.ProjectRole != nil {
+			projectRoleVal = types.StringValue(*member.ProjectRole)
+		}
+
+		element, elemDiags := types.ObjectValue(
+			elementType.AttrTypes,
+			map[string]attr.Value{
+				"space_role":        types.StringValue(string(member.SpaceRole)),
+				"has_direct_access": hasDirectAccessVal,
+				"inherited_from":    inheritedFromVal,
+				"project_role":      projectRoleVal,
+			},
+		)
+		diags.Append(elemDiags...)
+		if elemDiags.HasError() {
+			continue
+		}
+
+		// Use UserUUID as the map key
+		elements[member.UserUUID] = element
+	}
+
+	return types.MapValueMust(elementType, elements), diags
 }
 
-// populateAllGroupAccessList converts a slice of models.SpaceAccessGroup to a types.List.
-// This is used for the 'group_access_all' block, representing all group access (direct and inherited).
-func (r *spaceResource) populateAllGroupAccessList(ctx context.Context, groups []models.SpaceAccessGroup, diags *diag.Diagnostics) types.List {
-	if len(groups) == 0 {
-		tflog.Debug(ctx, "populateAllGroupAccessList: No groups to populate")
+// convertToGroupAccessMap converts a list of models.SpaceAccessGroup to a types.Map
+func convertToGroupAccessMap(groups []models.SpaceAccessGroup) (types.Map, diag.Diagnostics) {
+	var diags diag.Diagnostics
 
-		// Return empty list with correct element type if input is empty
-		elementType := types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"group_uuid": types.StringType,
-				"space_role": types.StringType,
-			},
-		}
-		return types.ListValueMust(elementType, nil)
+	// Define the element type for the map values
+	elementType := types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"space_role": types.StringType,
+		},
 	}
 
-	groupAccessList, conversionDiags := convertToGroupAccessList(groups)
-	diags.Append(conversionDiags...)
-	if conversionDiags.HasError() {
-		// Ensure empty list with correct type if conversion failed
-		elementType := types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"group_uuid": types.StringType,
-				"space_role": types.StringType,
+	elements := make(map[string]attr.Value)
+	for _, group := range groups {
+		element, elemDiags := types.ObjectValue(
+			elementType.AttrTypes,
+			map[string]attr.Value{
+				"space_role": types.StringValue(string(group.SpaceRole)),
 			},
+		)
+		diags.Append(elemDiags...)
+		if elemDiags.HasError() {
+			continue
 		}
-		return types.ListValueMust(elementType, nil)
-	}
-	tflog.Debug(ctx, "populateAllGroupAccessList: Populated group access list", map[string]any{"groupAccessList": groupAccessList})
 
-	return groupAccessList
+		// Use GroupUUID as the map key
+		elements[group.GroupUUID] = element
+	}
+
+	return types.MapValueMust(elementType, elements), diags
 }

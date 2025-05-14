@@ -105,7 +105,7 @@ func TestGetSpaceV1ResultsJSONUnmarshal(t *testing.T) {
 		"access": [
 			{"userUuid": "user1", "role": "editor"}
 		],
-		"groupAccess": [
+		"groupsAccess": [
 			{"groupUuid": "group1", "groupName": "Group One", "role": "viewer"}
 		]
 	}`
