@@ -56,7 +56,7 @@ resource "lightdash_space" "test_private" {
 
   group_access {
     group_uuid = lightdash_group.test2.group_uuid
-    space_role = "admin"
+    space_role = "editor"
   }
 
   depends_on = [
@@ -89,10 +89,10 @@ resource "lightdash_space" "test_parent_space" {
     space_role = "editor"
   }
 
-  # group_access {
-  #   group_uuid = lightdash_group.test2.group_uuid
-  #   space_role = "editor"
-  # }
+  group_access {
+    group_uuid = lightdash_group.test2.group_uuid
+    space_role = "viewer"
+  }
 
   depends_on = [
     lightdash_project_role_member.test_admin_user,
@@ -122,6 +122,11 @@ resource "lightdash_space" "test_grandchild_space" {
   project_uuid      = var.test_lightdash_project_uuid
   name              = "zzz_test_grandchild_space"
   parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
+
+  # group_access {
+  #   group_uuid = lightdash_group.test1.group_uuid
+  #   space_role = "viewer"
+  # }
 
   deletion_protection = false
 }
