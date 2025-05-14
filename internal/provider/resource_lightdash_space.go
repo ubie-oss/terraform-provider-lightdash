@@ -291,7 +291,7 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 	}
 }
 
-func (r *spaceResource) validateNestedSpaceConfig(ctx context.Context, config spaceResourceModel) []error {
+func (r *spaceResource) validateNestedSpaceConfig(_ context.Context, config spaceResourceModel) []error {
 	var errors []error
 	// The available options are different for root and nested spaces.
 	if !config.ParentSpaceUUID.IsNull() {
@@ -809,7 +809,7 @@ func convertToGroupAccessSet(groupAccess []spaceGroupAccessBlockModel) (types.Se
 
 // populateMemberAccessListSet converts a slice of spaceMemberAccessBlockModel to a types.Set.
 // This is used for the 'access' block, representing directly assigned member access.
-func (r *spaceResource) populateMemberAccessListSet(ctx context.Context, members []spaceMemberAccessBlockModel, diags *diag.Diagnostics) types.Set {
+func (r *spaceResource) populateMemberAccessListSet(_ context.Context, members []spaceMemberAccessBlockModel, diags *diag.Diagnostics) types.Set {
 	if len(members) == 0 {
 		// Return empty set with correct element type if input is empty
 		elementType := types.ObjectType{
