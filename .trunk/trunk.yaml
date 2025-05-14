@@ -26,14 +26,14 @@ lint:
     - taplo@0.9.3
     - terraform@1.1.0
     - semgrep@1.116.0
-    - gitleaks@8.25.1
+    - gitleaks@8.26.0
     - goimports@0.9.1
     - bandit@1.8.3
     - black@25.1.0
     - isort@6.0.1
-    - ruff@0.11.8
+    - ruff@0.11.9
     - actionlint@1.7.7
-    - checkov@3.2.415
+    - checkov@3.2.420
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.44.0
@@ -42,8 +42,8 @@ lint:
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - tflint@0.57.0
-    - trivy@0.61.1
-    - trufflehog@3.88.28
+    - trivy@0.62.1
+    - trufflehog@3.88.29
     - yamllint@1.37.1
 actions:
   enabled:
