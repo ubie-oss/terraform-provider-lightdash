@@ -19,6 +19,7 @@ terraform-init:
 .PHONY: terraform-apply
 terraform-apply:
 	TF_LOG=DEBUG TF_LOG_PATH=tf-apply.log terraform apply -var-file="testing.tfvars"
+	# -target=lightdash_space.test_parent_space
 
 .PHONY: terraform-destroy
 terraform-destroy:

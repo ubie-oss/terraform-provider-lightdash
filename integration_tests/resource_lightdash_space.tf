@@ -86,13 +86,13 @@ resource "lightdash_space" "test_parent_space" {
 
   group_access {
     group_uuid = lightdash_group.test1.group_uuid
-    space_role = "admin"
+    space_role = "editor"
   }
 
-  group_access {
-    group_uuid = lightdash_group.test2.group_uuid
-    space_role = "admin"
-  }
+  # group_access {
+  #   group_uuid = lightdash_group.test2.group_uuid
+  #   space_role = "editor"
+  # }
 
   depends_on = [
     lightdash_project_role_member.test_admin_user,
@@ -109,11 +109,11 @@ resource "lightdash_space" "test_child_space_1" {
 }
 
 resource "lightdash_space" "test_child_space_2" {
-  project_uuid = var.test_lightdash_project_uuid
-  name         = "zzz_test_child_space_2"
-  # parent_space_uuid = lightdash_space.test_parent_space.space_uuid
+  project_uuid      = var.test_lightdash_project_uuid
+  name              = "zzz_test_child_space_2"
+  parent_space_uuid = lightdash_space.test_parent_space.space_uuid
   # We test to switch the parent space
-  parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
+  # parent_space_uuid = lightdash_space.test_child_space_1.space_uuid
 
   deletion_protection = false
 }

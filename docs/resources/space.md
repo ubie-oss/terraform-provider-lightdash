@@ -99,9 +99,9 @@ resource "lightdash_space" "test_grandchild_space" {
 
 ### Read-Only
 
-- `access_all` (Attributes List) This block displays the complete list of users with access to the space, including those with direct access, inherited access, and organization administrators.It mirrors the API response for space access members and is read-only. (see [below for nested schema](#nestedatt--access_all))
+- `access_all` (Attributes Map) This block displays the complete list of users with access to the space, including those with direct access, inherited access, and organization administrators.It mirrors the API response for space access members and is read-only. The map key is the user UUID. (see [below for nested schema](#nestedatt--access_all))
 - `created_at` (String) Timestamp of the creation of the space
-- `group_access_all` (Attributes List) This block displays the complete list of groups with access to the space, including those with direct access and inherited access.It mirrors the API response for space access groups and is read-only. (see [below for nested schema](#nestedatt--group_access_all))
+- `group_access_all` (Attributes Map) This block displays the complete list of groups with access to the space, including those with direct access and inherited access.It mirrors the API response for space access groups and is read-only. The map key is the group UUID. (see [below for nested schema](#nestedatt--group_access_all))
 - `id` (String) Resource identifier
 - `last_updated` (String) Timestamp of the last Terraform update of the space.
 - `space_uuid` (String) Lightdash space UUID
@@ -131,8 +131,8 @@ Read-Only:
 
 - `has_direct_access` (Boolean) Indicates if the user has direct access to the space.
 - `inherited_from` (String) Indicates where the user's access is inherited from (e.g., organization, project).
+- `project_role` (String) The user's role within the associated project.
 - `space_role` (String) Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)
-- `user_uuid` (String) User UUID
 
 
 <a id="nestedatt--group_access_all"></a>
@@ -140,7 +140,6 @@ Read-Only:
 
 Read-Only:
 
-- `group_uuid` (String) Group UUID
 - `space_role` (String) Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)
 
 ## Import
