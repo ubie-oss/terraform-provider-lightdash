@@ -60,3 +60,6 @@ integration_tests/testing.tfvars
 
 # go mod vendor
 vendor/
+
+# .env
+.env

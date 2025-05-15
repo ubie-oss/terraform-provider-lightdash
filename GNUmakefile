@@ -16,8 +16,15 @@ default: testacc
 
 # Run acceptance tests
 .PHONY: testacc
+include .env
 testacc:
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+	echo "${LIGHTDASH_PROJECT}"
+	TF_ACC=1 \
+		LIGHTDASH_URL="${LIGHTDASH_URL}" \
+		LIGHTDASH_API_KEY="${LIGHTDASH_API_KEY}" \
+		LIGHTDASH_PROJECT="${LIGHTDASH_PROJECT}" \
+		TF_LOG=DEBUG \
+		go test ./internal/provider/... -v $(TESTARGS) -timeout 120m
 
 test:
 	# TF_ACC mustn't be set, otherwise acceptance tests will run

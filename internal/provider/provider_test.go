@@ -46,4 +46,18 @@ func testAccPreCheck(t *testing.T) {
 	// You can add code here to run prior to any test case execution, for example assertions
 	// about the appropriate environment variables being set are common to see in a pre-check
 	// function.
+
+	// Use the utility function from utils.go to check if in integration test mode
+	if !isIntegrationTestMode() {
+		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set to '1'")
+	}
+
+	// Use the utility functions from utils.go to check for API Key and Project UUID
+	if _, err := getLightdashApiKey(); err != nil {
+		t.Fatalf("LIGHTDASH_API_KEY must be set for acceptance tests: %v", err)
+	}
+
+	if _, err := getLightdashProjectUuid(); err != nil {
+		t.Fatalf("LIGHTDASH_PROJECT must be set for acceptance tests: %v", err)
+	}
 }

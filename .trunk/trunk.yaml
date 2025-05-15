@@ -20,6 +20,11 @@ lint:
         - docs/**
         - examples/**
         - tools/**
+    # Terraform files under the internal/provider directory aren't linted by tflint,
+    # because AI-assisted IDE (Cursor) recognizes linter errors in these files.
+    - linters: [tflint]
+      paths:
+        - internal/provider/**
   enabled:
     - golangci-lint2@2.1.6
     - renovate@40.0.6

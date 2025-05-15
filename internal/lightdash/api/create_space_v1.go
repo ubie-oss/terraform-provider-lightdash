@@ -23,7 +23,7 @@ import (
 
 type CreateSpaceV1Request struct {
 	Name            string  `json:"name"`
-	IsPrivate       bool    `json:"isPrivate"`
+	IsPrivate       *bool   `json:"isPrivate"`
 	ParentSpaceUUID *string `json:"parentSpaceUuid,omitempty"`
 }
 
@@ -42,11 +42,14 @@ type CreateSpaceV1Response struct {
 }
 
 // CreateSpaceV1 creates a new space in the given project. If parentSpaceUUID is nil, the space is created at the root level.
-func (c *Client) CreateSpaceV1(projectUUID, spaceName string, isPrivate bool, parentSpaceUUID *string) (*CreateSpaceV1Results, error) {
+func (c *Client) CreateSpaceV1(projectUUID, spaceName string, isPrivate *bool, parentSpaceUUID *string) (*CreateSpaceV1Results, error) {
+
 	data := CreateSpaceV1Request{
 		Name:            spaceName,
-		IsPrivate:       isPrivate,
 		ParentSpaceUUID: parentSpaceUUID,
+	}
+	if isPrivate != nil {
+		data.IsPrivate = isPrivate
 	}
 
 	marshalled, err := json.Marshal(data)
