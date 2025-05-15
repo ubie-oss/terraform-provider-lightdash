@@ -24,7 +24,7 @@ import (
 
 type UpdateSpaceV1Request struct {
 	Name      string `json:"name"`
-	IsPrivate bool   `json:"isPrivate"`
+	IsPrivate *bool  `json:"isPrivate,omitempty"`
 }
 
 type UpdateSpaceV1Results struct {
@@ -41,11 +41,13 @@ type UpdateSpaceV1Response struct {
 	Status  string               `json:"status"`
 }
 
-func (c *Client) UpdateSpaceV1(_ context.Context, projectUuid string, spaceUuid string, spaceName string, isPrivate bool) (*UpdateSpaceV1Results, error) {
+func (c *Client) UpdateSpaceV1(_ context.Context, projectUuid string, spaceUuid string, spaceName string, isPrivate *bool) (*UpdateSpaceV1Results, error) {
 	// Create the request body, including parentSpaceUuid if provided
 	data := UpdateSpaceV1Request{
-		Name:      spaceName,
-		IsPrivate: isPrivate,
+		Name: spaceName,
+	}
+	if isPrivate != nil {
+		data.IsPrivate = isPrivate
 	}
 	marshalled, err := json.Marshal(data)
 	if err != nil {
