@@ -150,7 +150,7 @@ func TestAccSpaceResource(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_root", "deletion_protection", "false"),
 					// lightdash_space.nested_space_public_child
 					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_child", "name", "Public Child Space (Acceptance Test: nested_space - 020)"),
-					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_child", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_child", "is_private", "false"),
 					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_child", "deletion_protection", "false"),
 					// lightdash_space.nested_space_public_grandchild
 					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_grandchild", "name", "Public Grandchild Space (Acceptance Test: nested_space - 020)"),
@@ -181,6 +181,46 @@ func TestAccSpaceResource(t *testing.T) {
 						"lightdash_space.nested_space_private_root",
 						"space_uuid",
 					),
+				),
+			},
+		},
+	})
+
+	// Test of space access
+	spaceAccessConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "space_access", "010_space_access.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get spaceAccessConfig: %v", err)
+	}
+	spaceAccessConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "space_access", "020_space_access.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get spaceAccessConfig: %v", err)
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig + spaceAccessConfig010,
+				Check: resource.ComposeTestCheckFunc(
+					// lightdash_space.space_access__test_space_1
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_1", "name", "Space 1 (Acceptance Test: space_access)"),
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_1", "is_private", "false"),
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_1", "group_access.#", "0"),
+					// lightdash_space.space_access__test_space_2
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "name", "Space 2 (Acceptance Test: space_access)"),
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "group_access.#", "3"),
+				),
+			},
+			{
+				Config: providerConfig + spaceAccessConfig020,
+				Check: resource.ComposeTestCheckFunc(
+					// lightdash_space.space_access__test_space_1
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_1", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_1", "group_access.#", "3"),
+					// lightdash_space.space_access__test_space_2
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "is_private", "false"),
+					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "group_access.#", "0"),
 				),
 			},
 		},

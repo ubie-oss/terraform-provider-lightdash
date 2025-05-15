@@ -11,14 +11,16 @@ resource "lightdash_space" "nested_space_public_child" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Public Child Space (Acceptance Test: nested_space - 020)"
   deletion_protection = false
-  parent_space_uuid   = lightdash_space.nested_space_public_root.space_uuid
+  // Make it a root space
+  parent_space_uuid = null
 }
 
 resource "lightdash_space" "nested_space_public_grandchild" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Public Grandchild Space (Acceptance Test: nested_space - 020)"
   deletion_protection = false
-  parent_space_uuid   = lightdash_space.nested_space_public_root.space_uuid
+  // Move it to the public root space
+  parent_space_uuid = lightdash_space.nested_space_public_root.space_uuid
 }
 
 # Private spaces
@@ -34,12 +36,14 @@ resource "lightdash_space" "nested_space_private_child" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Private Child Space (Acceptance Test: nested_space - 020)"
   deletion_protection = false
-  parent_space_uuid   = lightdash_space.nested_space_private_root.space_uuid
+  // Make it a root space
+  parent_space_uuid = null
 }
 
 resource "lightdash_space" "nested_space_private_grandchild" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Private Grandchild Space (Acceptance Test: nested_space - 020)"
   deletion_protection = false
-  parent_space_uuid   = lightdash_space.nested_space_private_root.space_uuid
+  // Move it to the private root space
+  parent_space_uuid = lightdash_space.nested_space_private_root.space_uuid
 }
