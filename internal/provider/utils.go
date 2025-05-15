@@ -17,13 +17,17 @@ package provider
 import (
 	"fmt"
 	"os"
+	"path"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
 const (
-	integrationTestModeEnvVar = "TF_ACC"
-	lightdashApiKeyEnvVar     = "LIGHTDASH_API_KEY" // #nosec G101
+	integrationTestModeEnvVar  = "TF_ACC"
+	lightdashApiKeyEnvVar      = "LIGHTDASH_API_KEY" // #nosec G101
+	lightdashProjectUuidEnvVar = "LIGHTDASH_PROJECT" // #nosec G101
+	lightdashUrlEnvVar         = "LIGHTDASH_URL"
 )
 
 func isIntegrationTestMode() bool {
@@ -34,11 +38,31 @@ func isIntegrationTestMode() bool {
 
 func getLightdashApiKey() (*string, error) {
 	// If the environment variable is set to 1, then we are in test mode
-	api_key := os.Getenv(lightdashApiKeyEnvVar)
-	if strings.TrimSpace(api_key) == "" {
+	api_key := strings.TrimSpace(os.Getenv(lightdashApiKeyEnvVar))
+	fmt.Println("api_key", api_key)
+	if api_key == "" {
 		return nil, fmt.Errorf("LIGHTDASH_API_KEY environment variable is not set")
 	}
 	return &api_key, nil
+}
+
+func getLightdashProjectUuid() (*string, error) {
+	// If the environment variable is set to 1, then we are in test mode
+	projectUuid := strings.TrimSpace(os.Getenv(lightdashProjectUuidEnvVar))
+	fmt.Println("projectUuid", projectUuid)
+	if projectUuid == "" {
+		return nil, fmt.Errorf("LIGHTDASH_PROJECT environment variable is not set")
+	}
+	return &projectUuid, nil
+}
+
+func getLightdashUrl() (*string, error) {
+	// If the environment variable is set to 1, then we are in test mode
+	url := strings.TrimSpace(os.Getenv(lightdashUrlEnvVar))
+	if url == "" {
+		return nil, fmt.Errorf("LIGHTDASH_URL environment variable is not set")
+	}
+	return &url, nil
 }
 
 func extractStrings(input, pattern string) ([]string, error) {
@@ -58,4 +82,84 @@ func extractStrings(input, pattern string) ([]string, error) {
 	groups := matches[1:]
 
 	return groups, nil
+}
+
+// Get the path to the acc_tests directory relative to the current file.
+func getPathToAccTests() (string, error) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("failed to get current file path")
+	}
+
+	// Get the directory of the current file (utils.go)
+	currentDir := path.Dir(filename)
+
+	// Navigate up two directories (internal/provider -> internal -> .) and then down into acc_tests
+	accTestsPath := path.Join(currentDir, "acc_tests")
+
+	// Check if the directory exists
+	if _, err := os.Stat(accTestsPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("acc_tests directory does not exist at %s", accTestsPath)
+	}
+	return accTestsPath, nil
+}
+
+// Get the path to an acc_test resource
+func getPathToAccTestResource(elements []string) (string, error) {
+	pathToAccTests, err := getPathToAccTests()
+	if err != nil {
+		return "", err
+	}
+
+	// Combine the base path with the elements from the slice
+	allElements := append([]string{pathToAccTests}, elements...)
+	accTestResourcePath := path.Join(allElements...)
+
+	if _, err := os.Stat(accTestResourcePath); os.IsNotExist(err) {
+		return "", fmt.Errorf("acc_tests directory does not exist at %s", accTestResourcePath)
+	}
+	return accTestResourcePath, nil
+}
+
+func ReadAccTestResource(elements []string) (string, error) {
+	path, err := getPathToAccTestResource(elements)
+	if err != nil {
+		return "", err
+	}
+	resource, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(resource), nil
+}
+
+// Create a provider config string
+func getProviderConfig() (string, error) {
+	// Get the Lightdash URL
+	lightdashUrl, err := getLightdashUrl()
+	if err != nil {
+		return "", err
+	}
+	// Get the Lightdash API key
+	lightdashApiKey, err := getLightdashApiKey()
+	if err != nil {
+		return "", err
+	}
+	lightdashProjectUuid, err := getLightdashProjectUuid()
+	if err != nil {
+		return "", err
+	}
+
+	// Create the provider config string
+	providerConfig := fmt.Sprintf(`
+provider "lightdash" {
+	host  = "%s"
+	token = "%s"
+}
+
+data "lightdash_project" "test" {
+	project_uuid = "%s"
+}
+`, *lightdashUrl, *lightdashApiKey, *lightdashProjectUuid)
+	return providerConfig, nil
 }
