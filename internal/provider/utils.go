@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -112,11 +113,24 @@ func getPathToAccTestResource(elements []string) (string, error) {
 	}
 
 	// Combine the base path with the elements from the slice
+	// Use path.Join to construct the path safely
 	allElements := append([]string{pathToAccTests}, elements...)
 	accTestResourcePath := path.Join(allElements...)
 
+	// Add a security check: ensure the constructed path is within the acc_tests directory
+	// Use filepath.Clean to normalize paths before comparison
+	cleanedAccTestsPath := path.Clean(pathToAccTests)
+	cleanedResourcePath := path.Clean(accTestResourcePath)
+
+	// Check if the cleaned resource path is a sub-path of the cleaned acc_tests path
+	// This prevents path traversal attacks using '..'
+	if !strings.HasPrefix(cleanedResourcePath, cleanedAccTestsPath) {
+		return "", fmt.Errorf("attempted to access file outside acc_tests directory: %s", accTestResourcePath)
+	}
+
+	// Also check that the constructed path actually exists
 	if _, err := os.Stat(accTestResourcePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("acc_tests directory does not exist at %s", accTestResourcePath)
+		return "", fmt.Errorf("acc_tests resource does not exist at %s", accTestResourcePath)
 	}
 	return accTestResourcePath, nil
 }
@@ -126,7 +140,7 @@ func ReadAccTestResource(elements []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resource, err := os.ReadFile(path)
+	resource, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return "", err
 	}

@@ -30,7 +30,7 @@ func TestAccSpaceResource(t *testing.T) {
 	}
 
 	// Test of simple space creation
-	publicSpaceConfig, err := ReadAccTestResource([]string{"resource_lightdash_space", "create_space", "010_create_space.tf"})
+	simpleSpaceConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "create_space", "010_create_space.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
@@ -39,21 +39,88 @@ func TestAccSpaceResource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + publicSpaceConfig,
+				Config: providerConfig + simpleSpaceConfig010,
 				Check: resource.ComposeTestCheckFunc(
-					// lightdash_space.test_public
-					resource.TestCheckResourceAttrSet("lightdash_space.test_public", "space_uuid"),
-					resource.TestCheckResourceAttr("lightdash_space.test_public", "name", "Public Space (Acceptance Test: create_space)"),
-					resource.TestCheckResourceAttr("lightdash_space.test_public", "is_private", "false"),
-					resource.TestCheckResourceAttr("lightdash_space.test_public", "deletion_protection", "false"),
-					// lightdash_space.test_private
-					resource.TestCheckResourceAttrSet("lightdash_space.test_private", "space_uuid"),
-					resource.TestCheckResourceAttr("lightdash_space.test_private", "name", "Private Space (Acceptance Test: create_space)"),
-					resource.TestCheckResourceAttr("lightdash_space.test_private", "is_private", "true"),
-					resource.TestCheckResourceAttr("lightdash_space.test_private", "deletion_protection", "false"),
+					// lightdash_space.create_space__test_public
+					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_public", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "name", "Public Space (Acceptance Test: create_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "is_private", "false"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "false"),
+					// lightdash_space.create_space__test_private
+					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_private", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "name", "Private Space (Acceptance Test: create_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "deletion_protection", "false"),
 				),
 			},
 			// Add more test steps for update, delete, import later if needed
+		},
+	})
+
+	// Test of nested spaces
+	nestedSpaceConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "nested_space", "010_nested_space.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get nestedSpaceConfig: %v", err)
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig + nestedSpaceConfig010,
+				Check: resource.ComposeTestCheckFunc(
+					// lightdash_space.nested_space_public_root
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_space_public_root", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_root", "name", "Public Root Space (Acceptance Test: nested_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_root", "is_private", "false"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_root", "deletion_protection", "false"),
+					// lightdash_space.nested_space_public_child
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_child", "name", "Public Child Space (Acceptance Test: nested_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_child", "deletion_protection", "false"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.nested_space_public_child",
+						"parent_space_uuid",
+						"lightdash_space.nested_space_public_root",
+						"space_uuid",
+					),
+					// lightdash_space.nested_space_public_grandchild
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_space_public_grandchild", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_grandchild", "name", "Public Grandchild Space (Acceptance Test: nested_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_public_grandchild", "deletion_protection", "false"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.nested_space_public_grandchild",
+						"parent_space_uuid",
+						"lightdash_space.nested_space_public_child",
+						"space_uuid",
+					),
+
+					// lightdash_space.nested_space_private_root
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_space_private_root", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_root", "name", "Private Root Space (Acceptance Test: nested_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_root", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_root", "deletion_protection", "false"),
+					// lightdash_space.nested_space_private_child
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_space_private_child", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_child", "name", "Private Child Space (Acceptance Test: nested_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_child", "deletion_protection", "false"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.nested_space_private_child",
+						"parent_space_uuid",
+						"lightdash_space.nested_space_private_root",
+						"space_uuid",
+					),
+					// lightdash_space.nested_space_private_grandchild
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_space_private_grandchild", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_grandchild", "name", "Private Grandchild Space (Acceptance Test: nested_space)"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_space_private_grandchild", "deletion_protection", "false"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.nested_space_private_grandchild",
+						"parent_space_uuid",
+						"lightdash_space.nested_space_private_child",
+						"space_uuid",
+					),
+				),
+			},
 		},
 	})
 }
