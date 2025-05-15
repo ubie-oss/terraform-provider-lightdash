@@ -23,6 +23,10 @@ import (
 // Using the shared testAccPreCheck and testAccProtoV6ProviderFactories from provider_acc_test.go
 
 func TestAccSpaceResource(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_space")
+	}
+
 	// Get the provider config
 	providerConfig, err := getProviderConfig()
 	if err != nil {
