@@ -52,7 +52,7 @@ func NewSpaceController(client *api.Client) *SpaceController {
 type CreateSpaceOptions struct {
 	ProjectUUID     string
 	SpaceName       string
-	IsPrivate       bool
+	IsPrivate       *bool
 	ParentSpaceUUID *string
 	MemberAccess    []models.SpaceAccessMember
 	GroupAccess     []models.SpaceAccessGroup
@@ -414,7 +414,7 @@ func (c *SpaceController) createNestedSpace(
 
 	// 2. Create the space via the service layer. Note that isPrivate, memberAccess, and groupAccess
 	// are effectively ignored by Lightdash for nested spaces as they inherit these from the parent.
-	createdSpace, err := c.spaceService.CreateSpace(options.ProjectUUID, options.SpaceName, options.IsPrivate, options.ParentSpaceUUID)
+	createdSpace, err := c.spaceService.CreateSpace(options.ProjectUUID, options.SpaceName, nil, options.ParentSpaceUUID)
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to create nested space: %w", err)}
 	}
@@ -616,10 +616,17 @@ func (c *SpaceController) updateRootSpace(
 	})
 
 	// 1. Update the space properties via the service layer
-	_, err := c.spaceService.UpdateRootSpace(projectUUID, spaceUUID, spaceName, isPrivate)
+	updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivate)
 	if err != nil {
 		return []error{fmt.Errorf("failed to update space properties: %w", err)}
 	}
+
+	tflog.Debug(ctx, "(SpaceController.updateRootSpace) Updated space details", map[string]interface{}{
+		"projectUUID": updatedSpaceDetails.ProjectUUID,
+		"spaceUUID":   updatedSpaceDetails.SpaceUUID,
+		"spaceName":   updatedSpaceDetails.SpaceName,
+		"isPrivate":   updatedSpaceDetails.IsPrivate,
+	})
 
 	// 2. Manage member access (add/update/remove direct access)
 	memberErrors := c.manageRootSpaceMemberAccess(
@@ -673,7 +680,7 @@ func (c *SpaceController) updateNestedSpace(
 	// Update only the name and parent space UUID for nested spaces via the service layer
 	// isPrivate is passed as nil because it cannot be updated for nested spaces.
 	// Pass the parentSpaceUUID to the service layer to handle moves between nested spaces
-	_, err := c.spaceService.UpdateNestedSpace(projectUUID, spaceUUID, spaceName)
+	_, err := c.spaceService.UpdateNestedSpace(ctx, projectUUID, spaceUUID, spaceName, currentSpaceDetails.IsPrivate)
 	if err != nil {
 		return []error{fmt.Errorf("failed to update nested space %s: %w", spaceUUID, err)}
 	}
@@ -704,8 +711,14 @@ func (c *SpaceController) moveRootToNestedSpace(
 		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
 	}
 
-	// 2. Update the space to make it a nested space (no parent) via the service layer
-	_, err = c.spaceService.UpdateNestedSpace(projectUUID, spaceUUID, spaceName)
+	// 2. Get the space details to check if it is private
+	spaceDetails, err := c.spaceService.GetSpace(projectUUID, spaceUUID)
+	if err != nil {
+		return []error{fmt.Errorf("failed to get space details: %w", err)}
+	}
+
+	// 3. Update the space to make it a nested space (no parent) via the service layer
+	_, err = c.spaceService.UpdateNestedSpace(ctx, projectUUID, spaceUUID, spaceName, spaceDetails.IsPrivate)
 	if err != nil {
 		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
 	}
@@ -740,7 +753,7 @@ func (c *SpaceController) moveNestedToRootSpace(
 	}
 
 	// 2. Update the space to make it a root space (no parent) via the service layer
-	_, err2 := c.spaceService.UpdateRootSpace(projectUUID, spaceUUID, spaceName, isPrivate)
+	_, err2 := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivate)
 	if err2 != nil {
 		return []error{fmt.Errorf("failed to update space properties after moving to root: %w", err2)}
 	}

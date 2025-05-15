@@ -34,6 +34,10 @@ func TestAccSpaceResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
+	simpleSpaceConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "create_space", "020_create_space.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
+	}
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -45,15 +49,27 @@ func TestAccSpaceResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_public", "space_uuid"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "name", "Public Space (Acceptance Test: create_space)"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "is_private", "false"),
-					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "false"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "true"),
 					// lightdash_space.create_space__test_private
 					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_private", "space_uuid"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "name", "Private Space (Acceptance Test: create_space)"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "deletion_protection", "true"),
+				),
+			},
+			{
+				Config: providerConfig + simpleSpaceConfig020,
+				Check: resource.ComposeTestCheckFunc(
+					// lightdash_space.create_space__test_public
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "name", "Public Space (Acceptance Test: create_space - 020)"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "false"),
+					// lightdash_space.create_space__test_private
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "name", "Private Space (Acceptance Test: create_space - 020)"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "is_private", "false"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "deletion_protection", "false"),
 				),
 			},
-			// Add more test steps for update, delete, import later if needed
 		},
 	})
 

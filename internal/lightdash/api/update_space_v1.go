@@ -16,6 +16,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,7 +24,7 @@ import (
 
 type UpdateSpaceV1Request struct {
 	Name      string `json:"name"`
-	IsPrivate bool   `json:"isPrivate,omitempty"`
+	IsPrivate bool   `json:"isPrivate"`
 }
 
 type UpdateSpaceV1Results struct {
@@ -40,13 +41,11 @@ type UpdateSpaceV1Response struct {
 	Status  string               `json:"status"`
 }
 
-func (c *Client) UpdateSpaceV1(projectUuid string, spaceUuid string, spaceName string, isPrivate *bool) (*UpdateSpaceV1Results, error) {
+func (c *Client) UpdateSpaceV1(_ context.Context, projectUuid string, spaceUuid string, spaceName string, isPrivate bool) (*UpdateSpaceV1Results, error) {
 	// Create the request body, including parentSpaceUuid if provided
 	data := UpdateSpaceV1Request{
-		Name: spaceName,
-	}
-	if isPrivate != nil {
-		data.IsPrivate = *isPrivate
+		Name:      spaceName,
+		IsPrivate: isPrivate,
 	}
 	marshalled, err := json.Marshal(data)
 	if err != nil {
@@ -64,6 +63,7 @@ func (c *Client) UpdateSpaceV1(projectUuid string, spaceUuid string, spaceName s
 			data, err,
 		)
 	}
+
 	// Do request
 	body, err := c.doRequest(req)
 	if err != nil {
@@ -72,6 +72,7 @@ func (c *Client) UpdateSpaceV1(projectUuid string, spaceUuid string, spaceName s
 			data, err,
 		)
 	}
+
 	// Marshal the response
 	response := UpdateSpaceV1Response{}
 	err = json.Unmarshal(body, &response)

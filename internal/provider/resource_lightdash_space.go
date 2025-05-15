@@ -343,7 +343,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	createOptions := controllers.CreateSpaceOptions{
 		ProjectUUID:     plan.ProjectUUID.ValueString(),
 		SpaceName:       plan.SpaceName.ValueString(),
-		IsPrivate:       plan.IsPrivate.ValueBool(),
+		IsPrivate:       plan.IsPrivate.ValueBoolPointer(),
 		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
 		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
 		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format
@@ -377,13 +377,13 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	// Populate the state with values returned by the controller (which reflects the API response)
 	var state spaceResourceModel
 	state.ID = types.StringValue(fmt.Sprintf("projects/%s/spaces/%s", createdSpaceDetails.ProjectUUID, createdSpaceDetails.SpaceUUID))
-	state.ProjectUUID = types.StringValue(createdSpaceDetails.ProjectUUID)
-	state.SpaceUUID = types.StringValue(createdSpaceDetails.SpaceUUID)
-	state.SpaceName = types.StringValue(createdSpaceDetails.SpaceName)
-	state.IsPrivate = types.BoolValue(createdSpaceDetails.IsPrivate)
+	state.ProjectUUID = types.StringValue(fetchedSpaceDetails.ProjectUUID)
+	state.SpaceUUID = types.StringValue(fetchedSpaceDetails.SpaceUUID)
+	state.SpaceName = types.StringValue(fetchedSpaceDetails.SpaceName)
+	state.IsPrivate = types.BoolValue(fetchedSpaceDetails.IsPrivate)
 	// Handle parent space UUID from controller result
-	if createdSpaceDetails.ParentSpaceUUID != nil {
-		state.ParentSpaceUUID = types.StringValue(*createdSpaceDetails.ParentSpaceUUID)
+	if fetchedSpaceDetails.ParentSpaceUUID != nil {
+		state.ParentSpaceUUID = types.StringValue(*fetchedSpaceDetails.ParentSpaceUUID)
 	} else {
 		state.ParentSpaceUUID = types.StringNull()
 	}
@@ -497,7 +497,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	tflog.Debug(ctx, "Updating space", map[string]any{"plan": plan, "oldState": oldState})
+	tflog.Debug(ctx, "(spaceResource.Update) Updating space", map[string]any{"plan": plan, "oldState": oldState})
 
 	// Extract member access details from the 'access' block
 	memberAccess := []spaceMemberAccessBlockModel{}
@@ -540,7 +540,10 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	tflog.Debug(ctx, "Space updated", map[string]any{"spaceDetails": updatedSpaceDetails})
+	tflog.Debug(ctx, "(spaceResource.Update) Space updated", map[string]any{
+		"spaceDetails": updatedSpaceDetails,
+		"isPrivate":    updatedSpaceDetails.IsPrivate,
+	})
 
 	// Populate the state with values returned by the controller (which reflect the final API state)
 	var updatedState spaceResourceModel

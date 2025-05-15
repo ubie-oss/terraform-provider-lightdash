@@ -15,7 +15,10 @@
 package services
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -34,7 +37,7 @@ func NewSpaceService(client *api.Client) *SpaceService {
 // Space Management Methods
 
 // CreateSpace creates a new space with specified properties
-func (s *SpaceService) CreateSpace(projectUuid, spaceName string, isPrivate bool, parentSpaceUuid *string) (*models.SpaceDetails, error) {
+func (s *SpaceService) CreateSpace(projectUuid, spaceName string, isPrivate *bool, parentSpaceUuid *string) (*models.SpaceDetails, error) {
 	createdSpace, err := s.client.CreateSpaceV1(projectUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create space: %w", err)
@@ -60,17 +63,36 @@ func (s *SpaceService) GetSpace(projectUuid, spaceUuid string) (*api.GetSpaceV1R
 }
 
 // UpdateRootSpace updates the space properties for a root space
-func (s *SpaceService) UpdateRootSpace(projectUuid, spaceUuid, spaceName string, isPrivate *bool) (*api.UpdateSpaceV1Results, error) {
-	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, isPrivate)
+func (s *SpaceService) UpdateRootSpace(ctx context.Context, projectUuid, spaceUuid, spaceName string, isPrivate *bool) (*api.UpdateSpaceV1Results, error) {
+	// If isPrivate is nil, use a default value (e.g., false).
+	// Otherwise, use the provided value.
+	privateValue := false // Default value if isPrivate is nil
+	if isPrivate != nil {
+		privateValue = *isPrivate // Use the provided value if not nil
+	}
+	tflog.Debug(ctx, "(SpaceService.UpdateRootSpace) Updating root space", map[string]interface{}{
+		"projectUuid": projectUuid,
+		"spaceUuid":   spaceUuid,
+		"spaceName":   spaceName,
+		"isPrivate":   privateValue,
+	})
+	// Pass the address of the determined boolean value to the API call.
+	updatedSpace, err := s.client.UpdateSpaceV1(ctx, projectUuid, spaceUuid, spaceName, privateValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update space properties: %w", err)
 	}
+	tflog.Debug(ctx, "(SpaceService.UpdateRootSpace) Updated space properties", map[string]interface{}{
+		"projectUuid": updatedSpace.ProjectUUID,
+		"spaceUuid":   updatedSpace.SpaceUUID,
+		"spaceName":   updatedSpace.SpaceName,
+		"isPrivate":   updatedSpace.IsPrivate,
+	})
 	return updatedSpace, nil
 }
 
 // UpdateNestedSpace updates the space properties for a nested space
-func (s *SpaceService) UpdateNestedSpace(projectUuid, spaceUuid string, spaceName string) (*api.UpdateSpaceV1Results, error) {
-	updatedSpace, err := s.client.UpdateSpaceV1(projectUuid, spaceUuid, spaceName, nil)
+func (s *SpaceService) UpdateNestedSpace(ctx context.Context, projectUuid, spaceUuid string, spaceName string, isPrivate bool) (*api.UpdateSpaceV1Results, error) {
+	updatedSpace, err := s.client.UpdateSpaceV1(ctx, projectUuid, spaceUuid, spaceName, isPrivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update nested space: %w", err)
 	}
