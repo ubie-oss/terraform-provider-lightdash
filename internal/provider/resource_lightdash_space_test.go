@@ -335,12 +335,12 @@ func TestAccSpaceResource_import(t *testing.T) {
 					}
 					// Get the project_uuid from the state
 					project_uuid, ok := res.Primary.Attributes["project_uuid"]
-					if !ok {
+					if !ok || project_uuid == "" {
 						return "", fmt.Errorf("project_uuid attribute not present in state")
 					}
 					// Get the space_uuid from the state
 					space_uuid, ok := res.Primary.Attributes["space_uuid"]
-					if !ok {
+					if !ok || space_uuid == "" {
 						return "", fmt.Errorf("space_uuid attribute not present in state")
 					}
 					// Construct the import ID in the form 'projects/<project_uuid>/spaces/<space_uuid>'

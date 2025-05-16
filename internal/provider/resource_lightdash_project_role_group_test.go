@@ -157,12 +157,12 @@ func TestAccProjectRoleGroupResource_import(t *testing.T) {
 					}
 					// Get the project_uuid from the state
 					project_uuid, ok := res.Primary.Attributes["project_uuid"]
-					if !ok && project_uuid != "" {
+					if !ok || project_uuid == "" {
 						return "", fmt.Errorf("project_uuid attribute not present in state")
 					}
 					// Get the group_uuid from the state
 					group_uuid, ok := res.Primary.Attributes["group_uuid"]
-					if !ok && group_uuid != "" {
+					if !ok || group_uuid == "" {
 						return "", fmt.Errorf("group_uuid attribute not present in state")
 					}
 					// Construct the import ID in the form 'projects/<project_uuid>/access-groups/<group_uuid>'
