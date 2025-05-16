@@ -273,14 +273,6 @@ func TestAccSpaceResource_import(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get importConfig: %v", err)
 	}
-	// importConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "import", "020_import.tf"})
-	// if err != nil {
-	// 	t.Fatalf("Failed to get importConfig: %v", err)
-	// }
-	importConfig030, err := ReadAccTestResource([]string{"resource_lightdash_space", "import", "030_import.tf"})
-	if err != nil {
-		t.Fatalf("Failed to get importConfig: %v", err)
-	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -325,7 +317,7 @@ func TestAccSpaceResource_import(t *testing.T) {
 			// },
 			// Import the states
 			{
-				Config:            providerConfig + importConfig030,
+				Config:            providerConfig + importConfig010,
 				ResourceName:      "lightdash_space.import__public_root_space",
 				ImportState:       true,
 				ImportStateVerify: true,
