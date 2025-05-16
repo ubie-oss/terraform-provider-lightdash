@@ -312,8 +312,9 @@ func (r *projectRoleGroupResource) ImportState(ctx context.Context, req resource
 	}
 
 	// Set the resource attributes
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), group.ProjectUUID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_uuid"), group.GroupUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), project_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_uuid"), group_uuid)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role"), group.ProjectRole)...)
 }
 
