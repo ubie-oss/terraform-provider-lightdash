@@ -15,14 +15,16 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // Using the shared testAccPreCheck and testAccProtoV6ProviderFactories from provider_acc_test.go
 
-func TestAccSpaceResource(t *testing.T) {
+func TestAccSpaceResource_simple(t *testing.T) {
 	if !isIntegrationTestMode() {
 		t.Skip("Skipping acceptance test for resource_lightdash_space")
 	}
@@ -76,6 +78,18 @@ func TestAccSpaceResource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccSpaceResource_nested(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_space - nested")
+	}
+
+	// Get the provider config
+	providerConfig, err := getProviderConfig()
+	if err != nil {
+		t.Fatalf("Failed to get providerConfig: %v", err)
+	}
 
 	// Test of nested spaces
 	nestedSpaceConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "nested_space", "010_nested_space.tf"})
@@ -189,6 +203,18 @@ func TestAccSpaceResource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccSpaceResource_access(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_space - access")
+	}
+
+	// Get the provider config
+	providerConfig, err := getProviderConfig()
+	if err != nil {
+		t.Fatalf("Failed to get providerConfig: %v", err)
+	}
 
 	// Test of space access
 	spaceAccessConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "space_access", "010_space_access.tf"})
@@ -226,6 +252,109 @@ func TestAccSpaceResource(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "is_private", "false"),
 					resource.TestCheckResourceAttr("lightdash_space.space_access__test_space_2", "group_access.#", "0"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccSpaceResource_import(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_space - import")
+	}
+
+	// Get the provider config
+	providerConfig, err := getProviderConfig()
+	if err != nil {
+		t.Fatalf("Failed to get providerConfig: %v", err)
+	}
+
+	// Test of space access
+	importConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "import", "010_import.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get importConfig: %v", err)
+	}
+	// importConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "import", "020_import.tf"})
+	// if err != nil {
+	// 	t.Fatalf("Failed to get importConfig: %v", err)
+	// }
+	importConfig030, err := ReadAccTestResource([]string{"resource_lightdash_space", "import", "030_import.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get importConfig: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create the states
+			{
+				Config: providerConfig + importConfig010,
+				Check: resource.ComposeTestCheckFunc(
+					// lightdash_space.import__public_root_space
+					resource.TestCheckResourceAttr("lightdash_space.import__public_root_space", "name", "Public Root Space (Acceptance Test: import)"),
+					resource.TestCheckResourceAttr("lightdash_space.import__public_root_space", "is_private", "false"),
+					resource.TestCheckResourceAttr("lightdash_space.import__public_root_space", "deletion_protection", "false"),
+					// lightdash_space.import__public_child_space
+					resource.TestCheckResourceAttr("lightdash_space.import__public_child_space", "name", "Public Child Space (Acceptance Test: import)"),
+					resource.TestCheckResourceAttr("lightdash_space.import__public_child_space", "deletion_protection", "false"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.import__public_child_space",
+						"parent_space_uuid",
+						"lightdash_space.import__public_root_space",
+						"space_uuid",
+					),
+					// lightdash_space.import__private_root_space
+					resource.TestCheckResourceAttr("lightdash_space.import__private_root_space", "name", "Private Root Space (Acceptance Test: import)"),
+					resource.TestCheckResourceAttr("lightdash_space.import__private_root_space", "is_private", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.import__private_root_space", "deletion_protection", "false"),
+					// lightdash_space.import__private_child_space
+					resource.TestCheckResourceAttr("lightdash_space.import__private_child_space", "name", "Private Child Space (Acceptance Test: import)"),
+					resource.TestCheckResourceAttr("lightdash_space.import__private_child_space", "deletion_protection", "false"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.import__private_child_space",
+						"parent_space_uuid",
+						"lightdash_space.import__private_root_space",
+						"space_uuid",
+					),
+				),
+			},
+			// Remove the states
+			// {
+			// 	Config: providerConfig + importConfig020,
+			// 	Check:  resource.ComposeTestCheckFunc(),
+			// },
+			// Import the states
+			{
+				Config:            providerConfig + importConfig030,
+				ResourceName:      "lightdash_space.import__public_root_space",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"access",
+					"created_at",
+					"last_updated",
+					// NOTE tentatively ignore the deletion_protection attribute
+					"deletion_protection",
+				},
+				ImportStateIdFunc: func(state *terraform.State) (string, error) {
+					res, ok := state.RootModule().Resources["lightdash_space.import__public_root_space"]
+					if !ok {
+						return "", fmt.Errorf("resource not found in state for import")
+					}
+					// Get the project_uuid from the state
+					project_uuid, ok := res.Primary.Attributes["project_uuid"]
+					if !ok {
+						return "", fmt.Errorf("project_uuid attribute not present in state")
+					}
+					// Get the space_uuid from the state
+					space_uuid, ok := res.Primary.Attributes["space_uuid"]
+					if !ok {
+						return "", fmt.Errorf("space_uuid attribute not present in state")
+					}
+					// Construct the import ID in the form 'projects/<project_uuid>/spaces/<space_uuid>'
+					id := fmt.Sprintf("projects/%s/spaces/%s", project_uuid, space_uuid)
+					return id, nil
+				},
 			},
 		},
 	})
