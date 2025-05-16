@@ -26,7 +26,6 @@ linters:
     - predeclared
     - unconvert
     - unparam
-    - usetesting
   exclusions:
     presets:
       - comments
