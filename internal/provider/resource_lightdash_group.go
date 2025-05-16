@@ -412,7 +412,7 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Set the resource attributes
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), groupUuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), importedGroup.OrganizationUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_uuid"), importedGroup.GroupUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), importedGroup.Name)...)
