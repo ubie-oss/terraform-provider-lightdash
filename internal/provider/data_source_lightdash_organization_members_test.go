@@ -47,12 +47,12 @@ func TestAccOrganizationMembersDataSource(t *testing.T) {
 				Config: providerConfig + config,
 				Check: resource.ComposeTestCheckFunc(
 					// lightdash_project_role_group.resource_lightdash_project_role_group__grant
-					resource.TestCheckResourceAttrSet("data.lightdash_organization.test", "organization_uuid"),
-					resource.TestCheckTypeSetElemNestedAttrs("data.lightdash_organization.test", "members.*", map[string]string{
-						"user_uuid": "user_uuid",
-						"email":     "email",
-						"role":      "role",
-					}),
+					resource.TestCheckResourceAttrSet("data.lightdash_organization_members.test", "organization_uuid"),
+					// TODO: Add check for members
+					//       We need to figure out the expression to specify wildcard for members in the terraform acceptance test
+					resource.TestCheckResourceAttrSet("data.lightdash_organization_members.test", "members.0.user_uuid"),
+					resource.TestCheckResourceAttrSet("data.lightdash_organization_members.test", "members.0.email"),
+					resource.TestCheckResourceAttrSet("data.lightdash_organization_members.test", "members.0.role"),
 				),
 			},
 		},
