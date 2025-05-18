@@ -39,6 +39,14 @@ build: gen-docs go-tidy gosec
 gosec:
 	gosec ./internal/...
 
+upgrade-go-mod:
+	# Upgrade dependencies
+	go get -u ./...
+	# Upgrade go.mod
+	go mod tidy
+	# Upgrade go.sum
+	go mod vendor
+
 lint: run-trunk-check run-pre-commit
 
 run-trunk-check:
