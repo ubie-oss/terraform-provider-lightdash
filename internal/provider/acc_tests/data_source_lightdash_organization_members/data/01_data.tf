@@ -1,2 +1,2 @@
-data "lightdash_organization" "test" {
+data "lightdash_organization_members" "test" {
 }
