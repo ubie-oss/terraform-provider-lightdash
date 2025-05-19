@@ -615,18 +615,26 @@ func (c *SpaceController) updateRootSpace(
 		"currentSpaceDetails": currentSpaceDetails,
 	})
 
-	// 1. Update the space properties via the service layer
-	updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivate)
-	if err != nil {
-		return []error{fmt.Errorf("failed to update space properties: %w", err)}
+	// If isPrivate isn't changed, then it is nil.
+	// This is a workaround to avoid the API from returning an error.
+	var isPrivateForUpdate *bool
+	if isPrivate != nil && *isPrivate != currentSpaceDetails.IsPrivate {
+		isPrivateForUpdate = isPrivate
 	}
 
-	tflog.Debug(ctx, "(SpaceController.updateRootSpace) Updated space details", map[string]interface{}{
-		"projectUUID": updatedSpaceDetails.ProjectUUID,
-		"spaceUUID":   updatedSpaceDetails.SpaceUUID,
-		"spaceName":   updatedSpaceDetails.SpaceName,
-		"isPrivate":   updatedSpaceDetails.IsPrivate,
-	})
+	// 1. Update the space properties via the service layer if they have changed
+	if spaceName != currentSpaceDetails.SpaceName || isPrivateForUpdate != nil {
+		updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivateForUpdate)
+		if err != nil {
+			return []error{fmt.Errorf("failed to update space properties: %w", err)}
+		}
+		tflog.Debug(ctx, "(SpaceController.updateRootSpace) Updated space details", map[string]interface{}{
+			"projectUUID": updatedSpaceDetails.ProjectUUID,
+			"spaceUUID":   updatedSpaceDetails.SpaceUUID,
+			"spaceName":   updatedSpaceDetails.SpaceName,
+			"isPrivate":   updatedSpaceDetails.IsPrivate,
+		})
+	}
 
 	// 2. Manage member access (add/update/remove direct access)
 	memberErrors := c.manageRootSpaceMemberAccess(
