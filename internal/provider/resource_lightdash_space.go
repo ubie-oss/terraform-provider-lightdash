@@ -275,6 +275,9 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 		return
 	}
 
+	// Validate configuration for space visibility
+	errors = append(errors, r.validateSpaceVisibilityConfig(ctx, config)...)
+
 	// Validate configuration for nested spaces
 	for _, error := range r.validateNestedSpaceConfig(ctx, config) {
 		errors = append(errors, error)
@@ -309,6 +312,20 @@ func (r *spaceResource) validateNestedSpaceConfig(_ context.Context, config spac
 		// So, it is impossible to set access or group_access when parent_space_uuid is set.
 		if !config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0 {
 			errors = append(errors, fmt.Errorf("parent space UUID is set, group access list must be empty"))
+		}
+	}
+	return errors
+}
+
+func (r *spaceResource) validateSpaceVisibilityConfig(_ context.Context, config spaceResourceModel) []error {
+	var errors []error
+	// A public space shouldn't have access lists
+	if !config.IsPrivate.IsNull() && !config.IsPrivate.ValueBool() {
+		if !config.MemberAccessList.IsNull() || len(config.MemberAccessList.Elements()) > 0 {
+			errors = append(errors, fmt.Errorf("is_private is not set, member access list must be empty"))
+		}
+		if !config.GroupAccessList.IsNull() || len(config.GroupAccessList.Elements()) > 0 {
+			errors = append(errors, fmt.Errorf("is_private is not set, group access list must be empty"))
 		}
 	}
 	return errors
