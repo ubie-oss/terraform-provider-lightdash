@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -141,6 +142,12 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 		NewGroupDataSource,
 		NewGroupMembersDataSource,
 		NewProjectSchedulerSettingsDataSource,
+	}
+}
+
+func (p *lightdashProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{
+		NewUniqueProjectMembersFunction,
 	}
 }
 
