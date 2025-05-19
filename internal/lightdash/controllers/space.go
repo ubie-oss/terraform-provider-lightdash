@@ -615,8 +615,15 @@ func (c *SpaceController) updateRootSpace(
 		"currentSpaceDetails": currentSpaceDetails,
 	})
 
+	// If isPrivate isn't changed, then it is nil.
+	// This is a workaround to avoid the API from returning an error.
+	var isPrivateForUpdate *bool
+	if isPrivate != nil && *isPrivate != currentSpaceDetails.IsPrivate {
+		isPrivateForUpdate = isPrivate
+	}
+
 	// 1. Update the space properties via the service layer
-	updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivate)
+	updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivateForUpdate)
 	if err != nil {
 		return []error{fmt.Errorf("failed to update space properties: %w", err)}
 	}
