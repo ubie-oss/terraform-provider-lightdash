@@ -73,34 +73,35 @@ func (f *UniqueProjectMembersFunction) Definition(
 	resp *function.DefinitionResponse,
 ) {
 	resp.Definition = function.Definition{
-		Summary:     "Unique the members of a project by role.",
-		Description: "If a member belongs to multiple roles, they will only appear once in the returned list. The member will be assigned the highest role in the list of roles (admin > developer > editor > integration > viewer).",
+		Summary: "Unique the members of a project by role.",
+		MarkdownDescription: `If a member belongs to multiple roles, they will only appear once in the returned list. ` +
+			`The member will be assigned the highest role in the list of roles (admin > developer > editor > integration > viewer).`,
 
 		Parameters: []function.Parameter{
 			function.ListParameter{
-				Name:        "admins",
-				Description: "List of admin member UUIDs.",
-				ElementType: types.StringType,
+				Name:                "admins",
+				MarkdownDescription: "List of admin member UUIDs.",
+				ElementType:         types.StringType,
 			},
 			function.ListParameter{
-				Name:        "developers",
-				Description: "List of developer member UUIDs.",
-				ElementType: types.StringType,
+				Name:                "developers",
+				MarkdownDescription: "List of developer member UUIDs.",
+				ElementType:         types.StringType,
 			},
 			function.ListParameter{
-				Name:        "editors",
-				Description: "List of editor member UUIDs.",
-				ElementType: types.StringType,
+				Name:                "editors",
+				MarkdownDescription: "List of editor member UUIDs.",
+				ElementType:         types.StringType,
 			},
 			function.ListParameter{
-				Name:        "interactive_viewers",
-				Description: "List of interactive viewer member UUIDs.",
-				ElementType: types.StringType,
+				Name:                "interactive_viewers",
+				MarkdownDescription: "List of interactive viewer member UUIDs.",
+				ElementType:         types.StringType,
 			},
 			function.ListParameter{
-				Name:        "viewers",
-				Description: "List of viewer member UUIDs.",
-				ElementType: types.StringType,
+				Name:                "viewers",
+				MarkdownDescription: "List of viewer member UUIDs.",
+				ElementType:         types.StringType,
 			},
 		},
 		Return: function.ObjectReturn{
