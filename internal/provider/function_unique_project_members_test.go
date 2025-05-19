@@ -22,6 +22,10 @@ import (
 )
 
 func TestUniqueProjectMembersRun_simple(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_project_role_group")
+	}
+
 	// Get the provider config
 	providerConfig, err := getProviderConfig()
 	if err != nil {
@@ -35,6 +39,7 @@ func TestUniqueProjectMembersRun_simple(t *testing.T) {
 	}
 
 	resource.UnitTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
@@ -55,6 +60,10 @@ func TestUniqueProjectMembersRun_simple(t *testing.T) {
 }
 
 func TestUniqueProjectMembersRun_complicated(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_project_role_group")
+	}
+
 	// Get the provider config
 	providerConfig, err := getProviderConfig()
 	if err != nil {
@@ -68,6 +77,7 @@ func TestUniqueProjectMembersRun_complicated(t *testing.T) {
 	}
 
 	resource.UnitTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
