@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-func TestUniqueProjectMembersRun_simple(t *testing.T) {
+func TestNormalizeProjectMembersRun_simple(t *testing.T) {
 	if !isIntegrationTestMode() {
 		t.Skip("Skipping acceptance test for resource_lightdash_project_role_group")
 	}
@@ -33,7 +33,7 @@ func TestUniqueProjectMembersRun_simple(t *testing.T) {
 	}
 
 	// Get the function config
-	functionConfig010, err := ReadAccTestResource([]string{"function_unique_project_members", "simple", "010_simple.tf"})
+	functionConfig010, err := ReadAccTestResource([]string{"function_normalize_project_members", "simple", "010_simple.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get functionConfig: %v", err)
 	}
@@ -48,18 +48,18 @@ func TestUniqueProjectMembersRun_simple(t *testing.T) {
 			{
 				Config: providerConfig + functionConfig010,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckOutput("unique_project_members_admins_json", "[\"admin1\"]"),
-					resource.TestCheckOutput("unique_project_members_developers_json", "[\"dev1\"]"),
-					resource.TestCheckOutput("unique_project_members_editors_json", "[\"editor1\"]"),
-					resource.TestCheckOutput("unique_project_members_interactive_viewers_json", "[\"interactive_viewer1\"]"),
-					resource.TestCheckOutput("unique_project_members_viewers_json", "[\"viewer1\"]"),
+					resource.TestCheckOutput("normalized_project_members_admins_json", "[\"admin1\"]"),
+					resource.TestCheckOutput("normalized_project_members_developers_json", "[\"dev1\"]"),
+					resource.TestCheckOutput("normalized_project_members_editors_json", "[\"editor1\"]"),
+					resource.TestCheckOutput("normalized_project_members_interactive_viewers_json", "[\"interactive_viewer1\"]"),
+					resource.TestCheckOutput("normalized_project_members_viewers_json", "[\"viewer1\"]"),
 				),
 			},
 		},
 	})
 }
 
-func TestUniqueProjectMembersRun_complicated(t *testing.T) {
+func TestNormalizeProjectMembersRun_complicated(t *testing.T) {
 	if !isIntegrationTestMode() {
 		t.Skip("Skipping acceptance test for resource_lightdash_project_role_group")
 	}
@@ -71,7 +71,7 @@ func TestUniqueProjectMembersRun_complicated(t *testing.T) {
 	}
 
 	// Get the function config
-	functionConfig010, err := ReadAccTestResource([]string{"function_unique_project_members", "complicated", "010_complicated.tf"})
+	functionConfig010, err := ReadAccTestResource([]string{"function_normalize_project_members", "complicated", "010_complicated.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get functionConfig: %v", err)
 	}
@@ -86,11 +86,11 @@ func TestUniqueProjectMembersRun_complicated(t *testing.T) {
 			{
 				Config: providerConfig + functionConfig010,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckOutput("unique_project_members_admins_json", "[\"admin1\",\"admin2\"]"),
-					resource.TestCheckOutput("unique_project_members_developers_json", "[\"dev1\",\"dev2\"]"),
-					resource.TestCheckOutput("unique_project_members_editors_json", "[\"editor1\",\"editor2\"]"),
-					resource.TestCheckOutput("unique_project_members_interactive_viewers_json", "[\"interactive_viewer1\",\"interactive_viewer2\"]"),
-					resource.TestCheckOutput("unique_project_members_viewers_json", "[\"viewer1\",\"viewer2\"]"),
+					resource.TestCheckOutput("normalized_project_members_admins_json", "[\"admin1\",\"admin2\"]"),
+					resource.TestCheckOutput("normalized_project_members_developers_json", "[\"dev1\",\"dev2\"]"),
+					resource.TestCheckOutput("normalized_project_members_editors_json", "[\"editor1\",\"editor2\"]"),
+					resource.TestCheckOutput("normalized_project_members_interactive_viewers_json", "[\"interactive_viewer1\",\"interactive_viewer2\"]"),
+					resource.TestCheckOutput("normalized_project_members_viewers_json", "[\"viewer1\",\"viewer2\"]"),
 				),
 			},
 		},

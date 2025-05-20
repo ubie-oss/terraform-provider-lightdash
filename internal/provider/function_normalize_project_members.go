@@ -25,11 +25,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 )
 
-// Custom function to unique the members of a project by role.
+// Custom function to normalize the members of a project by role.
 // If a member belongs to multiple roles, they will only appear once in the returned list.
 // The member will be assigned the highest role in the list of roles.
 //
-// provider::lightdash::function::unique_project_members(:
+// provider::lightdash::function::normalize_project_members(:
 //   admins: list(string),
 //   developers: list(string),
 //   editors: list(string),
@@ -37,7 +37,7 @@ import (
 //   viewers: list(string),
 // )
 //
-// Returns a list of unique members by role
+// Returns a list of normalize members by role
 // {
 //   admins: list(string),
 //   developers: list(string),
@@ -46,34 +46,34 @@ import (
 //   viewers: list(string),
 // }
 
-// Ensure UniqueProjectMembersFunction satisfies the function.Function interface.
-var _ function.Function = &UniqueProjectMembersFunction{}
+// Ensure NormalizeProjectMembersFunction satisfies the function.Function interface.
+var _ function.Function = &NormalizeProjectMembersFunction{}
 
-// UniqueProjectMembersFunction defines the function implementation.
-type UniqueProjectMembersFunction struct{}
+// NormalizeProjectMembersFunction defines the function implementation.
+type NormalizeProjectMembersFunction struct{}
 
-func NewUniqueProjectMembersFunction() function.Function {
-	return &UniqueProjectMembersFunction{}
+func NewNormalizeProjectMembersFunction() function.Function {
+	return &NormalizeProjectMembersFunction{}
 }
 
 // Metadata returns the function type name.
-func (f *UniqueProjectMembersFunction) Metadata(
+func (f *NormalizeProjectMembersFunction) Metadata(
 	_ context.Context,
 	req function.MetadataRequest,
 	resp *function.MetadataResponse,
 ) {
 	// The TypeName is inferred from the function name in the provider's Functions method.
-	resp.Name = "unique_project_members"
+	resp.Name = "normalize_project_members"
 }
 
 // Definition defines the function schema including parameters and return type.
-func (f *UniqueProjectMembersFunction) Definition(
+func (f *NormalizeProjectMembersFunction) Definition(
 	_ context.Context,
 	req function.DefinitionRequest,
 	resp *function.DefinitionResponse,
 ) {
 	resp.Definition = function.Definition{
-		Summary: "Unique the members of a project by role.",
+		Summary: "Normalize the members of a project by role.",
 		MarkdownDescription: `If a member belongs to multiple roles, they will only appear once in the returned list. ` +
 			`The member will be assigned the highest role in the list of roles (admin > developer > editor > integration > viewer).`,
 
@@ -116,8 +116,8 @@ func (f *UniqueProjectMembersFunction) Definition(
 	}
 }
 
-// UniqueProjectMembersParametersModel maps the function parameters and return.
-type UniqueProjectMembersParametersModel struct {
+// NormalizeProjectMembersParametersModel maps the function parameters and return.
+type NormalizeProjectMembersParametersModel struct {
 	Admins             types.List `tfsdk:"admins"`
 	Developers         types.List `tfsdk:"developers"`
 	Editors            types.List `tfsdk:"editors"`
@@ -125,8 +125,8 @@ type UniqueProjectMembersParametersModel struct {
 	Viewers            types.List `tfsdk:"viewers"`
 }
 
-// UniqueProjectMembersResponseModel maps the function value.
-type UniqueProjectMembersResponseModel struct {
+// NormalizeProjectMembersResponseModel maps the function value.
+type NormalizeProjectMembersResponseModel struct {
 	Admins             types.List `tfsdk:"admins"`
 	Developers         types.List `tfsdk:"developers"`
 	Editors            types.List `tfsdk:"editors"`
@@ -134,8 +134,8 @@ type UniqueProjectMembersResponseModel struct {
 	Viewers            types.List `tfsdk:"viewers"`
 }
 
-// Run the function to unique the members.
-func (f *UniqueProjectMembersFunction) Run(
+// Run the function to normalize the members.
+func (f *NormalizeProjectMembersFunction) Run(
 	ctx context.Context,
 	req function.RunRequest,
 	resp *function.RunResponse,
@@ -168,8 +168,8 @@ func (f *UniqueProjectMembersFunction) Run(
 		return
 	}
 
-	// Call the uniqueMembers function
-	resultAdmins, resultDevelopers, resultEditors, resultInteractiveViewers, resultViewers := f.uniqueMembers(
+	// Call the normalizeMembers function
+	resultAdmins, resultDevelopers, resultEditors, resultInteractiveViewers, resultViewers := f.normalizeMembers(
 		adminMembers,
 		developerMembers,
 		editorMembers,
@@ -178,7 +178,7 @@ func (f *UniqueProjectMembersFunction) Run(
 	)
 
 	// Convert Go slices back to Terraform types.List and handle potential diagnostics
-	resultModel := UniqueProjectMembersResponseModel{}
+	resultModel := NormalizeProjectMembersResponseModel{}
 	var listDiags diag.Diagnostics
 
 	resultModel.Admins, listDiags = types.ListValueFrom(ctx, types.StringType, resultAdmins)
@@ -204,7 +204,7 @@ func (f *UniqueProjectMembersFunction) Run(
 	resp.Error = function.ConcatFuncErrors(resp.Error, resp.Result.Set(ctx, resultModel))
 }
 
-func (f *UniqueProjectMembersFunction) uniqueMembers(
+func (f *NormalizeProjectMembersFunction) normalizeMembers(
 	admins []string,
 	developers []string,
 	editors []string,

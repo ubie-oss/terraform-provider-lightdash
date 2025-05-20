@@ -147,7 +147,7 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 
 func (p *lightdashProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
-		NewUniqueProjectMembersFunction,
+		NewNormalizeProjectMembersFunction,
 	}
 }
 
