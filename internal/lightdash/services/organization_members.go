@@ -16,6 +16,8 @@ package services
 
 import (
 	"fmt"
+	"slices"
+	"sort"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -33,35 +35,51 @@ func NewOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 	}
 }
 
-// GetOrganizationMembers retrieves the members of an organization.
-// It checks if the members list is already populated to avoid unnecessary API calls.
-// If the members list is empty, it fetches the members from the organization using the API client.
+// Fetch the members from the organization using the API client
 func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganizationMembersV1Results, error) {
+	pageSize := 100
+	members := []api.GetOrganizationMembersV1Results{}
+
+	// Fetch the members from the organization using the API client
+	page := 0
+	for {
+		// Fetch the members from the organization using the API client
+		pageMembers, err := s.client.GetOrganizationMembersV1(0, pageSize, page, "")
+		if err != nil {
+			return nil, err
+		}
+		// If no members are returned, break the loop
+		if len(pageMembers) == 0 {
+			break
+		}
+		// Append a member if it's not already in the list
+		for _, member := range pageMembers {
+			if !slices.Contains(members, member) {
+				members = append(members, member)
+			}
+		}
+		// Increment the page number
+		page++
+	}
+	// Sort the members by email
+	sort.Slice(members, func(i, j int) bool {
+		return members[i].Email < members[j].Email
+	})
+	return members, nil
+}
+
+// Fetch the members from the organization using the API client and cache the results
+// If the members list is already populated, it returns the cached results
+func (s *OrganizationMembersService) GetOrganizationMembersByCache() ([]api.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
-		page := 0
-		pageSize := 100
-		memberMap := make(map[string]api.GetOrganizationMembersV1Results)
-		for {
-			// Fetch the members from the organization using the API client
-			members, err := s.client.GetOrganizationMembersV1(0, pageSize, page, "")
-			if err != nil {
-				return nil, err
-			}
-			if len(members) == 0 {
-				break
-			}
-			for _, member := range members {
-				memberMap[member.UserUUID] = member
-			}
-			page++
+		// Fetch the members from the organization using the API client
+		members, err := s.GetOrganizationMembers()
+		if err != nil {
+			return nil, err
 		}
-		// Convert map values to slice to ensure uniqueness
-		for _, member := range memberMap {
-			s.members = append(s.members, member)
-		}
+		s.members = members
 	}
-
 	// Return the list of members
 	return s.members, nil
 }
@@ -70,7 +88,7 @@ func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganiza
 // It leverages the GetOrganizationMembers method to fetch all members and filters out non-admins.
 func (s *OrganizationMembersService) GetOrganizationMembersByRole(role models.OrganizationMemberRole) ([]api.GetOrganizationMembersV1Results, error) {
 	// Retrieve all members of the organization
-	allMembers, err := s.GetOrganizationMembers()
+	allMembers, err := s.GetOrganizationMembersByCache()
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +107,7 @@ func (s *OrganizationMembersService) GetOrganizationMembersByRole(role models.Or
 // GetOrganizationMemberByUserUuid retrieves a member of an organization by their UUID.
 func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid string) (*api.GetOrganizationMembersV1Results, error) {
 	// Retrieve all organization members
-	organizationMembers, err := s.GetOrganizationMembers()
+	organizationMembers, err := s.GetOrganizationMembersByCache()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +124,7 @@ func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid st
 // GetOrganizationMemberByEmail retrieves a member of an organization by their email.
 func (s *OrganizationMembersService) GetOrganizationMemberByEmail(email string) (*api.GetOrganizationMembersV1Results, error) {
 	// Retrieve all organization members
-	organizationMembers, err := s.GetOrganizationMembers()
+	organizationMembers, err := s.GetOrganizationMembersByCache()
 	if err != nil {
 		return nil, err
 	}
