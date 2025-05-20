@@ -150,7 +150,9 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Download dependencies
-        run: go mod download
+        run: |
+          go mod download
       - name: Run Deadcode
         run: |
+          go install github.com/mattn/deadcode@latest
           deadcode -test ./...
