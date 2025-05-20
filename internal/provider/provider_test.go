@@ -15,24 +15,11 @@
 package provider
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
-
-func getTestProviderConfig(api_key *string) string {
-	// providerConfig is a shared configuration to combine with the actual
-	// test configuration so the client is properly configured.
-	template := `
-provider "lightdash" {
-  host = "https://app.lightdash.cloud"
-  token = "%[1]%"
-}`
-	providerConfig := fmt.Sprintf(template, api_key)
-	return providerConfig
-}
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
 // acceptance testing. The factory function will be invoked for every Terraform

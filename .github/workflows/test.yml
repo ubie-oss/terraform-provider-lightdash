@@ -107,9 +107,11 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - run: |
+      - name: Download dependencies
+        run: |
           go mod download
-      - run: |
+      - name: Run tests
+        run: |
           go test -v -cover ./internal/...
       # TODO support integration test
       # - env:
@@ -119,7 +121,7 @@ jobs:
 
   # Run gosec security scanner
   gosec:
-    name: Gosec
+    name: gosec
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on
@@ -130,7 +132,26 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go mod download
-      - name: Run Gosec Security Scanner
+      - name: Run gosec Security Scanner
         uses: securego/gosec@v2.22.4
         with:
           args: ./internal/...
+
+  # Run deadcode scanner
+  deadcode:
+    name: deadcode
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Download dependencies
+        run: |
+          go mod download
+      - name: Run Deadcode
+        run: |
+          go run golang.org/x/tools/cmd/deadcode -test ./internal/...

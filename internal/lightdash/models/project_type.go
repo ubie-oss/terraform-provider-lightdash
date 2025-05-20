@@ -21,13 +21,3 @@ const (
 	DEFAULT_PROJECT_TYPE ProjectType = "DEFAULT"
 	PREVIEW_PROJECT_TYPE ProjectType = "PREVIEW"
 )
-
-// Check if a given ProjectType is valid
-func (e ProjectType) IsValid() bool {
-	switch e {
-	case DEFAULT_PROJECT_TYPE,
-		PREVIEW_PROJECT_TYPE:
-		return true
-	}
-	return false
-}
