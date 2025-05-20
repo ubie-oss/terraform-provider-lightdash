@@ -7,16 +7,19 @@ data "lightdash_organization" "test" {
 resource "lightdash_group" "space_access__test_group_1" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "Acceptance Test Group 1"
+  members           = []
 }
 
 resource "lightdash_group" "space_access__test_group_2" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "Acceptance Test Group 2"
+  members           = []
 }
 
 resource "lightdash_group" "space_access__test_group_3" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "Acceptance Test Group 3"
+  members           = []
 }
 
 #######################################################################
