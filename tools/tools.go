@@ -8,4 +8,6 @@ package tools
 import (
 	// Documentation generation
 	_ "github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs"
+	// deadcode to find unused code
+	_ "golang.org/x/tools/cmd/deadcode"
 )
