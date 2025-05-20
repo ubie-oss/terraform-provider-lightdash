@@ -7,20 +7,21 @@ alwaysApply: true
 
 - **`internal/`**
   Core Go source code for the provider implementation.
-  - `provider/`: Terraform provider logic, resource and data source definitions.
   - `lightdash/`: Internal Lightdash API, models, services, and controllers.
+  - `provider/`: Terraform provider logic, resource and data source definitions.
 
 - **`examples/`**
   Example Terraform configurations.
-  - `resources/`: Example usage of resource types.
   - `data-sources/`: Example usage of data sources.
+  - `functions/`: Example usage of functions.
   - `provider/`: Example provider configuration.
+  - `resources/`: Example usage of resource types.
 
 - **`docs/`**
   Documentation for users and developers.
-  - `resources/`: Resource documentation.
   - `data-sources/`: Data source documentation.
-  - `index.md`: Main documentation entry point.
+  - `functions/`: Function documentation.
+  - `resources/`: Resource documentation.
 
 - **`integration_tests/`**
   Integration test configurations and scripts for validating provider functionality.
@@ -29,9 +30,15 @@ alwaysApply: true
   Developer-focused documentation and utilities.
   - `docs/`: Internal developer documentation.
 
-- **Other notable files and directories:**
+- **Other notable directories:**
+  - `scripts/`: Utility scripts
+  - `tools/`: Development tools
+  - `vendor/`: Go dependencies
+    - `github.com/`, `golang.org/`, etc.: Vendor packages
+
+- **Key files:**
   - `main.go`: Provider entry point.
   - `go.mod`, `go.sum`: Go module dependencies.
   - `README.md`, `CONTRIBUTING.md`: Project overview and contribution guidelines.
   - `.github/`: GitHub workflows and configuration.
-  - `.trunk/`, `.vscode/`, `.cursor/`: Tooling, vendored dependencies, and editor/project configuration.
+  - `.trunk/`: Tooling configuration.
