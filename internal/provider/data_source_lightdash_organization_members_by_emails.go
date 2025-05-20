@@ -57,38 +57,38 @@ func (d *organizationMembersByEmailsDataSource) Metadata(ctx context.Context, re
 
 func (d *organizationMembersByEmailsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash organization members data source",
-		Description:         "Lightdash organization members data source",
+		MarkdownDescription: "Fetches Lightdash organization members filtered by a list of emails.",
+		Description:         "Fetches Lightdash organization members filtered by a list of emails.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "Identifier of the data source, computed as `organizations/<organization_uuid>/users`.",
 				Computed:            true,
 			},
 			"emails": schema.ListAttribute{
-				MarkdownDescription: "List of emails",
+				MarkdownDescription: "A list of email addresses to filter the organization members by. Only members with an email in this list will be returned.",
 				Required:            true,
 				ElementType:         types.StringType,
 				Sensitive:           true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the organization the members belong to.",
 				Computed:            true,
 			},
 			"members": schema.ListNestedAttribute{
-				Description: "List of projects.",
+				Description: "A list of organization members matching the provided emails, sorted by user UUID.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The unique identifier of the Lightdash user.",
 							Computed:            true,
 						},
 						"email": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The email address of the Lightdash user.",
 							Computed:            true,
 						},
 						"role": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The organization role of the Lightdash user (e.g., `viewer`, `editor`, `admin`).",
 							Computed:            true,
 						},
 					},
