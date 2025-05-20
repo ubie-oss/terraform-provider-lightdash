@@ -96,3 +96,115 @@ func TestNormalizeProjectMembersRun_complicated(t *testing.T) {
 		},
 	})
 }
+
+func TestNormalizeMembers_normalizeMembers(t *testing.T) {
+	tests := []struct {
+		name                       string
+		admins                     []string
+		developers                 []string
+		editors                    []string
+		interactiveViewers         []string
+		viewers                    []string
+		expectedAdmins             []string
+		expectedDevelopers         []string
+		expectedEditors            []string
+		expectedInteractiveViewers []string
+		expectedViewers            []string
+	}{
+		{
+			name:                       "simple case - no overlapping roles",
+			admins:                     []string{"admin1"},
+			developers:                 []string{"dev1"},
+			editors:                    []string{"editor1"},
+			interactiveViewers:         []string{"iv1"},
+			viewers:                    []string{"viewer1"},
+			expectedAdmins:             []string{"admin1"},
+			expectedDevelopers:         []string{"dev1"},
+			expectedEditors:            []string{"editor1"},
+			expectedInteractiveViewers: []string{"iv1"},
+			expectedViewers:            []string{"viewer1"},
+		},
+		{
+			name:                       "overlapping roles - member in multiple roles",
+			admins:                     []string{"admin1", "admin2"},
+			developers:                 []string{"dev1", "admin1"},
+			editors:                    []string{"editor1", "dev1"},
+			interactiveViewers:         []string{"iv1", "editor1"},
+			viewers:                    []string{"viewer1", "iv1"},
+			expectedAdmins:             []string{"admin1", "admin2"},
+			expectedDevelopers:         []string{"dev1"},
+			expectedEditors:            []string{"editor1"},
+			expectedInteractiveViewers: []string{"iv1"},
+			expectedViewers:            []string{"viewer1"},
+		},
+		{
+			name:                       "empty input",
+			admins:                     []string{},
+			developers:                 []string{},
+			editors:                    []string{},
+			interactiveViewers:         []string{},
+			viewers:                    []string{},
+			expectedAdmins:             []string{},
+			expectedDevelopers:         []string{},
+			expectedEditors:            []string{},
+			expectedInteractiveViewers: []string{},
+			expectedViewers:            []string{},
+		},
+		{
+			name:                       "mixed input - some roles empty",
+			admins:                     []string{"admin1"},
+			developers:                 []string{},
+			editors:                    []string{"editor1"},
+			interactiveViewers:         []string{},
+			viewers:                    []string{"viewer1"},
+			expectedAdmins:             []string{"admin1"},
+			expectedDevelopers:         []string{},
+			expectedEditors:            []string{"editor1"},
+			expectedInteractiveViewers: []string{},
+			expectedViewers:            []string{"viewer1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &NormalizeProjectMembersFunction{}
+			admins, developers, editors, interactiveViewers, viewers := f.normalizeMembers(
+				tt.admins,
+				tt.developers,
+				tt.editors,
+				tt.interactiveViewers,
+				tt.viewers,
+			)
+
+			// Compare the results with expected values
+			if !equalStringSlices(admins, tt.expectedAdmins) {
+				t.Errorf("admins = %v, expected %v", admins, tt.expectedAdmins)
+			}
+			if !equalStringSlices(developers, tt.expectedDevelopers) {
+				t.Errorf("developers = %v, expected %v", developers, tt.expectedDevelopers)
+			}
+			if !equalStringSlices(editors, tt.expectedEditors) {
+				t.Errorf("editors = %v, expected %v", editors, tt.expectedEditors)
+			}
+			if !equalStringSlices(interactiveViewers, tt.expectedInteractiveViewers) {
+				t.Errorf("interactiveViewers = %v, expected %v", interactiveViewers, tt.expectedInteractiveViewers)
+			}
+			if !equalStringSlices(viewers, tt.expectedViewers) {
+				t.Errorf("viewers = %v, expected %v", viewers, tt.expectedViewers)
+			}
+		})
+	}
+}
+
+// Helper function to compare two string slices for equality
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
