@@ -15,6 +15,7 @@
 resource "lightdash_group" "test1" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "zzz_test_group_01"
+  members           = []
 }
 
 resource "lightdash_group" "test2" {

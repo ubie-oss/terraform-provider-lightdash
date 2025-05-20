@@ -4,6 +4,7 @@ data "lightdash_organization" "test" {
 resource "lightdash_group" "test_group" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "test-grant-project-role-group (Acceptance Test)"
+  members           = []
 }
 
 resource "lightdash_project_role_group" "test_project_role_group" {

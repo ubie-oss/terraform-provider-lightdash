@@ -5,6 +5,7 @@ data "lightdash_organization" "test" {
 resource "lightdash_group" "test_group" {
   organization_uuid = data.lightdash_organization.test.organization_uuid
   name              = "(Acceptance Test - data_source_lightdash_organization_groups)"
+  members           = []
 }
 
 data "lightdash_organization_groups" "test" {

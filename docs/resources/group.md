@@ -38,12 +38,9 @@ resource "lightdash_group" "test_group2" {
 
 ### Required
 
+- `members` (Attributes Set) Set of users. (see [below for nested schema](#nestedatt--members))
 - `name` (String) The name of the Lightdash group.
 - `organization_uuid` (String) The UUID of the Lightdash organization to which the group belongs.
-
-### Optional
-
-- `members` (Attributes List) List of users. (see [below for nested schema](#nestedatt--members))
 
 ### Read-Only
 
