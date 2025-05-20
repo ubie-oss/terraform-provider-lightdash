@@ -39,6 +39,9 @@ build: gen-docs go-tidy gosec
 gosec:
 	gosec ./internal/...
 
+deadcode:
+	deadcode -test ./...
+
 upgrade-go-mod:
 	# Upgrade dependencies
 	go get -u ./...
