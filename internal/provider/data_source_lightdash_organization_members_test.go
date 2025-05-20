@@ -34,7 +34,7 @@ func TestAccOrganizationMembersDataSource(t *testing.T) {
 	}
 
 	// Test of simple organization members retrieval
-	config, err := ReadAccTestResource([]string{"data_source_lightdash_organization_members", "data", "01_data.tf"})
+	config, err := ReadAccTestResource([]string{"data_sources", "lightdash_organization_members", "data", "01_data.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get organizationMembersConfig: %v", err)
 	}

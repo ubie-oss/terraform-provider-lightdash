@@ -36,23 +36,23 @@ func TestAccProjectRoleGroupResource_grant(t *testing.T) {
 	}
 
 	// Test of simple space creation
-	grantConfig010, err := ReadAccTestResource([]string{"resource_lightdash_project_role_group", "grant", "010_grant.tf"})
+	grantConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_project_role_group", "grant", "010_grant.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
-	grantConfig020, err := ReadAccTestResource([]string{"resource_lightdash_project_role_group", "grant", "020_grant.tf"})
+	grantConfig020, err := ReadAccTestResource([]string{"resources", "lightdash_project_role_group", "grant", "020_grant.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
-	grantConfig030, err := ReadAccTestResource([]string{"resource_lightdash_project_role_group", "grant", "030_grant.tf"})
+	grantConfig030, err := ReadAccTestResource([]string{"resources", "lightdash_project_role_group", "grant", "030_grant.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
-	grantConfig040, err := ReadAccTestResource([]string{"resource_lightdash_project_role_group", "grant", "040_grant.tf"})
+	grantConfig040, err := ReadAccTestResource([]string{"resources", "lightdash_project_role_group", "grant", "040_grant.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
-	grantConfig050, err := ReadAccTestResource([]string{"resource_lightdash_project_role_group", "grant", "050_grant.tf"})
+	grantConfig050, err := ReadAccTestResource([]string{"resources", "lightdash_project_role_group", "grant", "050_grant.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestAccProjectRoleGroupResource_import(t *testing.T) {
 	}
 
 	// Test of simple space creation
-	importConfig010, err := ReadAccTestResource([]string{"resource_lightdash_project_role_group", "import", "010_import.tf"})
+	importConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_project_role_group", "import", "010_import.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}

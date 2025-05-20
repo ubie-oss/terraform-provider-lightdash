@@ -36,11 +36,11 @@ func TestAccSpaceResource_simple(t *testing.T) {
 	}
 
 	// Test of simple space creation
-	simpleSpaceConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "create_space", "010_create_space.tf"})
+	simpleSpaceConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_space", "create_space", "010_create_space.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
-	simpleSpaceConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "create_space", "020_create_space.tf"})
+	simpleSpaceConfig020, err := ReadAccTestResource([]string{"resources", "lightdash_space", "create_space", "020_create_space.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get publicSpaceConfig: %v", err)
 	}
@@ -92,11 +92,11 @@ func TestAccSpaceResource_nested(t *testing.T) {
 	}
 
 	// Test of nested spaces
-	nestedSpaceConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "nested_space", "010_nested_space.tf"})
+	nestedSpaceConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_space", "nested_space", "010_nested_space.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get nestedSpaceConfig: %v", err)
 	}
-	nestedSpaceConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "nested_space", "020_nested_space.tf"})
+	nestedSpaceConfig020, err := ReadAccTestResource([]string{"resources", "lightdash_space", "nested_space", "020_nested_space.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get nestedSpaceConfig: %v", err)
 	}
@@ -217,11 +217,11 @@ func TestAccSpaceResource_access(t *testing.T) {
 	}
 
 	// Test of space access
-	spaceAccessConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "space_access", "010_space_access.tf"})
+	spaceAccessConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_space", "space_access", "010_space_access.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get spaceAccessConfig: %v", err)
 	}
-	spaceAccessConfig020, err := ReadAccTestResource([]string{"resource_lightdash_space", "space_access", "020_space_access.tf"})
+	spaceAccessConfig020, err := ReadAccTestResource([]string{"resources", "lightdash_space", "space_access", "020_space_access.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get spaceAccessConfig: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestAccSpaceResource_import(t *testing.T) {
 	}
 
 	// Test of space access
-	importConfig010, err := ReadAccTestResource([]string{"resource_lightdash_space", "import", "010_import.tf"})
+	importConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_space", "import", "010_import.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get importConfig: %v", err)
 	}
