@@ -29,8 +29,7 @@ lint:
       paths:
         # Tentatively disable terraform linting for acc_tests/function_*/**,
         # because `terraform fmt` can't appropriately handle provider provided functions.
-        # TODO think of the better directory structure for acc_tests
-        - internal/provider/acc_tests/function_*/**
+        - internal/provider/acc_tests/functions/**
   enabled:
     - golangci-lint2@2.1.6
     - renovate@40.0.6

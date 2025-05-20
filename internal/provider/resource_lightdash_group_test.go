@@ -36,7 +36,7 @@ func TestAccGroupResource_grant(t *testing.T) {
 	}
 
 	// Test of simple space creation
-	createConfig010, err := ReadAccTestResource([]string{"resource_lightdash_group", "create", "010_create.tf"})
+	createConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_group", "create", "010_create.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get createConfig: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestAccGroupResource_import(t *testing.T) {
 	}
 
 	// Test of simple space creation
-	importConfig010, err := ReadAccTestResource([]string{"resource_lightdash_group", "import", "010_import.tf"})
+	importConfig010, err := ReadAccTestResource([]string{"resources", "lightdash_group", "import", "010_import.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get importConfig: %v", err)
 	}

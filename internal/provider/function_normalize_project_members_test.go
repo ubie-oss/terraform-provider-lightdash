@@ -33,7 +33,7 @@ func TestNormalizeProjectMembersRun_simple(t *testing.T) {
 	}
 
 	// Get the function config
-	functionConfig010, err := ReadAccTestResource([]string{"function_normalize_project_members", "simple", "010_simple.tf"})
+	functionConfig010, err := ReadAccTestResource([]string{"functions", "normalize_project_members", "simple", "010_simple.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get functionConfig: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestNormalizeProjectMembersRun_complicated(t *testing.T) {
 	}
 
 	// Get the function config
-	functionConfig010, err := ReadAccTestResource([]string{"function_normalize_project_members", "complicated", "010_complicated.tf"})
+	functionConfig010, err := ReadAccTestResource([]string{"functions", "normalize_project_members", "complicated", "010_complicated.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get functionConfig: %v", err)
 	}
