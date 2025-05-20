@@ -154,5 +154,5 @@ jobs:
           go mod download
       - name: Run Deadcode
         run: |
-          go install github.com/mattn/deadcode@latest
+          go install golang.org/x/tools/cmd/deadcode@latest
           deadcode -test ./...
