@@ -33,7 +33,7 @@ test:
 clean:
 	go clean -cache -modcache -i -r
 
-build: gen-docs go-tidy gosec
+build: gen-docs go-tidy gosec deadcode
 	go build -v ./
 
 gosec:
