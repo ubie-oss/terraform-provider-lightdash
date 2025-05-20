@@ -3,7 +3,7 @@
 page_title: "normalize_project_members function - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Unique the members of a project by role.
+  Normalize the members of a project by role.
 ---
 
 # function: normalize_project_members
