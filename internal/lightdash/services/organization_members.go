@@ -18,21 +18,32 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"sync"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
+// Package-level variables for the singleton instance and sync.Once
+var organizationMembersServiceInstance *OrganizationMembersService
+var once sync.Once
+
 type OrganizationMembersService struct {
-	client  *api.Client
+	client *api.Client
+	// members are cached results from GetOrganizationMembers
 	members []api.GetOrganizationMembersV1Results
 }
 
-func NewOrganizationMembersService(client *api.Client) *OrganizationMembersService {
-	return &OrganizationMembersService{
-		client:  client,
-		members: []api.GetOrganizationMembersV1Results{},
-	}
+// GetOrganizationMembersService returns the singleton instance of OrganizationMembersService.
+// It initializes the instance the first first time it is called in a thread-safe manner.
+func GetOrganizationMembersService(client *api.Client) *OrganizationMembersService {
+	once.Do(func() {
+		organizationMembersServiceInstance = &OrganizationMembersService{
+			client:  client,
+			members: []api.GetOrganizationMembersV1Results{}, // Initialize empty cache
+		}
+	})
+	return organizationMembersServiceInstance
 }
 
 // Fetch the members from the organization using the API client
