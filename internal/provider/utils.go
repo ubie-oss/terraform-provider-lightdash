@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -176,4 +177,28 @@ data "lightdash_project" "test" {
 }
 `, *lightdashUrl, *lightdashApiKey, *lightdashProjectUuid)
 	return providerConfig, nil
+}
+
+// Subtract list2 from list1
+func subtractStringList(list1, list2 []string) []string {
+	// Create a frequency map of the second list
+	list2Map := make(map[string]int)
+	for _, item := range list2 {
+		list2Map[item]++
+	}
+
+	result := []string{}
+	// Iterate through the first list and add items if their count in list2Map is zero or less
+	for _, item := range list1 {
+		if list2Map[item] > 0 {
+			list2Map[item]--
+		} else {
+			result = append(result, item)
+		}
+	}
+
+	// Sort the result
+	sort.Strings(result)
+
+	return result
 }

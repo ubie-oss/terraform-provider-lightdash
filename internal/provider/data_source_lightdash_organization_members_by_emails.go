@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -24,71 +25,70 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
-	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ datasource.DataSource              = &organizationMembersDataSource{}
-	_ datasource.DataSourceWithConfigure = &organizationMembersDataSource{}
+	_ datasource.DataSource              = &organizationMembersByEmailsDataSource{}
+	_ datasource.DataSourceWithConfigure = &organizationMembersByEmailsDataSource{}
 )
 
-func NewOrganizationMembersDataSource() datasource.DataSource {
-	return &organizationMembersDataSource{}
+func NewOrganizationMembersByEmailsDataSource() datasource.DataSource {
+	return &organizationMembersByEmailsDataSource{}
 }
 
 // lightdashOrganizationMemberDataSource defines the data source implementation.
-type organizationMembersDataSource struct {
+type organizationMembersByEmailsDataSource struct {
 	client *api.Client
 }
 
-// organizationMemberDataSourceModel describes the data source data model.
-type organizationMemberModel struct {
-	UserUuid         types.String                  `tfsdk:"user_uuid"`
-	Email            types.String                  `tfsdk:"email"`
-	OrganizationRole models.OrganizationMemberRole `tfsdk:"role"`
-}
-
 // lightdashOrganizationMemberDataSourceModel describes the data source data model.
-type organizationMembersDataSourceModel struct {
+type organizationMembersByEmailsDataSourceModel struct {
 	ID               types.String              `tfsdk:"id"`
 	OrganizationUuid types.String              `tfsdk:"organization_uuid"`
+	Emails           types.List                `tfsdk:"emails"`
 	Members          []organizationMemberModel `tfsdk:"members"`
 }
 
-func (d *organizationMembersDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_organization_members"
+func (d *organizationMembersByEmailsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_organization_members_by_emails"
 }
 
-func (d *organizationMembersDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *organizationMembersByEmailsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash organization members data source",
-		Description:         "Lightdash organization members data source",
+		MarkdownDescription: "Fetches Lightdash organization members filtered by a list of emails.",
+		Description:         "Fetches Lightdash organization members filtered by a list of emails.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "Identifier of the data source, computed as `organizations/<organization_uuid>/users`.",
 				Computed:            true,
 			},
+			"emails": schema.ListAttribute{
+				MarkdownDescription: "A list of email addresses to filter the organization members by. Only members with an email in this list will be returned.",
+				Required:            true,
+				ElementType:         types.StringType,
+				Sensitive:           true,
+			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the organization the members belong to.",
 				Computed:            true,
 			},
 			"members": schema.ListNestedAttribute{
-				Description: "List of projects.",
+				Description: "A list of organization members matching the provided emails, sorted by user UUID.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The unique identifier of the Lightdash user.",
 							Computed:            true,
 						},
 						"email": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The email address of the Lightdash user.",
 							Computed:            true,
 						},
 						"role": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The organization role of the Lightdash user (e.g., `viewer`, `editor`, `admin`).",
 							Computed:            true,
 						},
 					},
@@ -98,7 +98,7 @@ func (d *organizationMembersDataSource) Schema(ctx context.Context, req datasour
 	}
 }
 
-func (d *organizationMembersDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *organizationMembersByEmailsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -116,8 +116,12 @@ func (d *organizationMembersDataSource) Configure(ctx context.Context, req datas
 	d.client = client
 }
 
-func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state organizationMembersDataSourceModel
+func (d *organizationMembersByEmailsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state organizationMembersByEmailsDataSourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Get information of the organization
 	organization, err := d.client.GetMyOrganizationV1()
@@ -131,7 +135,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 
 	// Get all members in the organization
 	service := services.GetOrganizationMembersService(d.client)
-	members, err := service.GetOrganizationMembers()
+	members, err := service.GetOrganizationMembersByCache()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization member",
@@ -141,11 +145,25 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 	}
 
 	// log the number of members
-	tflog.Info(ctx, fmt.Sprintf("Fetched organization members: %d", len(members)))
+	tflog.Info(ctx, fmt.Sprintf("(organization_members_by_emails) Fetched organization members: %d", len(members)))
+
+	// Convert types.List of emails to Go slice of strings
+	var emailList []string
+	diags := state.Emails.ElementsAs(ctx, &emailList, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Map response body to model
 	newMembers := []organizationMemberModel{}
 	for _, member := range members {
+		// Check if the email is in the list of emails
+		if !slices.Contains(emailList, member.Email) {
+			tflog.Debug(ctx, fmt.Sprintf("(organization_members_by_emails) Skipping member %s because it is not in the list of emails", member.Email))
+			continue
+		}
+
 		fetchedMember := organizationMemberModel{
 			UserUuid:         types.StringValue(member.UserUUID),
 			Email:            types.StringValue(member.Email),
@@ -160,7 +178,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 	})
 
 	// log the number of new members
-	tflog.Info(ctx, fmt.Sprintf("Updated organization members: %d", len(newMembers)))
+	tflog.Info(ctx, fmt.Sprintf("(organization_members_by_emails) Updated organization members: %d", len(newMembers)))
 
 	// Set state
 	state.OrganizationUuid = types.StringValue(organization.OrganizationUUID)
@@ -170,7 +188,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/users", organization.OrganizationUUID))
 
 	// Set state
-	diags := resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

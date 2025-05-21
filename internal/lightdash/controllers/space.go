@@ -42,7 +42,7 @@ type SpaceController struct {
 func NewSpaceController(client *api.Client) *SpaceController {
 	return &SpaceController{
 		spaceService:               services.NewSpaceService(client),
-		organizationMembersService: services.NewOrganizationMembersService(client),
+		organizationMembersService: services.GetOrganizationMembersService(client),
 		organizationGroupsService:  services.NewOrganizationGroupsService(client),
 		projectService:             services.NewProjectService(client),
 	}

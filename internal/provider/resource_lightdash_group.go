@@ -228,6 +228,35 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		}
 	}
 
+	// Need to fetch organization members to validate that the user UUIDs exist
+	organizationMembersService := services.GetOrganizationMembersService(r.client)
+	organizationMembers, err := organizationMembersService.GetOrganizationMembersByCache()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error getting organization members",
+			fmt.Sprintf("Could not get organization members for group %s: %s", group.GroupUUID, err.Error()),
+		)
+		return
+	}
+
+	// Check if all members exist in the organization
+	for _, member := range stateMembers {
+		found := false
+		for _, orgMember := range organizationMembers {
+			if member.UserUUID.ValueString() == orgMember.UserUUID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			resp.Diagnostics.AddError(
+				"Error validating group members",
+				fmt.Sprintf("User UUID %s in group %s does not exist in the organization", member.UserUUID.ValueString(), group.GroupUUID),
+			)
+			return
+		}
+	}
+
 	// Set the state values
 	state.OrganizationUUID = types.StringValue(group.OrganizationUUID)
 	state.GroupUUID = types.StringValue(group.GroupUUID)
@@ -279,7 +308,7 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	removedMembers := []groupMemberModelForGroup{}
 
 	// The service to get the organization members
-	organizationMembersService := services.NewOrganizationMembersService(r.client)
+	organizationMembersService := services.GetOrganizationMembersService(r.client)
 
 	// Select removed members by comparing state members to plan members
 	stateMembersMap := make(map[string]struct{}, len(stateMembersSlice))

@@ -80,3 +80,70 @@ func TestExtractStrings(t *testing.T) {
 		}
 	}
 }
+
+func TestSubtractStringList(t *testing.T) {
+	tests := []struct {
+		list1 []string
+		list2 []string
+
+		expected []string
+	}{
+		{
+			list1:    []string{"a", "b", "c"},
+			list2:    []string{"b", "c"},
+			expected: []string{"a"},
+		},
+		{
+			list1:    []string{"a", "b", "c"},
+			list2:    []string{"d", "e"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			list1:    []string{"a", "b", "c"},
+			list2:    []string{"a", "b", "c"},
+			expected: []string{},
+		},
+		{
+			list1:    []string{},
+			list2:    []string{"a", "b"},
+			expected: []string{},
+		},
+		{
+			list1:    []string{"a", "b"},
+			list2:    []string{},
+			expected: []string{"a", "b"},
+		},
+		{
+			list1:    []string{},
+			list2:    []string{},
+			expected: []string{},
+		},
+		{
+			list1:    []string{"a", "a", "b", "c"},
+			list2:    []string{"a", "c"},
+			expected: []string{"a", "b"},
+		},
+		{
+			list1:    []string{"a", "b", "c"},
+			list2:    []string{"b", "b", "c"},
+			expected: []string{"a"},
+		},
+		{
+			list1:    []string{"a", "a", "b", "b", "c", "c"},
+			list2:    []string{"a", "b", "c"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			list1:    []string{"c", "a", "b"},
+			list2:    []string{"b", "c"},
+			expected: []string{"a"},
+		},
+	}
+
+	for _, test := range tests {
+		result := subtractStringList(test.list1, test.list2)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("Expected: %v, Got: %v for list1=%v, list2=%v", test.expected, result, test.list1, test.list2)
+		}
+	}
+}
