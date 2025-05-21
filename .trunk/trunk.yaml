@@ -41,19 +41,19 @@ lint:
     - bandit@1.8.3
     - black@25.1.0
     - isort@6.0.1
-    - ruff@0.11.9
+    - ruff@0.11.10
     - actionlint@1.7.7
-    - checkov@3.2.420
+    - checkov@3.2.427
     - git-diff-check
     - gofmt@1.20.4
-    - markdownlint@0.44.0
+    - markdownlint@0.45.0
     - osv-scanner@2.0.2
     - prettier@3.5.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - tflint@0.57.0
     - trivy@0.62.1
-    - trufflehog@3.88.29
+    - trufflehog@3.88.30
     - yamllint@1.37.1
 actions:
   enabled:
