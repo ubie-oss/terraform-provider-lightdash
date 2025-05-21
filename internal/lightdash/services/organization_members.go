@@ -36,6 +36,8 @@ type OrganizationMembersService struct {
 
 // GetOrganizationMembersService returns the singleton instance of OrganizationMembersService.
 // It initializes the instance the first first time it is called in a thread-safe manner.
+// We don't add and remove members in the terraform provider at the moment.
+// So, we can cache the results of GetOrganizationMembers.
 func GetOrganizationMembersService(client *api.Client) *OrganizationMembersService {
 	once.Do(func() {
 		organizationMembersServiceInstance = &OrganizationMembersService{
