@@ -56,11 +56,38 @@ func TestAccSpaceResource_simple(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "name", "Public Space (Acceptance Test: create_space)"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "is_private", "false"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "true"),
+					// data.lightdash_space.test_public
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_space.create_space__test_public",
+						"space_uuid",
+						"lightdash_space.create_space__test_public",
+						"space_uuid",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_space.create_space__test_public",
+						"name",
+						"lightdash_space.create_space__test_public",
+						"name",
+					),
+
 					// lightdash_space.create_space__test_private
 					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_private", "space_uuid"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "name", "Private Space (Acceptance Test: create_space)"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "is_private", "true"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "deletion_protection", "true"),
+					// data.lightdash_space.test_private
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_space.create_space__test_private",
+						"space_uuid",
+						"lightdash_space.create_space__test_private",
+						"space_uuid",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_space.create_space__test_private",
+						"name",
+						"lightdash_space.create_space__test_private",
+						"name",
+					),
 				),
 			},
 			{
