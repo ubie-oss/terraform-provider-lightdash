@@ -1,0 +1,1 @@
+Retrieves a list of all projects within a Lightdash organization. This data source provides details for each project, including its UUID, name, and type. It returns a list of projects sorted by their UUID. This is useful for discovering existing projects to use in other parts of your Terraform configuration.

@@ -15,6 +15,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -23,6 +24,8 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 const (
@@ -201,4 +204,63 @@ func subtractStringList(list1, list2 []string) []string {
 	sort.Strings(result)
 
 	return result
+}
+
+// readMarkdownDescription reads the content of a markdown file located relative to the calling Go file.
+func readMarkdownDescription(ctx context.Context, filename string) (string, error) {
+	// Get the file path of the caller. We use Caller(1) because Caller(0) is this function itself.
+	_, callerFile, _, ok := runtime.Caller(1)
+	if !ok {
+		return "", fmt.Errorf("failed to get caller file path")
+	}
+
+	// Get the directory of the caller file
+	callerDir := filepath.Dir(callerFile)
+
+	// Construct the full path to the markdown file relative to the caller's directory.
+	// Assuming the markdown files are in internal/provider/docs relative to the project root,
+	// and the caller is in internal/provider. The path from callerDir to the docs directory is ../docs.
+	// The 'filename' parameter is expected to be relative from the 'provider' directory, e.g., "docs/resources/resource_name.md".
+	// Let's adjust the logic to handle the full path passed currently, like "internal/provider/docs/...".
+	// A simpler approach is to find the 'provider' directory and then join the rest of the path.
+
+	// Navigate up directories from the caller's file to find the 'provider' directory
+	dir := callerDir
+	for {
+		if filepath.Base(dir) == "provider" {
+			break
+		}
+		parentDir := filepath.Dir(dir)
+		if parentDir == dir {
+			// If we can't find 'provider', fall back to the original behavior or return an error
+			// For now, let's assume we can find 'provider' or the relative path is from project root.
+			// The previous error indicates the relative path from project root doesn't work in gen-docs.
+			// So finding the 'provider' directory is the more reliable approach.
+			tflog.Error(ctx, fmt.Sprintf("Could not find 'provider' directory for caller %s", callerFile))
+			// Fallback to the original problematic behavior for now, and log the error.
+			// This should ideally be a fatal error if the 'provider' directory structure is expected.
+			// Let's return an informative error.
+			return "", fmt.Errorf("could not find 'provider' directory in path for caller %s", callerFile)
+		}
+		dir = parentDir
+	}
+	providerDir := dir
+
+	// Extract the path relative to the 'provider' directory from the input 'filename'
+	// We expect filename to start with "internal/provider/", so we strip that.
+	relativePathInProvider := strings.TrimPrefix(filename, "internal/provider/")
+
+	// Construct the full path by joining the provider directory and the relative path within it
+	fullPath := filepath.Join(providerDir, relativePathInProvider)
+
+	tflog.Debug(ctx, fmt.Sprintf("Attempting to read markdown file from calculated path: %s (original filename: %s)", fullPath, filename))
+
+	content, err := os.ReadFile(filepath.Clean(fullPath))
+	if err != nil {
+		// Log the error with the full path that failed
+		tflog.Error(ctx, fmt.Sprintf("Error reading markdown file %s: %s", fullPath, err.Error()))
+		return "", fmt.Errorf("failed to read markdown file %s (tried path: %s): %w", filename, fullPath, err)
+	}
+
+	return string(content), nil
 }

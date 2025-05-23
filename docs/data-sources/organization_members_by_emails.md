@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_members_by_emails Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Fetches Lightdash organization members filtered by a list of emails.
+  Fetches Lightdash organization members filtered by a list of emails. This data source retrieves a list of members within a Lightdash organization whose email addresses are included in the provided list. It is useful for obtaining details (user UUID, email, and organization role) for a specific subset of organization members. The results are returned as a list of members, sorted by user UUID.
 ---
 
 # lightdash_organization_members_by_emails (Data Source)
 
-Fetches Lightdash organization members filtered by a list of emails.
+Fetches Lightdash organization members filtered by a list of emails. This data source retrieves a list of members within a Lightdash organization whose email addresses are included in the provided list. It is useful for obtaining details (user UUID, email, and organization role) for a specific subset of organization members. The results are returned as a list of members, sorted by user UUID.
 
 ## Example Usage
 

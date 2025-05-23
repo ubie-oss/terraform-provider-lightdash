@@ -1,0 +1,1 @@
+Manages a Lightdash group within an organization. Groups are used to manage access and permissions for multiple users collectively. This resource allows you to create, update, and delete groups by specifying a name and the organization UUID. You can then use this group in other resources like `lightdash_project_role_group` to assign project-level roles.

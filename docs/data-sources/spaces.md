@@ -3,12 +3,12 @@
 page_title: "lightdash_spaces Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash spaces data source
+  Retrieves a list of all spaces within a specific Lightdash project. This data source provides details for each space, including its UUID, name, visibility (private/public), and parent space (if any). The list of spaces is sorted by space UUID. It is useful for discovering existing spaces to use in other resources or data sources.
 ---
 
 # lightdash_spaces (Data Source)
 
-Lightdash spaces data source
+Retrieves a list of all spaces within a specific Lightdash project. This data source provides details for each space, including its UUID, name, visibility (private/public), and parent space (if any). The list of spaces is sorted by space UUID. It is useful for discovering existing spaces to use in other resources or data sources.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "lightdash_group Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  A Lightdash group represents a set of users within an organization, providing a mechanism to manage permissions for projects and resources. Each group is uniquely identified by a UUID and is associated with a specific organization. Group membership is defined by the user UUIDs of the members.
+  Manages a Lightdash group within an organization. Groups are used to manage access and permissions for multiple users collectively. This resource allows you to create, update, and delete groups by specifying a name and the organization UUID. You can then use this group in other resources like lightdash_project_role_group to assign project-level roles.
 ---
 
 # lightdash_group (Resource)
 
-A Lightdash group represents a set of users within an organization, providing a mechanism to manage permissions for projects and resources. Each group is uniquely identified by a UUID and is associated with a specific organization. Group membership is defined by the user UUIDs of the members.
+Manages a Lightdash group within an organization. Groups are used to manage access and permissions for multiple users collectively. This resource allows you to create, update, and delete groups by specifying a name and the organization UUID. You can then use this group in other resources like `lightdash_project_role_group` to assign project-level roles.
 
 ## Example Usage
 

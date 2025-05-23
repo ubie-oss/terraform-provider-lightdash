@@ -52,8 +52,17 @@ func (d *authenticatedUserDataSource) Metadata(ctx context.Context, req datasour
 }
 
 func (d *authenticatedUserDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/data_sources/data_source_authenticated_user.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Authenticated user data source",
+		MarkdownDescription: markdownDescription,
 		Description:         "Authenticated data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

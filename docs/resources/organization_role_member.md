@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_role_member Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightash the role of a member at organization level
+  Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., member, admin). This resource is essential for managing user access at the organization scope.
 ---
 
 # lightdash_organization_role_member (Resource)
 
-Lightash the role of a member at organization level
+Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., `member`, `admin`). This resource is essential for managing user access at the organization scope.
 
 ## Example Usage
 

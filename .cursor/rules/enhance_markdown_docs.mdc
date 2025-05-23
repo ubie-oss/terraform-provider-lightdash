@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Enhance Terraform Provider Documentation
+
+**Task:** Enhance markdown documentations of data resources, resources and functions by moving descriptions from Go code to separate markdown files.
+
+## Goal
+
+- Move markdown descriptions for Terraform resources, data sources and functions out of Go code into separate markdown files for better maintainability and comprehensive descriptions.
+- Write comprehensive descriptions based on the actual behavior for users.
+- Continuously address this task until all resources, data sources and functions have their descriptions in dedicated markdown files.
+- Regularly review existing markdown documentation to ensure it accurately reflects the current behavior of data sources, resources and functions.
+
+## Requirements
+
+1.  All resources and data sources must have descriptions written in dedicated markdown files.
+2.  Markdown files must not be empty and descriptions should be well-described from 3 sentences up to  15 sentences. The descriptions shouldn't have any headers becase it is automatically embedded in the terraform docs.
+3.  The markdown files must be loaded and used in the corresponding Go code files (`internal/provider/resource_*.go`, `internal/provider/data_source_*.go`, `internal/provider/function_*.go`).
+4.  Ensure that all corresponding Go code files (`internal/provider/resource_*.go`, `internal/provider/data_source_*.go`, `internal/provider/function_*.go`) have been updated to load descriptions from the dedicated markdown files.
+
+## Issue
+
+Markdown descriptions are currently embedded directly within Go code using multi-line strings, which is cumbersome for multi-line and formatted content.
+
+## Proposed Solution
+
+1.  Create separate markdown files for each `resource_*.go`, `data_source_*.go` and `function_*>go` file.
+2.  Place these files in `internal/provider/docs/resources/`, `internal/provider/docs/data_sources/` and `internal/provider/docs/functions` respectively.
+3.  Follow the naming convention: `resource_name.md` for `resource_name.go`,  `data_source_name.md` for `data_source_name.go` and `function_name.md` for `function_name.go`
+4.  Migrate existing descriptions to the new `.md` files.
+5.  Modify Go code to read descriptions from the `.md` files.
+6.  Consider implementing a helper function for loading markdown content.
+
+## File Structure and Naming Convention Examples
+
+-   For `internal/provider/resource_example.go`, the doc file is `internal/provider/docs/resources/resource_example.md`.
+-   For `internal/provider/data_source_example.go`, the doc file is `internal/provider/docs/data_sources/data_source_example.md`.
+-   For `internal/provider/function_example.go`, the doc file is `internal/provider/docs/data_sources/function_example.md`.

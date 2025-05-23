@@ -59,8 +59,17 @@ func (d *projectGroupAccessesDataSource) Metadata(ctx context.Context, req datas
 }
 
 func (d *projectGroupAccessesDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/data_sources/data_source_lightdash_project_group_accesses.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash project group accesses data source",
+		MarkdownDescription: markdownDescription,
 		Description:         "Lightdash project group accesses data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
