@@ -65,12 +65,18 @@ func (r *groupResource) Metadata(ctx context.Context, req resource.MetadataReque
 }
 
 func (r *groupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_lightdash_group.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "A Lightdash group represents a set of users within an organization, " +
-			"providing a mechanism to manage permissions for projects and resources. " +
-			"Each group is uniquely identified by a UUID and is associated with a specific organization. " +
-			"Group membership is defined by the user UUIDs of the members.",
-		Description: "Manages a Lightdash group",
+		MarkdownDescription: markdownDescription,
+		Description:         "Manages a Lightdash group",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,

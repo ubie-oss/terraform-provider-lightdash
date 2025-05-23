@@ -3,12 +3,12 @@
 page_title: "lightdash_project_scheduler_settings Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  A Lightdash scheduler settings resource manages the scheduling configurations for projects and resources within an organization.
+  Manages the scheduler settings for a specific Lightdash project. Currently, this resource allows you to configure the timezone used for scheduling reports and other time-based operations within the project. By managing the timezone through this resource, you can ensure consistency in scheduled tasks across your Lightdash projects. You need to provide the project UUID and the desired timezone.
 ---
 
 # lightdash_project_scheduler_settings (Resource)
 
-A Lightdash scheduler settings resource manages the scheduling configurations for projects and resources within an organization.
+Manages the scheduler settings for a specific Lightdash project. Currently, this resource allows you to configure the timezone used for scheduling reports and other time-based operations within the project. By managing the timezone through this resource, you can ensure consistency in scheduled tasks across your Lightdash projects. You need to provide the project UUID and the desired timezone.
 
 ## Example Usage
 

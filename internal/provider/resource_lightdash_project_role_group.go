@@ -57,9 +57,17 @@ func (r *projectRoleGroupResource) Metadata(ctx context.Context, req resource.Me
 }
 
 func (r *projectRoleGroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_project_role_group.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Assigns the role of a group at project level",
+		MarkdownDescription: markdownDescription,
 		Description:         "Assigns the role of a group at project level",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

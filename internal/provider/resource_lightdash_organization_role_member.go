@@ -60,9 +60,18 @@ func (r *organizationRoleMemberResource) Metadata(ctx context.Context, req resou
 }
 
 func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_organization_role_member.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash the role of a member at organization level",
+		MarkdownDescription: markdownDescription,
 		Description:         "Lightash the role of a member at organization level",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

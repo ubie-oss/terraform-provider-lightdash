@@ -1,0 +1,1 @@
+Retrieves a list of members and their assigned roles for a specific Lightdash project. This data source provides insights into how users are permissioned within a project, showing the user UUID, email, and the role assigned to the member. The list of members is sorted by user UUID. It is useful for auditing project access granted to different users.

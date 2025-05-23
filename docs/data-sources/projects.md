@@ -3,12 +3,12 @@
 page_title: "lightdash_projects Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash projects data source
+  Retrieves a list of all projects within a Lightdash organization. This data source provides details for each project, including its UUID, name, and type. It returns a list of projects sorted by their UUID. This is useful for discovering existing projects to use in other parts of your Terraform configuration.
 ---
 
 # lightdash_projects (Data Source)
 
-Lightdash projects data source
+Retrieves a list of all projects within a Lightdash organization. This data source provides details for each project, including its UUID, name, and type. It returns a list of projects sorted by their UUID. This is useful for discovering existing projects to use in other parts of your Terraform configuration.
 
 ## Example Usage
 

@@ -1,0 +1,1 @@
+Retrieves details for a specific Lightdash project by its UUID. This data source provides information such as the project's organization UUID, name, and type. It is useful for fetching project details when the UUID is known, allowing you to reference project attributes in your Terraform configuration.

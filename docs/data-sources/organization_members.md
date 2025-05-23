@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_members Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash organization members data source
+  Retrieves a list of all members within a Lightdash organization. This data source provides details for each member, including their user UUID, email, and organization role. It returns a list of members sorted by their UUID. This is useful for obtaining information about all users in the organization.
 ---
 
 # lightdash_organization_members (Data Source)
 
-Lightdash organization members data source
+Retrieves a list of all members within a Lightdash organization. This data source provides details for each member, including their user UUID, email, and organization role. It returns a list of members sorted by their UUID. This is useful for obtaining information about all users in the organization.
 
 ## Example Usage
 

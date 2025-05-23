@@ -3,21 +3,12 @@
 page_title: "lightdash_space Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. With Lightdash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. Each space has a unique identifier (UUID) and can be associated with a project. You can specify whether a space is private or not, allowing you to control who can access the space. Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. The created_at and last_updated attributes provide timestamps for the creation and last update of the space, respectively.
-  IMPORTANT: Nested spaces (with parent_space_uuid) have significant limitations:
-  Access controls for nested spaces are inherited from their parent space and cannot be managed individuallyVisibility (public/private) for nested spaces is inherited from their parent space and cannot be changedWhen a space is moved from root level to nested (or vice versa), its access controls will change accordinglyFor nested spaces, the access and group_access blocks will be empty in Terraform state as they cannot be managedAttempting to set is_private, access, or group_access for a nested space will result in validation errors because nested spaces automatically inherit these properties from their parent space
+  Manages a Lightdash space within a project. Spaces are used to organize charts and dashboards. This resource allows you to create, update, and delete spaces, and manage their visibility (public or private). You must specify the project UUID where the space will reside and a name for the space. Optionally, you can specify a parent space UUID to create nested spaces.
 ---
 
 # lightdash_space (Resource)
 
-Lightdash space is a powerful feature of the Lightdash platform that allows you to create and manage spaces for your analytics projects. With Lightdash space, you can organize your data, dashboards, and reports into separate spaces, providing a logical separation and access control for different teams or projects. Each space has a unique identifier (UUID) and can be associated with a project. You can specify whether a space is private or not, allowing you to control who can access the space. Additionally, you can enable deletion protection for a space, preventing accidental deletion during Terraform operations. The created_at and last_updated attributes provide timestamps for the creation and last update of the space, respectively. 
-
-**IMPORTANT: Nested spaces (with parent_space_uuid) have significant limitations:** 
-- Access controls for nested spaces are inherited from their parent space and cannot be managed individually 
-- Visibility (public/private) for nested spaces is inherited from their parent space and cannot be changed 
-- When a space is moved from root level to nested (or vice versa), its access controls will change accordingly 
-- For nested spaces, the `access` and `group_access` blocks will be empty in Terraform state as they cannot be managed
-- Attempting to set `is_private`, `access`, or `group_access` for a nested space will result in validation errors because nested spaces automatically inherit these properties from their parent space
+Manages a Lightdash space within a project. Spaces are used to organize charts and dashboards. This resource allows you to create, update, and delete spaces, and manage their visibility (public or private). You must specify the project UUID where the space will reside and a name for the space. Optionally, you can specify a parent space UUID to create nested spaces.
 
 ## Example Usage
 
@@ -86,40 +77,40 @@ resource "lightdash_space" "test_grandchild_space" {
 
 ### Required
 
-- `deletion_protection` (Boolean) Whether or not to allow Terraform to destroy the instance. Unless this field is set to false in Terraform state, a terraform destroy or terraform apply that would delete the instance will fail.
-- `name` (String) Lightdash space name
-- `project_uuid` (String) Lightdash project UUID
+- `name` (String) The name of the Lightdash space.
+- `project_uuid` (String) The UUID of the Lightdash project to which the space belongs.
 
 ### Optional
 
-- `access` (Block Set) Use this block to define the users who have access to the Lightdash space. Specify each user's UUID and their role within the space. Note: Organization administrators in Lightdash automatically have access to all spaces. IMPORTANT: This block is ignored for nested spaces, as they inherit access from their parent space. (see [below for nested schema](#nestedblock--access))
-- `group_access` (Block Set) Use this block to define the groups who have access to the Lightdash space by specifying their group UUIDs and their role within the space. (see [below for nested schema](#nestedblock--group_access))
-- `is_private` (Boolean) Lightdash space is private or not. Note: This setting is ignored for nested spaces as they inherit visibility from their parent.
-- `parent_space_uuid` (String) Lightdash parent space UUID. If set, creates a nested space that inherits access controls and visibility from its parent space.
+- `access` (Attributes Set) Set of user access configurations for the space. (see [below for nested schema](#nestedatt--access))
+- `deletion_protection` (Boolean) Whether the space is protected from deletion. Defaults to true.
+- `group_access` (Attributes Set) Set of group access configurations for the space. (see [below for nested schema](#nestedatt--group_access))
+- `is_private` (Boolean) Whether the space is private (true) or public (false). Defaults to false.
+- `parent_space_uuid` (String) The UUID of the parent space. Set to null for a root space.
 
 ### Read-Only
 
-- `created_at` (String) Timestamp of the creation of the space
-- `id` (String) Resource identifier
+- `created_at` (String) The timestamp when the space was created.
+- `id` (String) The unique identifier for the resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the space.
-- `space_uuid` (String) Lightdash space UUID
+- `space_uuid` (String) The UUID of the Lightdash space.
 
-<a id="nestedblock--access"></a>
+<a id="nestedatt--access"></a>
 ### Nested Schema for `access`
 
 Required:
 
-- `space_role` (String) Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)
-- `user_uuid` (String) User UUID
+- `space_role` (String) Lightdash space role for the user.
+- `user_uuid` (String) Lightdash user UUID
 
 
-<a id="nestedblock--group_access"></a>
+<a id="nestedatt--group_access"></a>
 ### Nested Schema for `group_access`
 
 Required:
 
-- `group_uuid` (String) Group UUID
-- `space_role` (String) Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)
+- `group_uuid` (String) Lightdash group UUID
+- `space_role` (String) Lightdash space role for the group.
 
 ## Import
 

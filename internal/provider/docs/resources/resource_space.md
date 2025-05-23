@@ -1,0 +1,1 @@
+A Lightdash space resource manages spaces within a Lightdash project. This resource allows for the creation, reading, updating, and deletion of spaces, including setting their name, visibility (private/public), and managing deletion protection. It also supports configuring access for individual members and groups within the space.

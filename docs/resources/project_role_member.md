@@ -3,12 +3,12 @@
 page_title: "lightdash_project_role_member Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash the role of a member at project level
+  Manages the assignment of a Lightdash member to a specific role within a project. This resource allows you to control the permissions granted to an individual user for a given project. You need to specify the project UUID, the user UUID, and the desired role (e.g., viewer, editor, developer, admin). Using this resource ensures that individual user access is managed declaratively at the project level.
 ---
 
 # lightdash_project_role_member (Resource)
 
-Lightdash the role of a member at project level
+Manages the assignment of a Lightdash member to a specific role within a project. This resource allows you to control the permissions granted to an individual user for a given project. You need to specify the project UUID, the user UUID, and the desired role (e.g., `viewer`, `editor`, `developer`, `admin`). Using this resource ensures that individual user access is managed declaratively at the project level.
 
 ## Example Usage
 

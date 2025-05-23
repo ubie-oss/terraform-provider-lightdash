@@ -3,12 +3,12 @@
 page_title: "lightdash_space Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash space data source
+  Retrieves detailed information for a specific Lightdash space by its UUID within a project. This data source provides extensive details including the space's parent space (if any), name, visibility (private/public), and detailed access information for both individual members and groups. It requires the project UUID and space UUID as input. This data source is useful for fetching the current state and access configurations of a space.
 ---
 
 # lightdash_space (Data Source)
 
-Lightdash space data source
+Retrieves detailed information for a specific Lightdash space by its UUID within a project. This data source provides extensive details including the space's parent space (if any), name, visibility (private/public), and detailed access information for both individual members and groups. It requires the project UUID and space UUID as input. This data source is useful for fetching the current state and access configurations of a space.
 
 ## Example Usage
 

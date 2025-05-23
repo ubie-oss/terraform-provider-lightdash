@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_groups Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash organization groups data source
+  Retrieves a list of all groups within a Lightdash organization. This data source provides details for each group, including its UUID, name, and creation timestamp. It requires the organization UUID as input and returns a list of groups sorted by their UUID. This is useful for discovering existing groups to use in other resources like lightdash_project_role_group.
 ---
 
 # lightdash_organization_groups (Data Source)
 
-Lightdash organization groups data source
+Retrieves a list of all groups within a Lightdash organization. This data source provides details for each group, including its UUID, name, and creation timestamp. It requires the organization UUID as input and returns a list of groups sorted by their UUID. This is useful for discovering existing groups to use in other resources like `lightdash_project_role_group`.
 
 ## Example Usage
 

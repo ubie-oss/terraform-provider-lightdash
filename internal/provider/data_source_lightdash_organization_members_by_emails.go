@@ -17,8 +17,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sort"
+
+	slices "golang.org/x/exp/slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -56,8 +57,17 @@ func (d *organizationMembersByEmailsDataSource) Metadata(ctx context.Context, re
 }
 
 func (d *organizationMembersByEmailsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/data_sources/data_source_lightdash_organization_members_by_emails.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Fetches Lightdash organization members filtered by a list of emails.",
+		MarkdownDescription: markdownDescription,
 		Description:         "Fetches Lightdash organization members filtered by a list of emails.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

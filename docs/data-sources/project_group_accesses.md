@@ -3,12 +3,12 @@
 page_title: "lightdash_project_group_accesses Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash project group accesses data source
+  Retrieves a list of groups and their assigned roles for a specific Lightdash project. This data source provides insights into how groups are permissioned within a project, showing the project UUID, group UUID, and the role assigned to the group. It is useful for auditing project access granted to different groups.
 ---
 
 # lightdash_project_group_accesses (Data Source)
 
-Lightdash project group accesses data source
+Retrieves a list of groups and their assigned roles for a specific Lightdash project. This data source provides insights into how groups are permissioned within a project, showing the project UUID, group UUID, and the role assigned to the group. It is useful for auditing project access granted to different groups.
 
 ## Example Usage
 

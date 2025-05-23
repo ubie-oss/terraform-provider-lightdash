@@ -58,8 +58,16 @@ func (r *projectSchedulerSettingsResource) Metadata(ctx context.Context, req res
 }
 
 func (r *projectSchedulerSettingsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_project_scheduler_settings.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "A Lightdash scheduler settings resource manages the scheduling configurations for projects and resources within an organization.",
+		MarkdownDescription: markdownDescription,
 		Description:         "Manages Lightdash scheduler settings",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

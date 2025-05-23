@@ -1,0 +1,1 @@
+Manages the assignment of a Lightdash group to a specific role within a project. This resource allows you to control the permissions granted to an entire group for a given project. You need to specify the project UUID, the group UUID, and the desired role (e.g., `viewer`, `editor`, `developer`). Using this resource ensures that group access is managed declaratively.

@@ -3,12 +3,12 @@
 page_title: "lightdash_project_scheduler_settings Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash project scheduler settings data source
+  This data source retrieves the scheduler settings for a specific Lightdash project. It allows you to fetch the currently configured timezone for project-level scheduling. This information is useful for aligning automation and reporting tasks with the project's designated timezone. You must provide the organization UUID and the project UUID to retrieve the settings.
 ---
 
 # lightdash_project_scheduler_settings (Data Source)
 
-Lightdash project scheduler settings data source
+This data source retrieves the scheduler settings for a specific Lightdash project. It allows you to fetch the currently configured timezone for project-level scheduling. This information is useful for aligning automation and reporting tasks with the project's designated timezone. You must provide the organization UUID and the project UUID to retrieve the settings.
 
 ## Example Usage
 

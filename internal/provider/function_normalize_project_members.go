@@ -22,6 +22,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 )
 
@@ -68,14 +70,22 @@ func (f *NormalizeProjectMembersFunction) Metadata(
 
 // Definition defines the function schema including parameters and return type.
 func (f *NormalizeProjectMembersFunction) Definition(
-	_ context.Context,
+	ctx context.Context,
 	req function.DefinitionRequest,
 	resp *function.DefinitionResponse,
 ) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/functions/function_normalize_project_members.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Definition = function.Definition{
-		Summary: "Normalize the members of a project by role.",
-		MarkdownDescription: `If a member belongs to multiple roles, they will only appear once in the returned list. ` +
-			`The member will be assigned the highest role in the list of roles (admin > developer > editor > integration > viewer).`,
+		Summary:             "Normalize the members of a project by role.",
+		MarkdownDescription: markdownDescription,
 
 		Parameters: []function.Parameter{
 			function.ListParameter{

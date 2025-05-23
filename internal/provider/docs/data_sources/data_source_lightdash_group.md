@@ -1,0 +1,1 @@
+This data source retrieves details about a specific Lightdash group using its UUID. It provides access to the group's name and creation timestamp. You need to provide the organization UUID and the group UUID to fetch the group details. This is helpful when you need to reference an existing group in your Terraform configurations.

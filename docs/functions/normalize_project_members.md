@@ -8,7 +8,7 @@ description: |-
 
 # function: normalize_project_members
 
-If a member belongs to multiple roles, they will only appear once in the returned list. The member will be assigned the highest role in the list of roles (admin > developer > editor > integration > viewer).
+This function normalizes the members of a Lightdash project by role. If a user is assigned multiple roles within the project, they will only be listed under the single highest role they possess. The roles are ordered from highest to lowest precedence as admin, developer, editor, interactive viewer, and viewer. This function takes lists of user UUIDs for each role as input and returns lists of user UUIDs for each role after normalization, ensuring each user appears only once under their highest effective role.
 
 
 
