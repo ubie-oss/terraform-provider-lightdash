@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -36,10 +35,9 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ resource.Resource                   = &spaceResource{}
-	_ resource.ResourceWithConfigure      = &spaceResource{}
-	_ resource.ResourceWithImportState    = &spaceResource{}
-	_ resource.ResourceWithValidateConfig = &spaceResource{}
+	_ resource.Resource                = &spaceResource{}
+	_ resource.ResourceWithConfigure   = &spaceResource{}
+	_ resource.ResourceWithImportState = &spaceResource{}
 )
 
 func NewSpaceResource() resource.Resource {
@@ -99,93 +97,100 @@ func (r *spaceResource) Metadata(ctx context.Context, req resource.MetadataReque
 }
 
 func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_lightdash_space.md")
+	markdownDescription, err := readMarkdownDescription(ctx, "docs/resources/resource_space.md")
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to read markdown description",
-			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+			"Failed to read markdown description",
+			"Could not read the markdown description file for the space resource: "+err.Error(),
 		)
-		return
+		return // Stop processing if documentation can't be loaded
 	}
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: markdownDescription,
-		Description:         "Manages a Lightdash space",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The unique identifier for the resource.",
+				MarkdownDescription: "Resource identifier",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
+			// The response from the API does not contain the organization UUID right now.
+			// "organization_uuid": schema.StringAttribute{
+			// 	MarkdownDescription: "Lightdash organization UUID",
+			// 	Computed:            true,
+			// },
 			"project_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the Lightdash project to which the space belongs.",
+				MarkdownDescription: "Lightdash project UUID",
 				Required:            true,
 			},
 			"parent_space_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the parent space. Set to null for a root space.",
+				MarkdownDescription: "Lightdash parent space UUID. If set, creates a nested space that inherits access controls and visibility from its parent space.",
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				// Computed:            true,
 			},
 			"space_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the Lightdash space.",
+				MarkdownDescription: "Lightdash space UUID",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"is_private": schema.BoolAttribute{
+				MarkdownDescription: "Lightdash space is private or not. Note: This setting is ignored for nested spaces as they inherit visibility from their parent.",
+				Optional:            true,
+				Computed:            true,
+			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the Lightdash space.",
+				MarkdownDescription: "Lightdash space name",
 				Required:            true,
 			},
-			"is_private": schema.BoolAttribute{
-				MarkdownDescription: "Whether the space is private (true) or public (false). Defaults to false.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
 			"deletion_protection": schema.BoolAttribute{
-				MarkdownDescription: "Whether the space is protected from deletion. Defaults to true.",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(true),
+				MarkdownDescription: "Whether or not to allow Terraform to destroy the instance. Unless this field is set to false in Terraform state, a terraform destroy or terraform apply that would delete the instance will fail.",
+				Required:            true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "The timestamp when the space was created.",
-				Computed:            true,
+				Description: "Timestamp of the creation of the space",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"last_updated": schema.StringAttribute{
-				MarkdownDescription: "Timestamp of the last Terraform update of the space.",
-				Computed:            true,
+				Description: "Timestamp of the last Terraform update of the space.",
+				Computed:    true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"access": schema.SetNestedBlock{
-				MarkdownDescription: "Set of user access configurations for the space.",
+				MarkdownDescription: "Use this block to define the users who have access to the Lightdash space. " +
+					"Specify each user's UUID and their role within the space. " +
+					"Note: Organization administrators in Lightdash automatically have access to all spaces. " +
+					"IMPORTANT: This block is ignored for nested spaces, as they inherit access from their parent space.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "User UUID",
 							Required:            true,
 						},
 						"space_role": schema.StringAttribute{
-							MarkdownDescription: "Lightdash space role for the user.",
+							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"group_access": schema.SetNestedBlock{
-				MarkdownDescription: "Set of group access configurations for the space.",
+				MarkdownDescription: "Use this block to define the groups who have access to the Lightdash space by specifying their group UUIDs and their role within the space.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"group_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash group UUID",
+							MarkdownDescription: "Group UUID",
 							Required:            true,
 						},
 						"space_role": schema.StringAttribute{
-							MarkdownDescription: "Lightdash space role for the group.",
+							MarkdownDescription: "Lightdash space role: 'admin' (Full Access), 'editor' (Can Edit), or 'viewer' (Can View)",
 							Required:            true,
 						},
 					},
