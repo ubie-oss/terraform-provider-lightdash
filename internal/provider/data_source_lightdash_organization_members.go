@@ -76,28 +76,28 @@ func (d *organizationMembersDataSource) Schema(ctx context.Context, req datasour
 		Description:         "Lightdash organization members data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/users`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Computed:            true,
 			},
 			"members": schema.ListNestedAttribute{
-				Description: "List of projects.",
-				Computed:    true,
+				MarkdownDescription: "A list of organization members.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The UUID of the Lightdash user.",
 							Computed:            true,
 						},
 						"email": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The email address of the Lightdash user.",
 							Computed:            true,
 						},
 						"role": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The organization role of the user.",
 							Computed:            true,
 						},
 					},

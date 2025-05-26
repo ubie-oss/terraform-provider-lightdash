@@ -25,18 +25,18 @@ data "lightdash_group_members" "test" {
 
 ### Required
 
-- `group_uuid` (String) Group UUID of the Lightdash group.
-- `organization_uuid` (String) Organization UUID of the Lightdash group.
-- `project_uuid` (String) UUID of the Lightdash project.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `members` (Attributes List) List of group members. (see [below for nested schema](#nestedatt--members))
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>/members`.
+- `members` (Attributes List) A list of the group members. (see [below for nested schema](#nestedatt--members))
 
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`
 
 Read-Only:
 
-- `user_uuid` (String) User UUID of the Lightdash group member.
+- `user_uuid` (String) The UUID of the Lightdash user who is a member of the group.

@@ -22,6 +22,6 @@ data "lightdash_authenticated_user" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/authenticated-users/<user_uuid>`.
 - `organization_uuid` (String) Lightdash organization UUID
 - `user_uuid` (String) Lightdash authenticated user UUID

@@ -90,7 +90,7 @@ func (d *organizationMembersByEmailsDataSource) Schema(ctx context.Context, req 
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "The unique identifier of the Lightdash user.",
+							MarkdownDescription: "The UUID of the Lightdash user.",
 							Computed:            true,
 						},
 						"email": schema.StringAttribute{

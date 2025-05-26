@@ -71,41 +71,41 @@ func (d *spacesDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: markdownDescription,
-		Description:         "Lightdash spaces data source",
+		Description:         "Lists Lightdash spaces within a project.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/spaces`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash organization.",
+				Required:            true,
 			},
 			"project_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash project.",
+				Required:            true,
 			},
 			"spaces": schema.ListNestedAttribute{
-				Description: "List of spaces.",
-				Computed:    true,
+				MarkdownDescription: "A list of spaces within the specified project.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"parent_space_uuid": schema.StringAttribute{
-							Description: "Parent space UUID of the Lightdash space. This attribute is nullable and will be empty if the space has no parent.",
-							Computed:    true,
-							Optional:    true,
+							MarkdownDescription: "The UUID of the parent space. This attribute is null if the space has no parent.",
+							Computed:            true,
+							Optional:            true,
 						},
 						"space_uuid": schema.StringAttribute{
-							Description: "Space UUID of the Lightdash space.",
-							Computed:    true,
+							MarkdownDescription: "The UUID of the Lightdash space.",
+							Computed:            true,
 						},
 						"name": schema.StringAttribute{
-							Description: "Name of the Lightdash space.",
-							Computed:    true,
+							MarkdownDescription: "The human-readable name of the space.",
+							Computed:            true,
 						},
 						"is_private": schema.BoolAttribute{
-							Description: "Is the Lightdash space private.",
-							Computed:    true,
+							MarkdownDescription: "Whether the space is private (`true`) or public (`false`).",
+							Computed:            true,
 						},
 					},
 				},

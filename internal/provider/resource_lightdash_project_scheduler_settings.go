@@ -72,21 +72,21 @@ func (r *projectSchedulerSettingsResource) Schema(ctx context.Context, req resou
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The unique identifier for the resource.",
+				MarkdownDescription: "The resource identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/scheduler_settings`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the Lightdash organization to which the settings belong.",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Required:            true,
 			},
 			"project_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the Lightdash project to which the settings belong.",
+				MarkdownDescription: "The UUID of the Lightdash project.",
 				Required:            true,
 			},
 			"scheduler_timezone": schema.StringAttribute{
-				MarkdownDescription: "The timezone of the Lightdash scheduler settings.",
+				MarkdownDescription: "The timezone setting for the project's scheduler.",
 				Required:            true,
 			},
 		},

@@ -41,4 +41,4 @@ Read-Only:
 
 - `email` (String) The email address of the Lightdash user.
 - `role` (String) The organization role of the Lightdash user (e.g., `viewer`, `editor`, `admin`).
-- `user_uuid` (String) The unique identifier of the Lightdash user.
+- `user_uuid` (String) The UUID of the Lightdash user.

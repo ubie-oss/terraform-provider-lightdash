@@ -72,25 +72,25 @@ func (r *projectRoleGroupResource) Schema(ctx context.Context, req resource.Sche
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Resource identifier.",
+				MarkdownDescription: "The resource identifier. It is computed as `projects/<project_uuid>/groups/<group_uuid>`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"project_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash project UUID.",
+				MarkdownDescription: "The UUID of the Lightdash project.",
 				Required:            true,
 			},
 			"group_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash group UUID.",
+				MarkdownDescription: "The UUID of the Lightdash group.",
 				Required:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "Lightdash group's role.",
+				MarkdownDescription: "The role assigned to the group within the project.",
 				Required:            true,
 			},
 			"last_updated": schema.StringAttribute{
-				MarkdownDescription: "The timestamp of the last update.",
+				MarkdownDescription: "The timestamp of the last Terraform update applied to the project role group resource.",
 				Computed:            true,
 			},
 		},

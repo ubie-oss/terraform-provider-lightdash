@@ -82,7 +82,7 @@ func (d *spaceDataSource) Schema(ctx context.Context, req datasource.SchemaReque
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: markdownDescription,
-		Description:         "Lightdash space data source",
+		Description:         "Retrieves details about a specific Lightdash space.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Data source identifier",

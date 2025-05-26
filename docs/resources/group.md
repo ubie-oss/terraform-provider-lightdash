@@ -38,21 +38,21 @@ resource "lightdash_group" "test_group2" {
 
 ### Required
 
-- `members` (Attributes Set) Set of users. (see [below for nested schema](#nestedatt--members))
+- `members` (Attributes Set) A set of user UUIDs who are members of the group. (see [below for nested schema](#nestedatt--members))
 - `name` (String) The name of the Lightdash group.
-- `organization_uuid` (String) The UUID of the Lightdash organization to which the group belongs.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
 
 ### Read-Only
 
 - `group_uuid` (String) The UUID of the Lightdash group.
-- `id` (String) The unique identifier for the resource.
+- `id` (String) The resource identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>`.
 
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`
 
 Required:
 
-- `user_uuid` (String) Lightdash user UUID
+- `user_uuid` (String) The UUID of the Lightdash user.
 
 ## Import
 

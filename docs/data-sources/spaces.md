@@ -24,23 +24,23 @@ data "lightdash_spaces" "test" {
 
 ### Required
 
-- `organization_uuid` (String) Organization UUID of the Lightdash project.
-- `project_uuid` (String) Organization UUID of the Lightdash project.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `spaces` (Attributes List) List of spaces. (see [below for nested schema](#nestedatt--spaces))
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/spaces`.
+- `spaces` (Attributes List) A list of spaces within the specified project. (see [below for nested schema](#nestedatt--spaces))
 
 <a id="nestedatt--spaces"></a>
 ### Nested Schema for `spaces`
 
 Optional:
 
-- `parent_space_uuid` (String) Parent space UUID of the Lightdash space. This attribute is nullable and will be empty if the space has no parent.
+- `parent_space_uuid` (String) The UUID of the parent space. This attribute is null if the space has no parent.
 
 Read-Only:
 
-- `is_private` (Boolean) Is the Lightdash space private.
-- `name` (String) Name of the Lightdash space.
-- `space_uuid` (String) Space UUID of the Lightdash space.
+- `is_private` (Boolean) Whether the space is private (`true`) or public (`false`).
+- `name` (String) The human-readable name of the space.
+- `space_uuid` (String) The UUID of the Lightdash space.

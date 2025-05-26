@@ -23,18 +23,18 @@ data "lightdash_project_members" "example" {
 
 ### Required
 
-- `project_uuid` (String) Project UUID.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `members` (Attributes List) List of members. (see [below for nested schema](#nestedatt--members))
+- `id` (String) The data source identifier. It is computed as `projects/<project_uuid>/access`.
+- `members` (Attributes List) A list of project members. (see [below for nested schema](#nestedatt--members))
 
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`
 
 Read-Only:
 
-- `email` (String) Lightdash user email.
-- `role` (String) Lightdash project role.
-- `user_uuid` (String) Lightdash user UUID.
+- `email` (String) The email address of the Lightdash user.
+- `role` (String) The project role of the user within the Lightdash project.
+- `user_uuid` (String) The UUID of the Lightdash user who is a member of the project.

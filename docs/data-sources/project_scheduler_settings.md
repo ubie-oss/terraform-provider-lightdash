@@ -24,10 +24,10 @@ data "lightdash_project_scheduler_settings" "test" {
 
 ### Required
 
-- `organization_uuid` (String) Organization UUID of the Lightdash project.
-- `project_uuid` (String) Project UUID of the Lightdash project.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `scheduler_timezone` (String) Timezone for the Lightdash project scheduler.
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/scheduler_settings`.
+- `scheduler_timezone` (String) The timezone for the Lightdash project scheduler.

@@ -24,19 +24,19 @@ data "lightdash_project_group_accesses" "test" {
 
 ### Required
 
-- `organization_uuid` (String) Organization UUID of the Lightdash project.
-- `project_uuid` (String) Project UUID of the Lightdash project.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `groups` (Attributes List) List of group accesses. (see [below for nested schema](#nestedatt--groups))
-- `id` (String) Data source identifier
+- `groups` (Attributes List) A list of groups and their assigned roles within the project. (see [below for nested schema](#nestedatt--groups))
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/groups`.
 
 <a id="nestedatt--groups"></a>
 ### Nested Schema for `groups`
 
 Read-Only:
 
-- `group_uuid` (String) Group UUID of the Lightdash group.
-- `project_uuid` (String) Project UUID of the Lightdash project.
-- `role` (String) Role of the group in the Lightdash project.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `project_uuid` (String) The UUID of the Lightdash project.
+- `role` (String) The role assigned to the group within the project.

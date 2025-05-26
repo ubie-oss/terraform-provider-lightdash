@@ -26,13 +26,13 @@ resource "lightdash_project_scheduler_settings" "example" {
 
 ### Required
 
-- `organization_uuid` (String) The UUID of the Lightdash organization to which the settings belong.
-- `project_uuid` (String) The UUID of the Lightdash project to which the settings belong.
-- `scheduler_timezone` (String) The timezone of the Lightdash scheduler settings.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
+- `scheduler_timezone` (String) The timezone setting for the project's scheduler.
 
 ### Read-Only
 
-- `id` (String) The unique identifier for the resource.
+- `id` (String) The resource identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/scheduler_settings`.
 
 ## Import
 

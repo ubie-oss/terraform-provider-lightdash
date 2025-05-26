@@ -65,10 +65,11 @@ func (d *organizationDataSource) Schema(ctx context.Context, req datasource.Sche
 		Description:         "Lightdash organization data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>`.",
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Computed:            true,
 			},
 		},

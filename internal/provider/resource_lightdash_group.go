@@ -80,13 +80,13 @@ func (r *groupResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The unique identifier for the resource.",
+				MarkdownDescription: "The resource identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the Lightdash organization to which the group belongs.",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Required:            true,
 			},
 			"group_uuid": schema.StringAttribute{
@@ -102,12 +102,12 @@ func (r *groupResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			// TODO check if values of userUUID are unique
 			"members": schema.SetNestedAttribute{
-				Description: "Set of users.",
-				Required:    true,
+				MarkdownDescription: "A set of user UUIDs who are members of the group.",
+				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The UUID of the Lightdash user.",
 							Required:            true,
 						},
 					},

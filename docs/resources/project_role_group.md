@@ -25,14 +25,14 @@ resource "lightdash_project_role_group" "test" {
 
 ### Required
 
-- `group_uuid` (String) Lightdash group UUID.
-- `project_uuid` (String) Lightdash project UUID.
-- `role` (String) Lightdash group's role.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `project_uuid` (String) The UUID of the Lightdash project.
+- `role` (String) The role assigned to the group within the project.
 
 ### Read-Only
 
-- `id` (String) Resource identifier.
-- `last_updated` (String) The timestamp of the last update.
+- `id` (String) The resource identifier. It is computed as `projects/<project_uuid>/groups/<group_uuid>`.
+- `last_updated` (String) The timestamp of the last Terraform update applied to the project role group resource.
 
 ## Import
 

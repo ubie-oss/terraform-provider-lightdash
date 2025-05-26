@@ -25,12 +25,12 @@ data "lightdash_group" "test" {
 
 ### Required
 
-- `group_uuid` (String) UUID of the Lightdash group.
-- `organization_uuid` (String) Organization UUID of the Lightdash group.
-- `project_uuid` (String) UUID of the Lightdash project.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `created_at` (String) Creation timestamp of the Lightdash group.
-- `id` (String) Data source identifier
-- `name` (String) Name of the Lightdash group.
+- `created_at` (String) The timestamp when the Lightdash group was created.
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>`.
+- `name` (String) The name of the Lightdash group.

@@ -69,21 +69,21 @@ func (d *projectSchedulerSettingsDataSource) Schema(ctx context.Context, req dat
 		Description:         "Lightdash project scheduler settings data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/scheduler_settings`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash organization.",
+				Required:            true,
 			},
 			"project_uuid": schema.StringAttribute{
-				Description: "Project UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash project.",
+				Required:            true,
 			},
 			"scheduler_timezone": schema.StringAttribute{
-				Description: "Timezone for the Lightdash project scheduler.",
-				Required:    false,
-				Computed:    true,
+				MarkdownDescription: "The timezone for the Lightdash project scheduler.",
+				Required:            false,
+				Computed:            true,
 			},
 		},
 	}

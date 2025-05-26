@@ -72,30 +72,30 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 		Description:         "Lightdash projects data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/projects`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash project.",
-				Optional:    true,
-				Computed:    true,
+				MarkdownDescription: "The UUID of the Lightdash organization.",
+				Optional:            true,
+				Computed:            true,
 			},
 			"projects": schema.ListNestedAttribute{
-				Description: "List of projects.",
-				Computed:    true,
+				MarkdownDescription: "A list of Lightdash projects.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_uuid": schema.StringAttribute{
-							Description: "Project UUID of the Lightdash project.",
-							Computed:    true,
+							MarkdownDescription: "The UUID of the Lightdash project.",
+							Computed:            true,
 						},
 						"name": schema.StringAttribute{
-							Description: "Lightdash project name.",
-							Computed:    true,
+							MarkdownDescription: "The name of the Lightdash project.",
+							Computed:            true,
 						},
 						"type": schema.StringAttribute{
-							Description: "Lightdash project type.",
-							Computed:    true,
+							MarkdownDescription: "The type of the Lightdash project.",
+							Computed:            true,
 						},
 					},
 				},

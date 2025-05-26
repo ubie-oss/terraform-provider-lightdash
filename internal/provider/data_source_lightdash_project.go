@@ -67,23 +67,23 @@ func (d *projectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 		Description:         "Lightdash project data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Optional:            true,
 			},
 			"project_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash project UUID",
+				MarkdownDescription: "The UUID of the Lightdash project.",
 				Required:            true,
 			},
 			"project_type": schema.StringAttribute{
-				MarkdownDescription: "Lightdash project type",
+				MarkdownDescription: "The type of the Lightdash project.",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Lightdash project name",
+				MarkdownDescription: "The name of the Lightdash project.",
 				Computed:            true,
 			},
 		},

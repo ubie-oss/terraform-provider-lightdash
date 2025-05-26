@@ -66,7 +66,8 @@ func (d *authenticatedUserDataSource) Schema(ctx context.Context, req datasource
 		Description:         "Authenticated data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/authenticated-users/<user_uuid>`.",
 			},
 			"organization_uuid": schema.StringAttribute{
 				MarkdownDescription: "Lightdash organization UUID",

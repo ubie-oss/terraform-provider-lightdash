@@ -73,33 +73,33 @@ func (d *projectGroupAccessesDataSource) Schema(ctx context.Context, req datasou
 		Description:         "Lightdash project group accesses data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/groups`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash organization.",
+				Required:            true,
 			},
 			"project_uuid": schema.StringAttribute{
-				Description: "Project UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash project.",
+				Required:            true,
 			},
 			"groups": schema.ListNestedAttribute{
-				Description: "List of group accesses.",
-				Computed:    true,
+				MarkdownDescription: "A list of groups and their assigned roles within the project.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project_uuid": schema.StringAttribute{
-							Description: "Project UUID of the Lightdash project.",
-							Computed:    true,
+							MarkdownDescription: "The UUID of the Lightdash project.",
+							Computed:            true,
 						},
 						"group_uuid": schema.StringAttribute{
-							Description: "Group UUID of the Lightdash group.",
-							Computed:    true,
+							MarkdownDescription: "The UUID of the Lightdash group.",
+							Computed:            true,
 						},
 						"role": schema.StringAttribute{
-							Description: "Role of the group in the Lightdash project.",
-							Computed:    true,
+							MarkdownDescription: "The role assigned to the group within the project.",
+							Computed:            true,
 						},
 					},
 				},

@@ -23,18 +23,18 @@ data "lightdash_organization_groups" "test" {
 
 ### Required
 
-- `organization_uuid` (String) Lightdash organization UUID
+- `organization_uuid` (String) The UUID of the Lightdash organization.
 
 ### Read-Only
 
-- `groups` (Attributes List) List of organization groups. (see [below for nested schema](#nestedatt--groups))
-- `id` (String) Data source identifier
+- `groups` (Attributes List) A list of organization groups. (see [below for nested schema](#nestedatt--groups))
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/groups`.
 
 <a id="nestedatt--groups"></a>
 ### Nested Schema for `groups`
 
 Read-Only:
 
-- `created_at` (String) Timestamp when the group was created
-- `group_uuid` (String) Lightdash group UUID
-- `name` (String) Lightdash group name
+- `created_at` (String) The timestamp when the group was created.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `name` (String) The name of the Lightdash group.

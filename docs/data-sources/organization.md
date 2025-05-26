@@ -22,5 +22,5 @@ data "lightdash_organization" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-- `organization_uuid` (String) Lightdash organization UUID
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>`.
+- `organization_uuid` (String) The UUID of the Lightdash organization.

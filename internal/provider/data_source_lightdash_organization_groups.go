@@ -74,28 +74,28 @@ func (d *organizationGroupsDataSource) Schema(ctx context.Context, req datasourc
 		Description:         "Lightdash organization groups data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/groups`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Required:            true,
 			},
 			"groups": schema.ListNestedAttribute{
-				Description: "List of organization groups.",
-				Computed:    true,
+				MarkdownDescription: "A list of organization groups.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"group_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash group UUID",
+							MarkdownDescription: "The UUID of the Lightdash group.",
 							Computed:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Lightdash group name",
+							MarkdownDescription: "The name of the Lightdash group.",
 							Computed:            true,
 						},
 						"created_at": schema.StringAttribute{
-							MarkdownDescription: "Timestamp when the group was created",
+							MarkdownDescription: "The timestamp when the group was created.",
 							Computed:            true,
 						},
 					},
