@@ -44,7 +44,6 @@ func isIntegrationTestMode() bool {
 func getLightdashApiKey() (*string, error) {
 	// If the environment variable is set to 1, then we are in test mode
 	api_key := strings.TrimSpace(os.Getenv(lightdashApiKeyEnvVar))
-	fmt.Println("api_key", api_key)
 	if api_key == "" {
 		return nil, fmt.Errorf("LIGHTDASH_API_KEY environment variable is not set")
 	}
@@ -54,7 +53,6 @@ func getLightdashApiKey() (*string, error) {
 func getLightdashProjectUuid() (*string, error) {
 	// If the environment variable is set to 1, then we are in test mode
 	projectUuid := strings.TrimSpace(os.Getenv(lightdashProjectUuidEnvVar))
-	fmt.Println("projectUuid", projectUuid)
 	if projectUuid == "" {
 		return nil, fmt.Errorf("LIGHTDASH_PROJECT environment variable is not set")
 	}
