@@ -113,10 +113,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 		Description:         "Manages a Lightdash space",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Computed:            true,
 				MarkdownDescription: "The unique identifier for the resource.",
 			},
 			"project_uuid": schema.StringAttribute{
@@ -162,10 +159,11 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				MarkdownDescription: "Timestamp of the last Terraform update of the space.",
 				Computed:            true,
 			},
-			"access": schema.SetNestedAttribute{
+		},
+		Blocks: map[string]schema.Block{
+			"access": schema.SetNestedBlock{
 				MarkdownDescription: "Set of user access configurations for the space.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
 							MarkdownDescription: "Lightdash user UUID",
@@ -178,10 +176,9 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 					},
 				},
 			},
-			"group_access": schema.SetNestedAttribute{
+			"group_access": schema.SetNestedBlock{
 				MarkdownDescription: "Set of group access configurations for the space.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"group_uuid": schema.StringAttribute{
 							MarkdownDescription: "Lightdash group UUID",
