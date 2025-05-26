@@ -3,12 +3,12 @@
 page_title: "lightdash_project_members Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash project member data source
+  Retrieves a list of members and their assigned roles for a specific Lightdash project. This data source provides insights into how users are permissioned within a project, showing the user UUID, email, and the role assigned to the member. The list of members is sorted by user UUID. It is useful for auditing project access granted to different users.
 ---
 
 # lightdash_project_members (Data Source)
 
-Lightdash project member data source
+Retrieves a list of members and their assigned roles for a specific Lightdash project. This data source provides insights into how users are permissioned within a project, showing the user UUID, email, and the role assigned to the member. The list of members is sorted by user UUID. It is useful for auditing project access granted to different users.
 
 ## Example Usage
 
@@ -23,18 +23,18 @@ data "lightdash_project_members" "example" {
 
 ### Required
 
-- `project_uuid` (String) Project UUID.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `members` (Attributes List) List of members. (see [below for nested schema](#nestedatt--members))
+- `id` (String) The data source identifier. It is computed as `projects/<project_uuid>/access`.
+- `members` (Attributes List) A list of project members. (see [below for nested schema](#nestedatt--members))
 
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`
 
 Read-Only:
 
-- `email` (String) Lightdash user email.
-- `role` (String) Lightdash project role.
-- `user_uuid` (String) Lightdash user UUID.
+- `email` (String) The email address of the Lightdash user.
+- `role` (String) The project role of the user within the Lightdash project.
+- `user_uuid` (String) The UUID of the Lightdash user who is a member of the project.

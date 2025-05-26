@@ -3,12 +3,12 @@
 page_title: "lightdash_authenticated_user Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Authenticated user data source
+  Retrieves information about the Lightdash organization associated with the authenticated user. This data source is useful for obtaining the organization UUID, which is often required for other resources and data sources within the provider. It provides a simple way to get the organization context for subsequent operations without needing to specify the organization UUID explicitly in the provider configuration itself.
 ---
 
 # lightdash_authenticated_user (Data Source)
 
-Authenticated user data source
+Retrieves information about the Lightdash organization associated with the authenticated user. This data source is useful for obtaining the organization UUID, which is often required for other resources and data sources within the provider. It provides a simple way to get the organization context for subsequent operations without needing to specify the organization UUID explicitly in the provider configuration itself.
 
 ## Example Usage
 
@@ -22,6 +22,6 @@ data "lightdash_authenticated_user" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/authenticated-users/<user_uuid>`.
 - `organization_uuid` (String) Lightdash organization UUID
 - `user_uuid` (String) Lightdash authenticated user UUID

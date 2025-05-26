@@ -54,28 +54,37 @@ func (d *organizationMemberDataSource) Metadata(ctx context.Context, req datasou
 }
 
 func (d *organizationMemberDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/data_sources/data_source_lightdash_organization_member.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash organization member data source",
+		MarkdownDescription: markdownDescription,
 		Description:         "Lightdash organization member data source",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/users/<user_uuid>`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID.",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Computed:            true,
 			},
 			"user_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash user UUID.",
+				MarkdownDescription: "The UUID of the Lightdash user.",
 				Computed:            true,
 			},
 			"email": schema.StringAttribute{
-				MarkdownDescription: "Lightdash user's email.",
+				MarkdownDescription: "The email address of the Lightdash user.",
 				Required:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization role of the user.",
+				MarkdownDescription: "The organization role of the user.",
 				Computed:            true,
 			},
 		},

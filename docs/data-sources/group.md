@@ -3,12 +3,12 @@
 page_title: "lightdash_group Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash group data source
+  This data source retrieves details about a specific Lightdash group using its UUID. It provides access to the group's name and creation timestamp. You need to provide the organization UUID and the group UUID to fetch the group details. This is helpful when you need to reference an existing group in your Terraform configurations.
 ---
 
 # lightdash_group (Data Source)
 
-Lightdash group data source
+This data source retrieves details about a specific Lightdash group using its UUID. It provides access to the group's name and creation timestamp. You need to provide the organization UUID and the group UUID to fetch the group details. This is helpful when you need to reference an existing group in your Terraform configurations.
 
 ## Example Usage
 
@@ -25,12 +25,12 @@ data "lightdash_group" "test" {
 
 ### Required
 
-- `group_uuid` (String) UUID of the Lightdash group.
-- `organization_uuid` (String) Organization UUID of the Lightdash group.
-- `project_uuid` (String) UUID of the Lightdash project.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Read-Only
 
-- `created_at` (String) Creation timestamp of the Lightdash group.
-- `id` (String) Data source identifier
-- `name` (String) Name of the Lightdash group.
+- `created_at` (String) The timestamp when the Lightdash group was created.
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>`.
+- `name` (String) The name of the Lightdash group.

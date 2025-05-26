@@ -1,0 +1,1 @@
+Retrieves details for a specific member within a Lightdash organization by their email address. This data source provides information such as the user's UUID and their organization role. It requires the email address as input and returns the member's details.

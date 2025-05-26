@@ -65,22 +65,28 @@ func (r *groupResource) Metadata(ctx context.Context, req resource.MetadataReque
 }
 
 func (r *groupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_lightdash_group.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "A Lightdash group represents a set of users within an organization, " +
-			"providing a mechanism to manage permissions for projects and resources. " +
-			"Each group is uniquely identified by a UUID and is associated with a specific organization. " +
-			"Group membership is defined by the user UUIDs of the members.",
-		Description: "Manages a Lightdash group",
+		MarkdownDescription: markdownDescription,
+		Description:         "Manages a Lightdash group",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The unique identifier for the resource.",
+				MarkdownDescription: "The resource identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the Lightdash organization to which the group belongs.",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Required:            true,
 			},
 			"group_uuid": schema.StringAttribute{
@@ -96,12 +102,12 @@ func (r *groupResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			// TODO check if values of userUUID are unique
 			"members": schema.SetNestedAttribute{
-				Description: "Set of users.",
-				Required:    true,
+				MarkdownDescription: "A set of user UUIDs who are members of the group.",
+				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							MarkdownDescription: "Lightdash user UUID",
+							MarkdownDescription: "The UUID of the Lightdash user.",
 							Required:            true,
 						},
 					},

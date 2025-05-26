@@ -3,12 +3,12 @@
 page_title: "lightdash_project_role_group Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Assigns the role of a group at project level
+  Manages the assignment of a Lightdash group to a specific role within a project. This resource allows you to control the permissions granted to an entire group for a given project. You need to specify the project UUID, the group UUID, and the desired role (e.g., viewer, editor, developer). Using this resource ensures that group access is managed declaratively.
 ---
 
 # lightdash_project_role_group (Resource)
 
-Assigns the role of a group at project level
+Manages the assignment of a Lightdash group to a specific role within a project. This resource allows you to control the permissions granted to an entire group for a given project. You need to specify the project UUID, the group UUID, and the desired role (e.g., `viewer`, `editor`, `developer`). Using this resource ensures that group access is managed declaratively.
 
 ## Example Usage
 
@@ -25,14 +25,14 @@ resource "lightdash_project_role_group" "test" {
 
 ### Required
 
-- `group_uuid` (String) Lightdash group UUID.
-- `project_uuid` (String) Lightdash project UUID.
-- `role` (String) Lightdash group's role.
+- `group_uuid` (String) The UUID of the Lightdash group.
+- `project_uuid` (String) The UUID of the Lightdash project.
+- `role` (String) The role assigned to the group within the project.
 
 ### Read-Only
 
-- `id` (String) Resource identifier.
-- `last_updated` (String) The timestamp of the last update.
+- `id` (String) The resource identifier. It is computed as `projects/<project_uuid>/groups/<group_uuid>`.
+- `last_updated` (String) The timestamp of the last Terraform update applied to the project role group resource.
 
 ## Import
 

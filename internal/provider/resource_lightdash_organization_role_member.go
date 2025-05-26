@@ -60,37 +60,46 @@ func (r *organizationRoleMemberResource) Metadata(ctx context.Context, req resou
 }
 
 func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_organization_role_member.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightash the role of a member at organization level",
+		MarkdownDescription: markdownDescription,
 		Description:         "Lightash the role of a member at organization level",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Resource identifier",
+				MarkdownDescription: "The resource identifier. It is computed as `organizations/<organization_uuid>/users/<user_uuid>`.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"organization_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization UUID",
+				MarkdownDescription: "The UUID of the Lightdash organization.",
 				Required:            true,
 			},
 			"user_uuid": schema.StringAttribute{
-				MarkdownDescription: "Lightdash user UUID",
+				MarkdownDescription: "The UUID of the Lightdash user.",
 				Required:            true,
 			},
 			"email": schema.StringAttribute{
-				MarkdownDescription: "Lightdash user UUID",
+				MarkdownDescription: "The email address of the Lightdash user.",
 				Computed:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "Lightdash organization role",
+				MarkdownDescription: "The organization role assigned to the user.",
 				Required:            true,
 			},
 			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the space.",
-				Computed:    true,
+				MarkdownDescription: "The timestamp of the last Terraform update applied to the organization role member.",
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

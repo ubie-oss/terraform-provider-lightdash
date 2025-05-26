@@ -3,12 +3,12 @@
 page_title: "lightdash_organization Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash organization data source
+  Retrieves information about the Lightdash organization associated with the authenticated user. This data source is useful for obtaining the organization UUID, which is often required for other resources and data sources within the provider. It provides a simple way to get the organization context for subsequent operations without needing to specify the organization UUID explicitly in the provider configuration itself.
 ---
 
 # lightdash_organization (Data Source)
 
-Lightdash organization data source
+Retrieves information about the Lightdash organization associated with the authenticated user. This data source is useful for obtaining the organization UUID, which is often required for other resources and data sources within the provider. It provides a simple way to get the organization context for subsequent operations without needing to specify the organization UUID explicitly in the provider configuration itself.
 
 ## Example Usage
 
@@ -22,5 +22,5 @@ data "lightdash_organization" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-- `organization_uuid` (String) Lightdash organization UUID
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>`.
+- `organization_uuid` (String) The UUID of the Lightdash organization.

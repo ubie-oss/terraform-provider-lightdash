@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_members Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash organization members data source
+  Retrieves a list of all members within a Lightdash organization. This data source provides details for each member, including their user UUID, email, and organization role. It returns a list of members sorted by their UUID. This is useful for obtaining information about all users in the organization.
 ---
 
 # lightdash_organization_members (Data Source)
 
-Lightdash organization members data source
+Retrieves a list of all members within a Lightdash organization. This data source provides details for each member, including their user UUID, email, and organization role. It returns a list of members sorted by their UUID. This is useful for obtaining information about all users in the organization.
 
 ## Example Usage
 
@@ -22,15 +22,15 @@ data "lightdash_organization_members" "test" {
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `members` (Attributes List) List of projects. (see [below for nested schema](#nestedatt--members))
-- `organization_uuid` (String) Lightdash organization UUID
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/users`.
+- `members` (Attributes List) A list of organization members. (see [below for nested schema](#nestedatt--members))
+- `organization_uuid` (String) The UUID of the Lightdash organization.
 
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`
 
 Read-Only:
 
-- `email` (String) Lightdash user UUID
-- `role` (String) Lightdash user UUID
-- `user_uuid` (String) Lightdash user UUID
+- `email` (String) The email address of the Lightdash user.
+- `role` (String) The organization role of the user.
+- `user_uuid` (String) The UUID of the Lightdash user.

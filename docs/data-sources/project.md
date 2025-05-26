@@ -3,12 +3,12 @@
 page_title: "lightdash_project Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash project data source
+  Retrieves details for a specific Lightdash project by its UUID. This data source provides information such as the project's organization UUID, name, and type. It is useful for fetching project details when the UUID is known, allowing you to reference project attributes in your Terraform configuration.
 ---
 
 # lightdash_project (Data Source)
 
-Lightdash project data source
+Retrieves details for a specific Lightdash project by its UUID. This data source provides information such as the project's organization UUID, name, and type. It is useful for fetching project details when the UUID is known, allowing you to reference project attributes in your Terraform configuration.
 
 ## Example Usage
 
@@ -23,14 +23,14 @@ data "lightdash_project" "example" {
 
 ### Required
 
-- `project_uuid` (String) Lightdash project UUID
+- `project_uuid` (String) The UUID of the Lightdash project.
 
 ### Optional
 
-- `organization_uuid` (String) Lightdash organization UUID
+- `organization_uuid` (String) The UUID of the Lightdash organization.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `name` (String) Lightdash project name
-- `project_type` (String) Lightdash project type
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>`.
+- `name` (String) The name of the Lightdash project.
+- `project_type` (String) The type of the Lightdash project.

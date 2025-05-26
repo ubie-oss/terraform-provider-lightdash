@@ -1,0 +1,1 @@
+This data source retrieves a list of members belonging to a specific Lightdash group. It requires the group's UUID and the organization UUID to fetch the list of members. The output provides the user UUID for each member in the group.

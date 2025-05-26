@@ -71,9 +71,18 @@ func (d *spaceDataSource) Metadata(ctx context.Context, req datasource.MetadataR
 }
 
 func (d *spaceDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/data_sources/data_source_lightdash_space.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash space data source",
-		Description:         "Lightdash space data source",
+		MarkdownDescription: markdownDescription,
+		Description:         "Retrieves details about a specific Lightdash space.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Data source identifier",

@@ -3,12 +3,12 @@
 page_title: "lightdash_projects Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash projects data source
+  Retrieves a list of all projects within a Lightdash organization. This data source provides details for each project, including its UUID, name, and type. It returns a list of projects sorted by their UUID. This is useful for discovering existing projects to use in other parts of your Terraform configuration.
 ---
 
 # lightdash_projects (Data Source)
 
-Lightdash projects data source
+Retrieves a list of all projects within a Lightdash organization. This data source provides details for each project, including its UUID, name, and type. It returns a list of projects sorted by their UUID. This is useful for discovering existing projects to use in other parts of your Terraform configuration.
 
 ## Example Usage
 
@@ -23,18 +23,18 @@ data "lightdash_projects" "test" {
 
 ### Optional
 
-- `organization_uuid` (String) Organization UUID of the Lightdash project.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `projects` (Attributes List) List of projects. (see [below for nested schema](#nestedatt--projects))
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/projects`.
+- `projects` (Attributes List) A list of Lightdash projects. (see [below for nested schema](#nestedatt--projects))
 
 <a id="nestedatt--projects"></a>
 ### Nested Schema for `projects`
 
 Read-Only:
 
-- `name` (String) Lightdash project name.
-- `project_uuid` (String) Project UUID of the Lightdash project.
-- `type` (String) Lightdash project type.
+- `name` (String) The name of the Lightdash project.
+- `project_uuid` (String) The UUID of the Lightdash project.
+- `type` (String) The type of the Lightdash project.

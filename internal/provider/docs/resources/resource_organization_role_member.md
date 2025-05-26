@@ -1,0 +1,1 @@
+Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., `member`, `admin`). This resource is essential for managing user access at the organization scope.

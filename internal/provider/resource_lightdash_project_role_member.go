@@ -32,8 +32,10 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &projectRoleMemberResource{}
-var _ resource.ResourceWithImportState = &projectRoleMemberResource{}
+var (
+	_ resource.Resource                = &projectRoleMemberResource{}
+	_ resource.ResourceWithImportState = &projectRoleMemberResource{}
+)
 
 func NewProjectRoleMemberResource() resource.Resource {
 	return &projectRoleMemberResource{}
@@ -60,10 +62,18 @@ func (r *projectRoleMemberResource) Metadata(ctx context.Context, req resource.M
 }
 
 func (r *projectRoleMemberResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/resources/resource_project_role_member.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Lightdash the role of a member at project level",
-		Description:         "Lightdash the role of a member at project level",
+		MarkdownDescription: markdownDescription,
+		Description:         "Manages the role of a member at the project level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,

@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_role_member Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightash the role of a member at organization level
+  Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., member, admin). This resource is essential for managing user access at the organization scope.
 ---
 
 # lightdash_organization_role_member (Resource)
 
-Lightash the role of a member at organization level
+Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., `member`, `admin`). This resource is essential for managing user access at the organization scope.
 
 ## Example Usage
 
@@ -24,15 +24,15 @@ resource "lightdash_organization_role_member" "test" {
 
 ### Required
 
-- `organization_uuid` (String) Lightdash organization UUID
-- `role` (String) Lightdash organization role
-- `user_uuid` (String) Lightdash user UUID
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `role` (String) The organization role assigned to the user.
+- `user_uuid` (String) The UUID of the Lightdash user.
 
 ### Read-Only
 
-- `email` (String) Lightdash user UUID
-- `id` (String) Resource identifier
-- `last_updated` (String) Timestamp of the last Terraform update of the space.
+- `email` (String) The email address of the Lightdash user.
+- `id` (String) The resource identifier. It is computed as `organizations/<organization_uuid>/users/<user_uuid>`.
+- `last_updated` (String) The timestamp of the last Terraform update applied to the organization role member.
 
 ## Import
 

@@ -3,12 +3,12 @@
 page_title: "lightdash_project_scheduler_settings Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  A Lightdash scheduler settings resource manages the scheduling configurations for projects and resources within an organization.
+  Manages the scheduler settings for a specific Lightdash project. Currently, this resource allows you to configure the timezone used for scheduling reports and other time-based operations within the project. By managing the timezone through this resource, you can ensure consistency in scheduled tasks across your Lightdash projects. You need to provide the project UUID and the desired timezone.
 ---
 
 # lightdash_project_scheduler_settings (Resource)
 
-A Lightdash scheduler settings resource manages the scheduling configurations for projects and resources within an organization.
+Manages the scheduler settings for a specific Lightdash project. Currently, this resource allows you to configure the timezone used for scheduling reports and other time-based operations within the project. By managing the timezone through this resource, you can ensure consistency in scheduled tasks across your Lightdash projects. You need to provide the project UUID and the desired timezone.
 
 ## Example Usage
 
@@ -26,13 +26,13 @@ resource "lightdash_project_scheduler_settings" "example" {
 
 ### Required
 
-- `organization_uuid` (String) The UUID of the Lightdash organization to which the settings belong.
-- `project_uuid` (String) The UUID of the Lightdash project to which the settings belong.
-- `scheduler_timezone` (String) The timezone of the Lightdash scheduler settings.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `project_uuid` (String) The UUID of the Lightdash project.
+- `scheduler_timezone` (String) The timezone setting for the project's scheduler.
 
 ### Read-Only
 
-- `id` (String) The unique identifier for the resource.
+- `id` (String) The resource identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/scheduler_settings`.
 
 ## Import
 

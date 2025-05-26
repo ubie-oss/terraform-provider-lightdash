@@ -3,12 +3,12 @@
 page_title: "lightdash_organization_member Data Source - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Lightdash organization member data source
+  Retrieves details for a specific member within a Lightdash organization by their email address. This data source provides information such as the user's UUID and their organization role. It requires the email address as input and returns the member's details.
 ---
 
 # lightdash_organization_member (Data Source)
 
-Lightdash organization member data source
+Retrieves details for a specific member within a Lightdash organization by their email address. This data source provides information such as the user's UUID and their organization role. It requires the email address as input and returns the member's details.
 
 ## Example Usage
 
@@ -23,11 +23,11 @@ data "lightdash_organization_member" "example" {
 
 ### Required
 
-- `email` (String) Lightdash user's email.
+- `email` (String) The email address of the Lightdash user.
 
 ### Read-Only
 
-- `id` (String) Data source identifier
-- `organization_uuid` (String) Lightdash organization UUID.
-- `role` (String) Lightdash organization role of the user.
-- `user_uuid` (String) Lightdash user UUID.
+- `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/users/<user_uuid>`.
+- `organization_uuid` (String) The UUID of the Lightdash organization.
+- `role` (String) The organization role of the user.
+- `user_uuid` (String) The UUID of the Lightdash user.

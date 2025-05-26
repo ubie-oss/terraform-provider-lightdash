@@ -62,34 +62,43 @@ func (d *groupMembersDataSource) Metadata(ctx context.Context, req datasource.Me
 }
 
 func (d *groupMembersDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	markdownDescription, err := readMarkdownDescription(ctx, "internal/provider/docs/data_sources/data_source_lightdash_group_members.md")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to read markdown description",
+			fmt.Sprintf("Unable to read schema markdown description file: %s", err.Error()),
+		)
+		return
+	}
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lightdash group members data source",
+		MarkdownDescription: markdownDescription,
 		Description:         "Data source for Lightdash group members.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier",
+				MarkdownDescription: "The data source identifier. It is computed as `organizations/<organization_uuid>/groups/<group_uuid>/members`.",
 				Computed:            true,
 			},
 			"organization_uuid": schema.StringAttribute{
-				Description: "Organization UUID of the Lightdash group.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash organization.",
+				Required:            true,
 			},
 			"project_uuid": schema.StringAttribute{
-				Description: "UUID of the Lightdash project.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash project.",
+				Required:            true,
 			},
 			"group_uuid": schema.StringAttribute{
-				Description: "Group UUID of the Lightdash group.",
-				Required:    true,
+				MarkdownDescription: "The UUID of the Lightdash group.",
+				Required:            true,
 			},
 			"members": schema.ListNestedAttribute{
-				Description: "List of group members.",
-				Computed:    true,
+				MarkdownDescription: "A list of the group members.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
-							Description: "User UUID of the Lightdash group member.",
-							Computed:    true,
+							MarkdownDescription: "The UUID of the Lightdash user who is a member of the group.",
+							Computed:            true,
 						},
 					},
 				},
