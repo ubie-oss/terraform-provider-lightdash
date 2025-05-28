@@ -13,7 +13,7 @@ Fetches Lightdash organization members filtered by a list of emails. This data s
 ## Example Usage
 
 ```terraform
-data "lightdash_organization_members_emails" "test" {
+data "lightdash_organization_members_by_emails" "test" {
   emails = [
     "test@test.com",
     "test2@test.com",

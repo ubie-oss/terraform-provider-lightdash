@@ -26,7 +26,7 @@ resource "lightdash_space" "test_public" {
 }
 
 
-resource "lightdash_space" "test_privacte" {
+resource "lightdash_space" "test_private" {
   project_uuid = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
   name         = "zzz_test_private_space"
   // The visibility is private by default.
