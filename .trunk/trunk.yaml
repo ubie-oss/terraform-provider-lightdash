@@ -6,12 +6,12 @@ cli:
 plugins:
   sources:
     - id: trunk
-      ref: v1.6.8
+      ref: v1.7.0
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
     - go@1.23.1
-    - node@18.20.5
+    - node@22.16.0
     - python@3.10.8
 lint:
   ignore:
@@ -35,7 +35,7 @@ lint:
         - internal/provider/docs/**
   enabled:
     - golangci-lint2@2.1.6
-    - renovate@40.0.6
+    - renovate@40.32.7
     - taplo@0.9.3
     - terraform@1.1.0
     - semgrep@1.116.0
@@ -44,9 +44,9 @@ lint:
     - bandit@1.8.3
     - black@25.1.0
     - isort@6.0.1
-    - ruff@0.11.10
+    - ruff@0.11.11
     - actionlint@1.7.7
-    - checkov@3.2.427
+    - checkov@3.2.435
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.45.0
@@ -54,9 +54,9 @@ lint:
     - prettier@3.5.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
-    - tflint@0.57.0
+    - tflint@0.58.0
     - trivy@0.62.1
-    - trufflehog@3.88.30
+    - trufflehog@3.88.34
     - yamllint@1.37.1
 actions:
   enabled:
