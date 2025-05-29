@@ -118,7 +118,7 @@ func (d *projectSchedulerSettingsDataSource) Read(ctx context.Context, req datas
 
 	// Fetch scheduler settings from the API
 	schedulerSettingsService := services.NewProjectSchedulerSettingsService(d.client, state.ProjectUUID.ValueString())
-	settings, err := schedulerSettingsService.GetProjectSchedulerSettings(state.ProjectUUID.ValueString())
+	settings, err := schedulerSettingsService.GetProjectSchedulerSettings(ctx, state.ProjectUUID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Unable to Read Lightdash project scheduler settings (project UUID: %s)", state.ProjectUUID.ValueString()),

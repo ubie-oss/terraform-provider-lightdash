@@ -145,7 +145,7 @@ func (d *organizationMembersByEmailsDataSource) Read(ctx context.Context, req da
 
 	// Get all members in the organization
 	service := services.GetOrganizationMembersService(d.client)
-	members, err := service.GetOrganizationMembersByCache()
+	members, err := service.GetOrganizationMembersByCache(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization member",

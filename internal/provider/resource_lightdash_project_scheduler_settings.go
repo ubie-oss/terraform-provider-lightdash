@@ -130,6 +130,7 @@ func (r *projectSchedulerSettingsResource) Create(ctx context.Context, req resou
 	)
 
 	err := schedulerSettingsService.UpdateProjectSchedulerSettings(
+		ctx,
 		&models.ProjectSchedulerSettings{SchedulerTimezone: scheduler_timezone},
 	)
 	if err != nil {
@@ -177,7 +178,7 @@ func (r *projectSchedulerSettingsResource) Read(ctx context.Context, req resourc
 		r.client,
 		projectUuid,
 	)
-	settings, err := schedulerSettingsService.GetProjectSchedulerSettings(projectUuid)
+	settings, err := schedulerSettingsService.GetProjectSchedulerSettings(ctx, projectUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading scheduler settings",
@@ -218,6 +219,7 @@ func (r *projectSchedulerSettingsResource) Update(ctx context.Context, req resou
 		projectUuid,
 	)
 	err := schedulerSettingsService.UpdateProjectSchedulerSettings(
+		ctx,
 		&models.ProjectSchedulerSettings{SchedulerTimezone: schedulerTimezone},
 	)
 	if err != nil {
@@ -256,6 +258,7 @@ func (r *projectSchedulerSettingsResource) Delete(ctx context.Context, req resou
 		state.ProjectUUID.ValueString(),
 	)
 	err := schedulerSettingsService.UpdateProjectSchedulerSettings(
+		ctx,
 		&models.ProjectSchedulerSettings{SchedulerTimezone: defaultProjectSchedulerTimezone},
 	)
 	if err != nil {
@@ -285,7 +288,7 @@ func (r *projectSchedulerSettingsResource) ImportState(ctx context.Context, req 
 		r.client,
 		projectUuid,
 	)
-	importedSettings, err := schedulerSettingsService.GetProjectSchedulerSettings(projectUuid)
+	importedSettings, err := schedulerSettingsService.GetProjectSchedulerSettings(ctx, projectUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting scheduler settings",
