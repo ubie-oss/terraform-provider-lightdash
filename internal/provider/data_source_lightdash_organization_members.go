@@ -140,7 +140,7 @@ func (d *organizationMembersDataSource) Read(ctx context.Context, req datasource
 
 	// Get all members in the organization
 	service := services.GetOrganizationMembersService(d.client)
-	members, err := service.GetOrganizationMembers()
+	members, err := service.GetOrganizationMembers(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization member",

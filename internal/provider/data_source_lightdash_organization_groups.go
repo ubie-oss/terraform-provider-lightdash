@@ -135,7 +135,7 @@ func (d *organizationGroupsDataSource) Read(ctx context.Context, req datasource.
 
 	// Get all groups in the organization using the service
 	orgGroupsService := services.NewOrganizationGroupsService(d.client)
-	groups, err := orgGroupsService.GetOrganizationGroups()
+	groups, err := orgGroupsService.GetOrganizationGroups(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization groups",

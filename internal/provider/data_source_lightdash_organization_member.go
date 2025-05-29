@@ -119,7 +119,7 @@ func (d *organizationMemberDataSource) Read(ctx context.Context, req datasource.
 	// Get all members in the organization
 	email := state.Email.ValueString()
 	service := services.GetOrganizationMembersService(d.client)
-	member, err := service.GetOrganizationMemberByEmail(email)
+	member, err := service.GetOrganizationMemberByEmail(ctx, email)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization member",

@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"sort"
@@ -49,7 +50,7 @@ func GetOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 }
 
 // Fetch the members from the organization using the API client
-func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMembers(ctx context.Context) ([]api.GetOrganizationMembersV1Results, error) {
 	pageSize := 100
 	members := []api.GetOrganizationMembersV1Results{}
 
@@ -83,11 +84,11 @@ func (s *OrganizationMembersService) GetOrganizationMembers() ([]api.GetOrganiza
 
 // Fetch the members from the organization using the API client and cache the results
 // If the members list is already populated, it returns the cached results
-func (s *OrganizationMembersService) GetOrganizationMembersByCache() ([]api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMembersByCache(ctx context.Context) ([]api.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
 		// Fetch the members from the organization using the API client
-		members, err := s.GetOrganizationMembers()
+		members, err := s.GetOrganizationMembers(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -99,9 +100,9 @@ func (s *OrganizationMembersService) GetOrganizationMembersByCache() ([]api.GetO
 
 // GetOrganizationAdmins retrieves the admins of an organization.
 // It leverages the GetOrganizationMembers method to fetch all members and filters out non-admins.
-func (s *OrganizationMembersService) GetOrganizationMembersByRole(role models.OrganizationMemberRole) ([]api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMembersByRole(ctx context.Context, role models.OrganizationMemberRole) ([]api.GetOrganizationMembersV1Results, error) {
 	// Retrieve all members of the organization
-	allMembers, err := s.GetOrganizationMembersByCache()
+	allMembers, err := s.GetOrganizationMembersByCache(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -118,9 +119,9 @@ func (s *OrganizationMembersService) GetOrganizationMembersByRole(role models.Or
 }
 
 // GetOrganizationMemberByUserUuid retrieves a member of an organization by their UUID.
-func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid string) (*api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(ctx context.Context, userUuid string) (*api.GetOrganizationMembersV1Results, error) {
 	// Retrieve all organization members
-	organizationMembers, err := s.GetOrganizationMembersByCache()
+	organizationMembers, err := s.GetOrganizationMembersByCache(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +136,9 @@ func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(userUuid st
 }
 
 // GetOrganizationMemberByEmail retrieves a member of an organization by their email.
-func (s *OrganizationMembersService) GetOrganizationMemberByEmail(email string) (*api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMemberByEmail(ctx context.Context, email string) (*api.GetOrganizationMembersV1Results, error) {
 	// Retrieve all organization members
-	organizationMembers, err := s.GetOrganizationMembersByCache()
+	organizationMembers, err := s.GetOrganizationMembersByCache(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +153,9 @@ func (s *OrganizationMembersService) GetOrganizationMemberByEmail(email string) 
 }
 
 // Check if a member with the passed user UUID is an admin of the organization.
-func (s *OrganizationMembersService) IsOrganizationAdmin(userUuid string) (bool, error) {
+func (s *OrganizationMembersService) IsOrganizationAdmin(ctx context.Context, userUuid string) (bool, error) {
 	// Retrieve the organization member by their UUID
-	member, err := s.GetOrganizationMemberByUserUuid(userUuid)
+	member, err := s.GetOrganizationMemberByUserUuid(ctx, userUuid)
 	if err != nil {
 		return false, err
 	}

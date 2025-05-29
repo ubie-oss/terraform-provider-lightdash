@@ -130,7 +130,7 @@ func (c *SpaceController) GetSpace(ctx context.Context, projectUUID, spaceUUID s
 	})
 
 	// Get space details from the service layer
-	space, err := c.spaceService.GetSpace(projectUUID, spaceUUID)
+	space, err := c.spaceService.GetSpace(ctx, projectUUID, spaceUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get space: %w", err)
 	}
@@ -302,7 +302,7 @@ func (c *SpaceController) DeleteSpace(ctx context.Context, options DeleteSpaceOp
 	}
 
 	// Delete the space via the service layer
-	return c.spaceService.DeleteSpace(options.ProjectUUID, options.SpaceUUID)
+	return c.spaceService.DeleteSpace(ctx, options.ProjectUUID, options.SpaceUUID)
 }
 
 // ImportSpace imports an existing space by its resource ID.
@@ -339,13 +339,14 @@ func (c *SpaceController) createRootSpace(
 	})
 
 	// 1. Validate the input
-	validationErrors := c.validateSpaceCreation(options)
+	validationErrors := c.validateSpaceCreation(ctx, options)
 	if len(validationErrors) > 0 {
 		return nil, validationErrors
 	}
 
 	// 2. Create the space via the service layer
 	createdSpace, err := c.spaceService.CreateSpace(
+		ctx,
 		options.ProjectUUID,
 		options.SpaceName,
 		options.IsPrivate,
@@ -379,7 +380,7 @@ func (c *SpaceController) createRootSpace(
 
 	if len(accessErrors) > 0 {
 		// If access management fails, try to clean up by deleting the space
-		errDel := c.spaceService.DeleteSpace(options.ProjectUUID, createdSpace.SpaceUUID)
+		errDel := c.spaceService.DeleteSpace(ctx, options.ProjectUUID, createdSpace.SpaceUUID)
 		if errDel != nil {
 			accessErrors = append(accessErrors, fmt.Errorf("failed to delete space after access management failure: %w", errDel))
 		}
@@ -414,7 +415,7 @@ func (c *SpaceController) createNestedSpace(
 
 	// 2. Create the space via the service layer. Note that isPrivate, memberAccess, and groupAccess
 	// are effectively ignored by Lightdash for nested spaces as they inherit these from the parent.
-	createdSpace, err := c.spaceService.CreateSpace(options.ProjectUUID, options.SpaceName, nil, options.ParentSpaceUUID)
+	createdSpace, err := c.spaceService.CreateSpace(ctx, options.ProjectUUID, options.SpaceName, nil, options.ParentSpaceUUID)
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to create nested space: %w", err)}
 	}
@@ -423,11 +424,11 @@ func (c *SpaceController) createNestedSpace(
 }
 
 // validateSpaceCreation validates space creation parameters
-func (c *SpaceController) validateSpaceCreation(options CreateSpaceOptions) []error {
+func (c *SpaceController) validateSpaceCreation(ctx context.Context, options CreateSpaceOptions) []error {
 	var errors []error
 
 	// 1.1 Check if the member can become a space member (must be project member, not org admin)
-	projectMembers, err := c.projectService.GetProjectMembers(options.ProjectUUID)
+	projectMembers, err := c.projectService.GetProjectMembers(ctx, options.ProjectUUID)
 	if err != nil {
 		return []error{fmt.Errorf("failed to get project members: %w", err)}
 	}
@@ -449,7 +450,7 @@ func (c *SpaceController) validateSpaceCreation(options CreateSpaceOptions) []er
 
 	// 1.2 Check if the groups exist in the organization
 	for _, group := range options.GroupAccess {
-		_, err := c.organizationGroupsService.GetGroup(group.GroupUUID)
+		_, err := c.organizationGroupsService.GetGroup(ctx, group.GroupUUID)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("group %s not found: %w", group.GroupUUID, err))
 			continue
@@ -496,7 +497,7 @@ func (c *SpaceController) manageRootSpaceMemberAccess(
 	// Find members to remove (in current but not in new)
 	for userUUID := range currentDirectMemberMap {
 		if _, exists := newDirectMemberMap[userUUID]; !exists {
-			err := c.spaceService.RemoveUserFromSpace(projectUUID, spaceUUID, userUUID)
+			err := c.spaceService.RemoveUserFromSpace(ctx, projectUUID, spaceUUID, userUUID)
 			if err != nil {
 				errors = append(errors, fmt.Errorf("failed to remove direct access for user %s from space %s: %w", userUUID, spaceUUID, err))
 			}
@@ -510,7 +511,7 @@ func (c *SpaceController) manageRootSpaceMemberAccess(
 
 		// Add if not in current direct access or update if role has changed
 		if !exists || currentMember.SpaceRole != newMember.SpaceRole {
-			err := c.spaceService.AddUserToSpace(projectUUID, spaceUUID, userUUID, newMember.SpaceRole)
+			err := c.spaceService.AddUserToSpace(ctx, projectUUID, spaceUUID, userUUID, newMember.SpaceRole)
 			if err != nil {
 				errors = append(errors, fmt.Errorf("failed to add/update direct access for user %s to space %s: %w", userUUID, spaceUUID, err))
 			}
@@ -552,7 +553,7 @@ func (c *SpaceController) manageRootSpaceGroupAccess(
 		if _, exists := newGroupMap[groupUUID]; !exists {
 			// Check if group exists in Lightdash before attempting to remove access.
 			// This prevents errors if the group was deleted outside of Terraform.
-			_, err := c.organizationGroupsService.GetGroup(groupUUID)
+			_, err := c.organizationGroupsService.GetGroup(ctx, groupUUID)
 			if err != nil {
 				// Skip if group no longer exists in Lightdash
 				tflog.Debug(ctx, fmt.Sprintf("group %s not found in Lightdash, skipping removal from space %s", groupUUID, spaceUUID))
@@ -560,7 +561,7 @@ func (c *SpaceController) manageRootSpaceGroupAccess(
 			}
 
 			// Remove access via API
-			err = c.spaceService.RemoveGroupFromSpace(projectUUID, spaceUUID, groupUUID)
+			err = c.spaceService.RemoveGroupFromSpace(ctx, projectUUID, spaceUUID, groupUUID)
 			if err != nil {
 				errors = append(errors, fmt.Errorf("failed to remove group %s from space %s: %w", groupUUID, spaceUUID, err))
 			}
@@ -573,7 +574,7 @@ func (c *SpaceController) manageRootSpaceGroupAccess(
 		currentGroup, exists := currentGroupMap[groupUUID]
 
 		// Check if group exists in Lightdash before adding/updating
-		_, err := c.organizationGroupsService.GetGroup(groupUUID)
+		_, err := c.organizationGroupsService.GetGroup(ctx, groupUUID)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("group %s not found in Lightdash: %w", groupUUID, err))
 			continue
@@ -581,7 +582,7 @@ func (c *SpaceController) manageRootSpaceGroupAccess(
 
 		// Add if not in current or update if role has changed
 		if !exists || currentGroup.SpaceRole != newGroup.SpaceRole {
-			err := c.spaceService.UpdateGroupAccessInSpace(projectUUID, spaceUUID, groupUUID, newGroup.SpaceRole)
+			err := c.spaceService.UpdateGroupAccessInSpace(ctx, projectUUID, spaceUUID, groupUUID, newGroup.SpaceRole)
 			if err != nil {
 				errors = append(errors, fmt.Errorf("failed to update group %s access in space %s: %w", groupUUID, spaceUUID, err))
 			}
@@ -679,7 +680,7 @@ func (c *SpaceController) updateNestedSpace(
 
 	// If the new parent Space UUID isn't the same as the current one, then move the space to the new parent
 	if !services.CompareParentSpaceUUID(currentSpaceDetails.ParentSpaceUUID, parentSpaceUUID) {
-		err := c.spaceService.MoveSpace(projectUUID, spaceUUID, parentSpaceUUID)
+		err := c.spaceService.MoveSpace(ctx, projectUUID, spaceUUID, parentSpaceUUID)
 		if err != nil {
 			return []error{fmt.Errorf("failed to move space to new parent: %w", err)}
 		}
@@ -714,13 +715,13 @@ func (c *SpaceController) moveRootToNestedSpace(
 	})
 
 	// 1. Move the space to the new parent via the service layer
-	err := c.spaceService.MoveSpace(projectUUID, spaceUUID, parentSpaceUUID)
+	err := c.spaceService.MoveSpace(ctx, projectUUID, spaceUUID, parentSpaceUUID)
 	if err != nil {
 		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
 	}
 
 	// 2. Get the space details to check if it is private
-	spaceDetails, err := c.spaceService.GetSpace(projectUUID, spaceUUID)
+	spaceDetails, err := c.spaceService.GetSpace(ctx, projectUUID, spaceUUID)
 	if err != nil {
 		return []error{fmt.Errorf("failed to get space details: %w", err)}
 	}
@@ -755,7 +756,7 @@ func (c *SpaceController) moveNestedToRootSpace(
 	})
 
 	// 1. Move the space to the root space via the service layer
-	err1 := c.spaceService.MoveSpace(projectUUID, spaceUUID, nil)
+	err1 := c.spaceService.MoveSpace(ctx, projectUUID, spaceUUID, nil)
 	if err1 != nil {
 		return []error{fmt.Errorf("failed to move nested space %s to root: %w", spaceUUID, err1)}
 	}

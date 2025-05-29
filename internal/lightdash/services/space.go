@@ -37,7 +37,7 @@ func NewSpaceService(client *api.Client) *SpaceService {
 // Space Management Methods
 
 // CreateSpace creates a new space with specified properties
-func (s *SpaceService) CreateSpace(projectUuid, spaceName string, isPrivate *bool, parentSpaceUuid *string) (*models.SpaceDetails, error) {
+func (s *SpaceService) CreateSpace(ctx context.Context, projectUuid, spaceName string, isPrivate *bool, parentSpaceUuid *string) (*models.SpaceDetails, error) {
 	createdSpace, err := s.client.CreateSpaceV1(projectUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create space: %w", err)
@@ -58,7 +58,7 @@ func (s *SpaceService) CreateSpace(projectUuid, spaceName string, isPrivate *boo
 }
 
 // GetSpace retrieves a space by UUID
-func (s *SpaceService) GetSpace(projectUuid, spaceUuid string) (*api.GetSpaceV1Results, error) {
+func (s *SpaceService) GetSpace(ctx context.Context, projectUuid, spaceUuid string) (*api.GetSpaceV1Results, error) {
 	return s.client.GetSpaceV1(projectUuid, spaceUuid)
 }
 
@@ -94,13 +94,13 @@ func (s *SpaceService) UpdateNestedSpace(ctx context.Context, projectUuid, space
 }
 
 // DeleteSpace deletes a space
-func (s *SpaceService) DeleteSpace(projectUuid, spaceUuid string) error {
+func (s *SpaceService) DeleteSpace(ctx context.Context, projectUuid, spaceUuid string) error {
 	return s.client.DeleteSpaceV1(projectUuid, spaceUuid)
 }
 
 // MoveSpace moves a space to a new parent space
 // parentSpaceUuidPointer == nil means the space should become a root space
-func (s *SpaceService) MoveSpace(projectUuid, spaceUuid string, parentSpaceUuidPointer *string) error {
+func (s *SpaceService) MoveSpace(ctx context.Context, projectUuid, spaceUuid string, parentSpaceUuidPointer *string) error {
 	err := s.client.MoveSpaceV2(projectUuid, spaceUuid, parentSpaceUuidPointer)
 	if err != nil {
 		return fmt.Errorf("failed to move space: %w", err)
@@ -128,37 +128,37 @@ func (s *SpaceService) ExtractSpaceResourceID(resourceID string) (projectUuid st
 
 // AddUserToSpace grants a user access to a space with the specified role
 // NOTE: Should only be called for root spaces
-func (s *SpaceService) AddUserToSpace(projectUuid, spaceUuid, userUuid string, role models.SpaceMemberRole) error {
+func (s *SpaceService) AddUserToSpace(ctx context.Context, projectUuid, spaceUuid, userUuid string, role models.SpaceMemberRole) error {
 	return s.client.AddSpaceShareToUserV1(projectUuid, spaceUuid, userUuid, role)
 }
 
 // RemoveUserFromSpace revokes a user's access to a space
 // NOTE: Should only be called for root spaces
-func (s *SpaceService) RemoveUserFromSpace(projectUuid, spaceUuid, userUuid string) error {
+func (s *SpaceService) RemoveUserFromSpace(ctx context.Context, projectUuid, spaceUuid, userUuid string) error {
 	return s.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, userUuid)
 }
 
 // AddGroupToSpace grants a group access to a space with the specified role
 // NOTE: Should only be called for root spaces
-func (s *SpaceService) AddGroupToSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
+func (s *SpaceService) AddGroupToSpace(ctx context.Context, projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
 	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
 }
 
 // UpdateGroupAccessInSpace updates a group's role in a space
 // NOTE: Should only be called for root spaces
-func (s *SpaceService) UpdateGroupAccessInSpace(projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
+func (s *SpaceService) UpdateGroupAccessInSpace(ctx context.Context, projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
 	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
 }
 
 // RemoveGroupFromSpace revokes a group's access to a space
 // NOTE: Should only be called for root spaces
-func (s *SpaceService) RemoveGroupFromSpace(projectUuid, spaceUuid, groupUuid string) error {
+func (s *SpaceService) RemoveGroupFromSpace(ctx context.Context, projectUuid, spaceUuid, groupUuid string) error {
 	return s.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid)
 }
 
 // GetChildSpaces returns all child spaces of a space
-func (s *SpaceService) GetChildSpaces(projectUuid, spaceUuid string) ([]api.ChildSpace, error) {
-	space, err := s.GetSpace(projectUuid, spaceUuid)
+func (s *SpaceService) GetChildSpaces(ctx context.Context, projectUuid, spaceUuid string) ([]api.ChildSpace, error) {
+	space, err := s.GetSpace(ctx, projectUuid, spaceUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get space details: %w", err)
 	}

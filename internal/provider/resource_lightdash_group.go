@@ -236,7 +236,7 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	// Need to fetch organization members to validate that the user UUIDs exist
 	organizationMembersService := services.GetOrganizationMembersService(r.client)
-	organizationMembers, err := organizationMembersService.GetOrganizationMembersByCache()
+	organizationMembers, err := organizationMembersService.GetOrganizationMembersByCache(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error getting organization members",
@@ -329,7 +329,7 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	for _, memberInState := range stateMembersSlice {
 		// Check if the user still exists in the organization
-		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(memberInState.UserUUID.ValueString())
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(ctx, memberInState.UserUUID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddWarning(
 				"User no longer exists in the organization",
@@ -347,7 +347,7 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Select added members by comparing plan members to state members
 	for _, memberInPlan := range planMembersSlice {
 		// Check if the user still exists in the organization
-		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(memberInPlan.UserUUID.ValueString())
+		_, err := organizationMembersService.GetOrganizationMemberByUserUuid(ctx, memberInPlan.UserUUID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddWarning(
 				"User no longer exists in the organization",

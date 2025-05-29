@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
@@ -32,7 +33,7 @@ func NewOrganizationGroupsService(client *api.Client) *OrganizationGroupsService
 }
 
 // GetGroup retrieves a single group by UUID
-func (s *OrganizationGroupsService) GetGroup(groupUUID string) (*models.OrganizationGroup, error) {
+func (s *OrganizationGroupsService) GetGroup(ctx context.Context, groupUUID string) (*models.OrganizationGroup, error) {
 	// Get the group from the API
 	group, err := s.client.GetGroupV1(groupUUID)
 	if err != nil {
@@ -50,7 +51,7 @@ func (s *OrganizationGroupsService) GetGroup(groupUUID string) (*models.Organiza
 	return result, nil
 }
 
-func (s *OrganizationGroupsService) GetOrganizationGroups() ([]models.OrganizationGroup, error) {
+func (s *OrganizationGroupsService) GetOrganizationGroups(ctx context.Context) ([]models.OrganizationGroup, error) {
 	groupMap := make(map[string]models.OrganizationGroup)
 	page := 0
 	pageSize := 100

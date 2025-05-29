@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
@@ -33,7 +34,7 @@ func NewProjectSchedulerSettingsService(client *api.Client, projectUuid string) 
 	}
 }
 
-func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings(projectUuid string) (*models.ProjectSchedulerSettings, error) {
+func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings(ctx context.Context, projectUuid string) (*models.ProjectSchedulerSettings, error) {
 	// Get the project
 	project, err := s.client.GetProjectV1(projectUuid)
 	if err != nil {
@@ -49,7 +50,7 @@ func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings(projectUui
 }
 
 func (s *ProjectSchedulerSettingsService) UpdateProjectSchedulerSettings(
-	projectSchedulerSettings *models.ProjectSchedulerSettings) error {
+	ctx context.Context, projectSchedulerSettings *models.ProjectSchedulerSettings) error {
 
 	// Update the project scheduler settings
 	var schedulerTimezone = projectSchedulerSettings.SchedulerTimezone
