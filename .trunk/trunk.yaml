@@ -2,7 +2,7 @@
 # To learn more about the format of this file, see https://docs.trunk.io/reference/trunk-yaml
 version: 0.1
 cli:
-  version: 1.22.15
+  version: 1.24.0
 plugins:
   sources:
     - id: trunk
@@ -35,18 +35,18 @@ lint:
         - internal/provider/docs/**
   enabled:
     - golangci-lint2@2.1.6
-    - renovate@40.32.7
+    - renovate@40.40.1
     - taplo@0.9.3
     - terraform@1.1.0
-    - semgrep@1.116.0
-    - gitleaks@8.26.0
+    - semgrep@1.123.0
+    - gitleaks@8.27.0
     - goimports@0.9.1
     - bandit@1.8.3
     - black@25.1.0
     - isort@6.0.1
-    - ruff@0.11.11
+    - ruff@0.11.12
     - actionlint@1.7.7
-    - checkov@3.2.435
+    - checkov@3.2.436
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.45.0
@@ -55,8 +55,8 @@ lint:
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - tflint@0.58.0
-    - trivy@0.62.1
-    - trufflehog@3.88.34
+    - trivy@0.63.0
+    - trufflehog@3.88.35
     - yamllint@1.37.1
 actions:
   enabled:
