@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 5
     name: Run pr agent on every pull request, respond to user comments
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.10.3
         with:
           egress-policy: audit
