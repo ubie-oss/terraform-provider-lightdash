@@ -14,7 +14,7 @@
 
 module github.com/ubie-oss/terraform-provider-lightdash
 
-go 1.24.0
+go 1.25.1
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.23.0
