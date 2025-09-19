@@ -1,5 +1,7 @@
 locals {
-  normalized_project_members = provider::lightdash::normalize_project_members(
+  // `provider::lightdash::normalize_project_members` is the correct function name.
+  // It seems that `::` causes the compilation to fail.
+  normalized_project_members = normalize_project_members(
     ["admin1", "admin2", "admin2"],
     [
       "admin1", "developer1",

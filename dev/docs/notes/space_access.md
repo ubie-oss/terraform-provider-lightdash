@@ -20,7 +20,6 @@ Spaces have different visibility levels, impacting who can access them by defaul
 
 - **Public Access:** Accessible to everyone with access to the project the space belongs to. By default, users inherit space permissions from their project-level permissions.
 - **Restricted Access:** A broader category for spaces with limited access. Restricted spaces can function as:
-
   - **Private:** Only the space creator (initially the admin) has access.
   - **Shared:** Access is limited to organization administrators and specific users or groups explicitly invited or inheriting access.
 
