@@ -43,6 +43,8 @@ resource "lightdash_project_role_member" "test" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Project role members can be imported by specifying the resource identifier.
 terraform import lightdash_project_role_member.example "projects/${project_uuid}/access/${user_uuid}"
