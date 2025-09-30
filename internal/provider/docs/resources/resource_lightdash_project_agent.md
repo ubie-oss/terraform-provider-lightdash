@@ -1,0 +1,1 @@
+Manages a Lightdash project agent. This resource represents an AI agent configured within a Lightdash project. Currently, this resource only supports reading existing agents and does not support creating, updating, or deleting agents.
