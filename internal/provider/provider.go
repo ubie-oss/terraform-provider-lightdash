@@ -125,6 +125,7 @@ func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectRoleGroupResource,
 		NewProjectSchedulerSettingsResource,
 		NewProjectAgentResource,
+		NewProjectAgentEvaluationsResource,
 	}
 }
 
