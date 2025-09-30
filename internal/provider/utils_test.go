@@ -15,6 +15,7 @@
 package provider
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
@@ -145,5 +146,54 @@ func TestSubtractStringList(t *testing.T) {
 		if !reflect.DeepEqual(result, test.expected) {
 			t.Errorf("Expected: %v, Got: %v for list1=%v, list2=%v", test.expected, result, test.list1, test.list2)
 		}
+	}
+}
+
+func TestReadMarkdownDescriptionEmbedded(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		filename string
+		wantErr  bool
+	}{
+		{
+			name:     "resource with internal/provider prefix",
+			filename: "internal/provider/docs/resources/resource_lightdash_group.md",
+			wantErr:  false,
+		},
+		{
+			name:     "resource with docs prefix",
+			filename: "docs/resources/resource_space.md",
+			wantErr:  false,
+		},
+		{
+			name:     "data source",
+			filename: "internal/provider/docs/data_sources/data_source_authenticated_user.md",
+			wantErr:  false,
+		},
+		{
+			name:     "function",
+			filename: "internal/provider/docs/functions/function_normalize_project_members.md",
+			wantErr:  false,
+		},
+		{
+			name:     "non-existent file",
+			filename: "internal/provider/docs/resources/nonexistent.md",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content, err := readMarkdownDescription(ctx, tt.filename)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("readMarkdownDescription() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && len(content) == 0 {
+				t.Errorf("readMarkdownDescription() returned empty content for %s", tt.filename)
+			}
+		})
 	}
 }
