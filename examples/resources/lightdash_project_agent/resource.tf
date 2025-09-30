@@ -9,6 +9,8 @@ resource "lightdash_project_agent" "test" {
   group_access       = ["xxxx-xxxx-xxxx"]
   user_access        = ["xxxx-xxxx-xxxx"]
 
+  deletion_protection = true
+
   # If you want to manually change the instruction on the web UI of LIghtdash,
   # you can ignore the changes to the instruction.
   # lifecycle {

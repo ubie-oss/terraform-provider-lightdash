@@ -2,10 +2,11 @@ data "lightdash_organization" "test" {
 }
 
 resource "lightdash_project_agent" "test" {
-  organization_uuid = data.lightdash_organization.test.organization_uuid
-  project_uuid      = data.lightdash_project.test.project_uuid
-  name              = "Test Agent"
-  instruction       = "You are a helpful AI assistant for data analysis."
+  organization_uuid   = data.lightdash_organization.test.organization_uuid
+  project_uuid        = data.lightdash_project.test.project_uuid
+  name                = "Test Agent"
+  instruction         = "You are a helpful AI assistant for data analysis."
+  deletion_protection = false
 }
 
 output "is_agent_uuid_set" {

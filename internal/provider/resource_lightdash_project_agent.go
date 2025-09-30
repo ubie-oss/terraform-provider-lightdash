@@ -62,6 +62,7 @@ type projectAgentResourceModel struct {
 	EnableDataAccess types.Bool   `tfsdk:"enable_data_access"`
 	GroupAccess      types.List   `tfsdk:"group_access"`
 	UserAccess       types.List   `tfsdk:"user_access"`
+	DeleteProtection types.Bool   `tfsdk:"deletion_protection"`
 }
 
 func (r *projectAgentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -149,6 +150,10 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "UUIDs of individual users with access.",
 				Optional:            true,
 				Computed:            true,
+			},
+			"deletion_protection": schema.BoolAttribute{
+				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
+				Required:            true,
 			},
 		},
 	}
@@ -409,9 +414,9 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("agent_uuid"), &agentUuid)...)
 
-	// Get current state
-	var state projectAgentResourceModel
-	diags := req.State.Get(ctx, &state)
+	// Get current state. This is needed to preserve Terraform-managed attributes.
+	var currentState projectAgentResourceModel
+	diags := req.State.Get(ctx, &currentState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -428,20 +433,26 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	// Map response to state model
-	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
-	state.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
-	state.ProjectUUID = types.StringValue(agent.ProjectUUID)
-	state.AgentUUID = types.StringValue(agent.AgentUUID)
-	state.Name = types.StringValue(agent.Name)
+	// Update state from controller response
+	var newState projectAgentResourceModel
+
+	// Preserve fields that are computed once or managed by Terraform
+	newState.ID = currentState.ID
+	newState.OrganizationUUID = currentState.OrganizationUUID
+	newState.ProjectUUID = currentState.ProjectUUID
+	newState.AgentUUID = currentState.AgentUUID
+	newState.CreatedAt = currentState.CreatedAt
+	newState.DeleteProtection = currentState.DeleteProtection
+
+	// Update fields from API response
+	newState.Name = types.StringValue(agent.Name)
 
 	// Handle nullable Instruction
 	instructionTf := types.StringNull()
 	if agent.Instruction != nil {
 		instructionTf = types.StringValue(*agent.Instruction)
 	}
-	state.Instruction = instructionTf
+	newState.Instruction = instructionTf
 
 	// Convert tags slice to Terraform List
 	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
@@ -449,19 +460,18 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	state.Tags = tagsList
+	newState.Tags = tagsList
 
-	state.UpdatedAt = types.StringValue(agent.UpdatedAt)
-	state.CreatedAt = types.StringValue(agent.CreatedAt)
+	newState.UpdatedAt = types.StringValue(agent.UpdatedAt)
 
 	// Handle nullable ImageURL
 	imageURL := types.StringNull()
 	if agent.ImageURL != nil {
 		imageURL = types.StringValue(*agent.ImageURL)
 	}
-	state.ImageURL = imageURL
+	newState.ImageURL = imageURL
 
-	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
+	newState.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
 	// Convert group access slice to Terraform List
 	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.GroupAccess)
@@ -469,7 +479,7 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	state.GroupAccess = groupAccessList
+	newState.GroupAccess = groupAccessList
 
 	// Convert user access slice to Terraform List
 	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.UserAccess)
@@ -477,10 +487,10 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	state.UserAccess = userAccessList
+	newState.UserAccess = userAccessList
 
 	// Set refreshed state
-	diags = resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, newState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -657,6 +667,16 @@ func (r *projectAgentResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Extract values from state
 	projectUuid := state.ProjectUUID.ValueString()
 	agentUuid := state.AgentUUID.ValueString()
+	deletionProtection := state.DeleteProtection.ValueBool()
+
+	// Check deletion protection
+	if deletionProtection {
+		resp.Diagnostics.AddError(
+			"Deletion protection is enabled",
+			fmt.Sprintf("Cannot delete agent %q in project %q because deletion protection is enabled. Set deletion_protection to false to allow deletion.", agentUuid, projectUuid),
+		)
+		return
+	}
 
 	// Delete agent via service
 	agentService := services.NewAgentService(r.client)
@@ -746,6 +766,9 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_access"), userAccessList)...)
+
+	// Set deletion protection to true by default for imported resources
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("deletion_protection"), true)...)
 }
 
 func getProjectAgentResourceId(organization_uuid string, project_uuid string, agent_uuid string) string {

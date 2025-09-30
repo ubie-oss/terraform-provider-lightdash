@@ -9,4 +9,6 @@ resource "lightdash_project_agent" "test_agent" {
     lightdash_project_role_group.test1.group_uuid,
   ]
   user_access = []
+
+  deletion_protection = false
 }
