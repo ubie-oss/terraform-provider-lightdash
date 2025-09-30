@@ -59,7 +59,7 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckOutput("is_agent_uuid_set", "true"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "name", "Test Agent"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "instruction", "You are a helpful AI assistant for data analysis."),
-					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "false"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "true"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "enable_data_access"),
@@ -88,13 +88,13 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckOutput("is_agent_uuid_set", "true"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "name", "Test Agent Updated"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "instruction", "You are an updated helpful AI assistant for data analysis and insights."),
-					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "false"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.#", "2"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.0", "terraform"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.1", "updated"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_data_access", "false"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "false"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
 					// Check that agent references match data sources
@@ -146,11 +146,11 @@ func TestAccProjectAgentResource_import(t *testing.T) {
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test_agent", "agent_uuid"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "name", "Test Agent for Import"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "instruction", "You are a helpful AI assistant for data analysis and imports."),
-					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "deletion_protection", "false"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "tags.#", "2"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "tags.0", "import"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "tags.1", "test"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "enable_data_access", "true"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "deletion_protection", "false"),
 				),
 			},
 			{
@@ -159,7 +159,7 @@ func TestAccProjectAgentResource_import(t *testing.T) {
 				ResourceName:            "lightdash_project_agent.test_agent",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"deletion_protection"},
+				ImportStateVerifyIgnore: []string{},
 				ImportStateIdFunc: func(state *terraform.State) (string, error) {
 					res, ok := state.RootModule().Resources["lightdash_project_agent.test_agent"]
 					if !ok {

@@ -1,0 +1,1 @@
+Manages a Lightdash project agent evaluations. This resource allows you to create, read, update, and delete evaluations for AI agents within a Lightdash project. Evaluations contain prompts used to test and grade agent responses.
