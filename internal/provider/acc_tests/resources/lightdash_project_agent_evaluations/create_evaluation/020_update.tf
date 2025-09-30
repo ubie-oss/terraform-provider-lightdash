@@ -6,9 +6,9 @@ resource "lightdash_project_agent" "test_agent" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Test Agent for Evaluation"
   instruction         = "You are a helpful AI assistant for data analysis and evaluations."
-  deletion_protection = false
   tags                = ["evaluation", "test"]
   enable_data_access  = true
+  deletion_protection = false
 }
 
 resource "lightdash_project_agent_evaluations" "test" {

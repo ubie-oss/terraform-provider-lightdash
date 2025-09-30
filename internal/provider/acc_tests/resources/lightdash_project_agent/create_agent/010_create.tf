@@ -6,7 +6,7 @@ resource "lightdash_project_agent" "test" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Test Agent"
   instruction         = "You are a helpful AI assistant for data analysis."
-  deletion_protection = false
+  deletion_protection = true
 }
 
 output "is_agent_uuid_set" {

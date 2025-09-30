@@ -6,11 +6,11 @@ resource "lightdash_project_agent" "test" {
   project_uuid        = data.lightdash_project.test.project_uuid
   name                = "Test Agent Updated"
   instruction         = "You are an updated helpful AI assistant for data analysis and insights."
-  deletion_protection = false
   tags                = ["terraform", "updated"]
   enable_data_access  = false
   group_access        = []
   user_access         = []
+  deletion_protection = false
 }
 
 output "is_agent_uuid_set" {
