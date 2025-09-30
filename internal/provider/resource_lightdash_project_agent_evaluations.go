@@ -440,8 +440,10 @@ func (r *projectAgentEvaluationsResource) Update(ctx context.Context, req resour
 				// Extract the prompt field from the object
 				promptAttr := obj.Attributes()["prompt"]
 				if promptAttr != nil {
-					promptValue := promptAttr.(types.String)
-					prompts = append(prompts, promptValue.ValueString())
+					promptValue, ok := promptAttr.(types.String)
+					if ok {
+						prompts = append(prompts, promptValue.ValueString())
+					}
 				}
 			}
 		}
