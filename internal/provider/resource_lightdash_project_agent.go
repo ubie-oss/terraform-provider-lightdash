@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -108,12 +109,17 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the Lightdash agent.",
-				Optional:            true,
-				Computed:            true,
+				Required:            true,
+				Validators: []validator.String{
+					ValidateNonEmptyString{},
+				},
 			},
 			"instruction": schema.StringAttribute{
 				MarkdownDescription: "Custom instruction (system prompt) for the agent (max 8192 chars).",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateNonEmptyString{},
+				},
 			},
 			"tags": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -187,82 +193,6 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 
 	// Extract plan values
 	projectUuid := plan.ProjectUUID.ValueString()
-
-	// Check if agent_uuid is provided - if so, this might be a read operation for an existing agent
-	if !plan.AgentUUID.IsNull() && !plan.AgentUUID.IsUnknown() {
-		// Agent UUID is provided, treat this as reading an existing agent
-		agentUuid := plan.AgentUUID.ValueString()
-
-		// Get agent from service
-		agentService := services.NewAgentService(r.client)
-		agent, err := agentService.GetAgent(ctx, projectUuid, agentUuid)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to Read Lightdash project agent",
-				fmt.Sprintf("Unable to read agent with Project UUID %q and Agent UUID %q: %s", projectUuid, agentUuid, err.Error()),
-			)
-			return
-		}
-
-		// Map response to state model
-		plan.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-			agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
-		plan.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
-		plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
-		plan.AgentUUID = types.StringValue(agent.AgentUUID)
-		plan.Name = types.StringValue(agent.Name)
-
-		// Handle nullable Instruction
-		instructionTf := types.StringNull()
-		if agent.Instruction != nil {
-			instructionTf = types.StringValue(*agent.Instruction)
-		}
-		plan.Instruction = instructionTf
-
-		// Convert tags slice to Terraform List
-		tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		plan.Tags = tagsList
-
-		plan.UpdatedAt = types.StringValue(agent.UpdatedAt)
-		plan.CreatedAt = types.StringValue(agent.CreatedAt)
-
-		// Handle nullable ImageURL
-		imageURL := types.StringNull()
-		if agent.ImageURL != nil {
-			imageURL = types.StringValue(*agent.ImageURL)
-		}
-		plan.ImageURL = imageURL
-
-		plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
-
-		// Convert group access slice to Terraform List
-		groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.GroupAccess)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		plan.GroupAccess = groupAccessList
-
-		// Convert user access slice to Terraform List
-		userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.UserAccess)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		plan.UserAccess = userAccessList
-
-		// Set state
-		diags = resp.State.Set(ctx, &plan)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		return
-	}
 
 	// Validate required fields for creation
 	if plan.Name.IsNull() || plan.Name.IsUnknown() {
@@ -353,11 +283,16 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
 	plan.Name = types.StringValue(agent.Name)
 
-	// Handle nullable Instruction
-	instructionTf := types.StringNull()
-	if agent.Instruction != nil {
-		instructionTf = types.StringValue(*agent.Instruction)
+	// Handle Instruction - required field, cannot be null or empty
+	var instructionTf types.String
+	if agent.Instruction == nil || *agent.Instruction == "" {
+		resp.Diagnostics.AddError(
+			"Invalid API Response",
+			"Agent instruction cannot be null or empty in API response, but the API returned null or empty value. This indicates an issue with the Lightdash API or the agent configuration.",
+		)
+		return
 	}
+	instructionTf = types.StringValue(*agent.Instruction)
 	plan.Instruction = instructionTf
 
 	// Convert tags slice to Terraform List
@@ -441,11 +376,16 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	state.AgentUUID = types.StringValue(agent.AgentUUID)
 	state.Name = types.StringValue(agent.Name)
 
-	// Handle nullable Instruction
-	instructionTf := types.StringNull()
-	if agent.Instruction != nil {
-		instructionTf = types.StringValue(*agent.Instruction)
+	// Handle Instruction - required field, cannot be null or empty
+	var instructionTf types.String
+	if agent.Instruction == nil || *agent.Instruction == "" {
+		resp.Diagnostics.AddError(
+			"Invalid API Response",
+			"Agent instruction cannot be null or empty in API response, but the API returned null or empty value. This indicates an issue with the Lightdash API or the agent configuration.",
+		)
+		return
 	}
+	instructionTf = types.StringValue(*agent.Instruction)
 	state.Instruction = instructionTf
 
 	// Convert tags slice to Terraform List
@@ -600,11 +540,16 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
 	plan.Name = types.StringValue(agent.Name)
 
-	// Handle nullable Instruction
-	instructionTf := types.StringNull()
-	if agent.Instruction != nil {
-		instructionTf = types.StringValue(*agent.Instruction)
+	// Handle Instruction - required field, cannot be null or empty
+	var instructionTf types.String
+	if agent.Instruction == nil || *agent.Instruction == "" {
+		resp.Diagnostics.AddError(
+			"Invalid API Response",
+			"Agent instruction cannot be null or empty in API response, but the API returned null or empty value. This indicates an issue with the Lightdash API or the agent configuration.",
+		)
+		return
 	}
+	instructionTf = types.StringValue(*agent.Instruction)
 	plan.Instruction = instructionTf
 
 	// Convert tags slice to Terraform List
@@ -720,12 +665,15 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("agent_uuid"), agent.AgentUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), agent.Name)...)
 
-	// Handle nullable Instruction
-	if agent.Instruction != nil {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instruction"), *agent.Instruction)...)
-	} else {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instruction"), types.StringNull())...)
+	// Handle Instruction - required field, cannot be null or empty
+	if agent.Instruction == nil || *agent.Instruction == "" {
+		resp.Diagnostics.AddError(
+			"Invalid API Response",
+			"Agent instruction cannot be null or empty in API response, but the API returned null or empty value. This indicates an issue with the Lightdash API or the agent configuration.",
+		)
+		return
 	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instruction"), *agent.Instruction)...)
 
 	// Convert tags slice to Terraform List
 	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
