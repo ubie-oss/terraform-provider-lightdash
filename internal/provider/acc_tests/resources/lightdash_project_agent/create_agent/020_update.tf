@@ -7,7 +7,7 @@ resource "lightdash_project_agent" "test" {
   name                = "Test Agent Updated"
   instruction         = "You are an updated helpful AI assistant for data analysis and insights."
   tags                = ["terraform", "updated"]
-  enable_data_access  = false
+  enable_data_access  = true
   group_access        = []
   user_access         = []
   deletion_protection = false
