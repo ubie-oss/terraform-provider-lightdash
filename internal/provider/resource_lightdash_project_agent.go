@@ -302,8 +302,12 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	instructionTf = types.StringValue(*agent.Instruction)
 	plan.Instruction = instructionTf
 
-	// Convert tags slice to Terraform List
-	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
+	// Convert tags slice to Terraform List (ensure never null)
+	tagsVal := agent.Tags
+	if tagsVal == nil {
+		tagsVal = []string{}
+	}
+	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, tagsVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -322,16 +326,24 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
-	// Convert group access slice to Terraform List
-	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.GroupAccess)
+	// Convert group access slice to Terraform List (ensure never null)
+	groupAccessVal := agent.GroupAccess
+	if groupAccessVal == nil {
+		groupAccessVal = []string{}
+	}
+	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, groupAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	plan.GroupAccess = groupAccessList
 
-	// Convert user access slice to Terraform List
-	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.UserAccess)
+	// Convert user access slice to Terraform List (ensure never null)
+	userAccessVal := agent.UserAccess
+	if userAccessVal == nil {
+		userAccessVal = []string{}
+	}
+	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, userAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -395,8 +407,12 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	instructionTf = types.StringValue(*agent.Instruction)
 	state.Instruction = instructionTf
 
-	// Convert tags slice to Terraform List
-	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
+	// Convert tags slice to Terraform List (ensure never null)
+	tagsVal := agent.Tags
+	if tagsVal == nil {
+		tagsVal = []string{}
+	}
+	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, tagsVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -415,16 +431,24 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 
 	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
-	// Convert group access slice to Terraform List
-	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.GroupAccess)
+	// Convert group access slice to Terraform List (ensure never null)
+	groupAccessVal := agent.GroupAccess
+	if groupAccessVal == nil {
+		groupAccessVal = []string{}
+	}
+	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, groupAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	state.GroupAccess = groupAccessList
 
-	// Convert user access slice to Terraform List
-	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.UserAccess)
+	// Convert user access slice to Terraform List (ensure never null)
+	userAccessVal := agent.UserAccess
+	if userAccessVal == nil {
+		userAccessVal = []string{}
+	}
+	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, userAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -455,73 +479,59 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	projectUuid := state.ProjectUUID.ValueString()
 	agentUuid := state.AgentUUID.ValueString()
 
-	// Prepare update request with only changed fields
-	var name *string
-	if !plan.Name.Equal(state.Name) {
-		nameVal := plan.Name.ValueString()
-		name = &nameVal
-	}
+	// Prepare update request - send all fields from plan
+	// Always send name (required field)
+	nameVal := plan.Name.ValueString()
+	name := &nameVal
 
+	// Always send instruction (required field)
+	instructionVal := plan.Instruction.ValueString()
+	instruction := &instructionVal
+
+	// Handle optional imageUrl
 	var imageUrl *string
-	if !plan.ImageURL.Equal(state.ImageURL) {
-		if plan.ImageURL.IsNull() {
-			imageUrl = nil
-		} else {
-			imageUrlVal := plan.ImageURL.ValueString()
-			imageUrl = &imageUrlVal
-		}
+	if !plan.ImageURL.IsNull() {
+		imageUrlVal := plan.ImageURL.ValueString()
+		imageUrl = &imageUrlVal
 	}
 
-	var instruction *string
-	if !plan.Instruction.Equal(state.Instruction) {
-		if plan.Instruction.IsNull() {
-			instruction = nil
-		} else {
-			instructionVal := plan.Instruction.ValueString()
-			instruction = &instructionVal
-		}
-	}
-
+	// Always send tags
 	var tags []string
-	if !plan.Tags.Equal(state.Tags) {
-		if plan.Tags.IsNull() {
-			tags = []string{}
-		} else {
-			diags := plan.Tags.ElementsAs(ctx, &tags, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
+	if !plan.Tags.IsNull() {
+		diags := plan.Tags.ElementsAs(ctx, &tags, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
+	} else {
+		tags = []string{}
 	}
 
 	// For integrations, since they're not exposed in the schema, we pass empty slice
 	integrations := []models.AgentIntegration{}
 
+	// Always send groupAccess
 	var groupAccess []string
-	if !plan.GroupAccess.Equal(state.GroupAccess) {
-		if plan.GroupAccess.IsNull() {
-			groupAccess = []string{}
-		} else {
-			diags := plan.GroupAccess.ElementsAs(ctx, &groupAccess, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
+	if !plan.GroupAccess.IsNull() {
+		diags := plan.GroupAccess.ElementsAs(ctx, &groupAccess, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
+	} else {
+		groupAccess = []string{}
 	}
 
+	// Always send userAccess
 	var userAccess []string
-	if !plan.UserAccess.Equal(state.UserAccess) {
-		if plan.UserAccess.IsNull() {
-			userAccess = []string{}
-		} else {
-			diags := plan.UserAccess.ElementsAs(ctx, &userAccess, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
+	if !plan.UserAccess.IsNull() {
+		diags := plan.UserAccess.ElementsAs(ctx, &userAccess, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
+	} else {
+		userAccess = []string{}
 	}
 
 	// Always include enableDataAccess in updates since it's a required field
@@ -559,8 +569,12 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	instructionTf = types.StringValue(*agent.Instruction)
 	plan.Instruction = instructionTf
 
-	// Convert tags slice to Terraform List
-	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
+	// Convert tags slice to Terraform List (ensure never null)
+	tagsVal := agent.Tags
+	if tagsVal == nil {
+		tagsVal = []string{}
+	}
+	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, tagsVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -579,16 +593,24 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
-	// Convert group access slice to Terraform List
-	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.GroupAccess)
+	// Convert group access slice to Terraform List (ensure never null)
+	groupAccessVal := agent.GroupAccess
+	if groupAccessVal == nil {
+		groupAccessVal = []string{}
+	}
+	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, groupAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	plan.GroupAccess = groupAccessList
 
-	// Convert user access slice to Terraform List
-	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.UserAccess)
+	// Convert user access slice to Terraform List (ensure never null)
+	userAccessVal := agent.UserAccess
+	if userAccessVal == nil {
+		userAccessVal = []string{}
+	}
+	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, userAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -682,8 +704,12 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instruction"), *agent.Instruction)...)
 
-	// Convert tags slice to Terraform List
-	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.Tags)
+	// Convert tags slice to Terraform List (ensure never null)
+	tagsVal := agent.Tags
+	if tagsVal == nil {
+		tagsVal = []string{}
+	}
+	tagsList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, tagsVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -702,16 +728,24 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_data_access"), agent.EnableDataAccess)...)
 
-	// Convert group access slice to Terraform List
-	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.GroupAccess)
+	// Convert group access slice to Terraform List (ensure never null)
+	groupAccessVal := agent.GroupAccess
+	if groupAccessVal == nil {
+		groupAccessVal = []string{}
+	}
+	groupAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, groupAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_access"), groupAccessList)...)
 
-	// Convert user access slice to Terraform List
-	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, agent.UserAccess)
+	// Convert user access slice to Terraform List (ensure never null)
+	userAccessVal := agent.UserAccess
+	if userAccessVal == nil {
+		userAccessVal = []string{}
+	}
+	userAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, userAccessVal)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

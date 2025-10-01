@@ -26,10 +26,10 @@ type UpdateAgentV1Request struct {
 	Name             *string            `json:"name,omitempty"`
 	Instruction      *string            `json:"instruction,omitempty"`
 	ImageURL         *string            `json:"imageUrl,omitempty"`
-	Tags             []string           `json:"tags,omitempty"`
+	Tags             []string           `json:"tags"`
 	Integrations     []AgentIntegration `json:"integrations,omitempty"`
-	GroupAccess      []string           `json:"groupAccess,omitempty"`
-	UserAccess       []string           `json:"userAccess,omitempty"`
+	GroupAccess      []string           `json:"groupAccess"`
+	UserAccess       []string           `json:"userAccess"`
 	EnableDataAccess *bool              `json:"enableDataAccess,omitempty"`
 }
 
