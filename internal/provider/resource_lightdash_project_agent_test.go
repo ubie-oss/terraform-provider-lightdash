@@ -40,7 +40,11 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get create config 010: %v", err)
 	}
-	createConfig020, err := ReadAccTestResource([]string{"resources", "lightdash_project_agent", "create_agent", "020_update.tf"})
+	createConfig020, err := ReadAccTestResource([]string{"resources", "lightdash_project_agent", "create_agent", "020_create.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get create config 030: %v", err)
+	}
+	createConfig030, err := ReadAccTestResource([]string{"resources", "lightdash_project_agent", "create_agent", "030_create.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get create config 030: %v", err)
 	}
@@ -50,7 +54,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				// Basic agent creation
+				// Step 1: Basic agent creation (010_create.tf)
+				// No tags, group_access, or user_access specified (should default to empty lists)
 				Config: providerConfig + createConfig010,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "organization_uuid"),
@@ -61,9 +66,11 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "instruction", "You are a helpful AI assistant for data analysis."),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_data_access", "false"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "true"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
-					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "enable_data_access"),
 					// Check that agent references match data sources
 					resource.TestCheckResourceAttrPair(
 						"lightdash_project_agent.test",
@@ -85,6 +92,9 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "created_at"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "enable_data_access", "false"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "tags.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "group_access.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "user_access.#", "0"),
 					// Check that data source matches resource
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
@@ -125,7 +135,7 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 				),
 			},
 			{
-				// Agent update
+				// Step 2: Agent update with tags and explicit empty lists (020_create.tf)
 				Config: providerConfig + createConfig020,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "organization_uuid"),
@@ -204,21 +214,116 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
-						"tags.0",
+						"tags.#",
 						"lightdash_project_agent.test",
-						"tags.0",
-					),
-					resource.TestCheckResourceAttrPair(
-						"data.lightdash_project_agent.test",
-						"tags.1",
-						"lightdash_project_agent.test",
-						"tags.1",
+						"tags.#",
 					),
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
 						"enable_data_access",
 						"lightdash_project_agent.test",
 						"enable_data_access",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"group_access.#",
+						"lightdash_project_agent.test",
+						"group_access.#",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"user_access.#",
+						"lightdash_project_agent.test",
+						"user_access.#",
+					),
+				),
+			},
+			{
+				// Step 3: Agent update without tags (030_create.tf)
+				// Tags omitted, should default back to empty list
+				Config: providerConfig + createConfig030,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "organization_uuid"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "project_uuid"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "agent_uuid"),
+					resource.TestCheckOutput("is_agent_uuid_set", "true"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "name", "Test Agent Updated"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "instruction", "You are an updated helpful AI assistant for data analysis and insights."),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_data_access", "true"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "false"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
+					// Check that agent references match data sources
+					resource.TestCheckResourceAttrPair(
+						"lightdash_project_agent.test",
+						"organization_uuid",
+						"data.lightdash_organization.test",
+						"organization_uuid",
+					),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_project_agent.test",
+						"project_uuid",
+						"data.lightdash_project.test",
+						"project_uuid",
+					),
+					// Check data source attributes
+					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "id"),
+					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "organization_uuid"),
+					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "name"),
+					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "instruction"),
+					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "updated_at"),
+					resource.TestCheckResourceAttrSet("data.lightdash_project_agent.test", "created_at"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "name", "Test Agent Updated"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "instruction", "You are an updated helpful AI assistant for data analysis and insights."),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "enable_data_access", "true"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "tags.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "group_access.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "user_access.#", "0"),
+					// Check that data source matches resource
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"organization_uuid",
+						"lightdash_project_agent.test",
+						"organization_uuid",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"project_uuid",
+						"lightdash_project_agent.test",
+						"project_uuid",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"agent_uuid",
+						"lightdash_project_agent.test",
+						"agent_uuid",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"name",
+						"lightdash_project_agent.test",
+						"name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"instruction",
+						"lightdash_project_agent.test",
+						"instruction",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"enable_data_access",
+						"lightdash_project_agent.test",
+						"enable_data_access",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"tags.#",
+						"lightdash_project_agent.test",
+						"tags.#",
 					),
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
