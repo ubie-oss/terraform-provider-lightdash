@@ -43,6 +43,7 @@ resource "lightdash_project_agent" "test" {
 
 - `deletion_protection` (Boolean) When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.
 - `instruction` (String) Custom instruction (system prompt) for the agent (max 8192 chars).
+- `name` (String) The name of the Lightdash agent.
 - `organization_uuid` (String) The UUID of the Lightdash organization.
 - `project_uuid` (String) The UUID of the Lightdash project.
 
@@ -52,7 +53,6 @@ resource "lightdash_project_agent" "test" {
 - `enable_data_access` (Boolean) Whether the agent can access underlying project data.
 - `group_access` (List of String) UUIDs of user groups with access.
 - `image_url` (String) URL for the agent's icon/image.
-- `name` (String) The name of the Lightdash agent.
 - `tags` (List of String) Tags associated with the agent.
 - `user_access` (List of String) UUIDs of individual users with access.
 

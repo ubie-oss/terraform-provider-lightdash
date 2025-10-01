@@ -16,3 +16,8 @@ output "is_agent_uuid_set" {
     && length(lightdash_project_agent.test.agent_uuid) > 0
   )
 }
+
+data "lightdash_project_agent" "test" {
+  project_uuid = data.lightdash_project.test.project_uuid
+  agent_uuid   = lightdash_project_agent.test.agent_uuid
+}

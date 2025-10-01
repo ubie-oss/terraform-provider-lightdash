@@ -14,11 +14,11 @@
 
 module github.com/ubie-oss/terraform-provider-lightdash
 
-go 1.24.0
+go 1.24.2
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.23.0
-	github.com/hashicorp/terraform-plugin-framework v1.16.0
+	github.com/hashicorp/terraform-plugin-framework v1.16.1
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.13.3
@@ -98,5 +98,5 @@ require (
 	google.golang.org/protobuf v1.36.9 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect; indirectgit
 )
