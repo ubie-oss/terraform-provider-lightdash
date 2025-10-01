@@ -46,11 +46,11 @@ resource "lightdash_project_agent_evaluation" "test" {
 
 - `deletion_protection` (Boolean) When set to `true`, prevents the destruction of the project agent evaluation resource by Terraform. Defaults to `false`.
 - `description` (String) Optional description of the evaluation.
-- `evaluation_uuid` (String) The UUID of the evaluation.
 
 ### Read-Only
 
 - `created_at` (String) Timestamp of creation.
+- `evaluation_uuid` (String) The UUID of the evaluation.
 - `id` (String) The resource identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/agents/<agent_uuid>/evaluations/<evaluation_uuid>`.
 - `updated_at` (String) Timestamp of the last update.
 

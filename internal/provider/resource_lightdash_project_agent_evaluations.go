@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -102,7 +103,6 @@ func (r *projectAgentEvaluationsResource) Schema(ctx context.Context, req resour
 			},
 			"evaluation_uuid": schema.StringAttribute{
 				MarkdownDescription: "The UUID of the evaluation.",
-				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -111,6 +111,9 @@ func (r *projectAgentEvaluationsResource) Schema(ctx context.Context, req resour
 			"title": schema.StringAttribute{
 				MarkdownDescription: "The title of the evaluation.",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateNonEmptyString{},
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Optional description of the evaluation.",
@@ -125,6 +128,9 @@ func (r *projectAgentEvaluationsResource) Schema(ctx context.Context, req resour
 						"prompt": schema.StringAttribute{
 							MarkdownDescription: "The prompt text.",
 							Required:            true,
+							Validators: []validator.String{
+								ValidateNonEmptyString{},
+							},
 						},
 						"eval_prompt_uuid": schema.StringAttribute{
 							MarkdownDescription: "The UUID of the evaluation prompt.",
