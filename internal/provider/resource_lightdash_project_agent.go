@@ -577,11 +577,9 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	var enableDataAccess *bool
-	if !plan.EnableDataAccess.Equal(state.EnableDataAccess) {
-		enableDataAccessVal := plan.EnableDataAccess.ValueBool()
-		enableDataAccess = &enableDataAccessVal
-	}
+	// Always include enableDataAccess in updates since it's a required field
+	enableDataAccessVal := plan.EnableDataAccess.ValueBool()
+	enableDataAccess := &enableDataAccessVal
 
 	// Update agent via service
 	agentService := services.NewAgentService(r.client)
