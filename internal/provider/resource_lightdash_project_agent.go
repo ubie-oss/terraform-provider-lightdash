@@ -68,6 +68,12 @@ type projectAgentResourceModel struct {
 	GroupAccess           types.List   `tfsdk:"group_access"`
 	UserAccess            types.List   `tfsdk:"user_access"`
 	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
+	Integrations          types.List   `tfsdk:"integrations"`
+}
+
+type integrationObjectModel struct {
+	Type      types.String `tfsdk:"type"`
+	ChannelID types.String `tfsdk:"channel_id"`
 }
 
 func (r *projectAgentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -175,6 +181,29 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
 				Required:            true,
 			},
+			"integrations": schema.ListNestedAttribute{
+				MarkdownDescription: "List of integrations for the agent.",
+				Optional:            true,
+				Computed:            true,
+				Default: listdefault.StaticValue(types.ListValueMust(types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"type":       types.StringType,
+						"channel_id": types.StringType,
+					},
+				}, []attr.Value{})),
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							MarkdownDescription: "The type of integration (e.g., `slack`).",
+							Required:            true,
+						},
+						"channel_id": schema.StringAttribute{
+							MarkdownDescription: "The channel ID for the integration.",
+							Optional:            true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -260,6 +289,23 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
+	// Convert integrations list to slice
+	var integrations []models.AgentIntegration
+	if !plan.Integrations.IsUnknown() && !plan.Integrations.IsNull() {
+		var integrationObjects []integrationObjectModel
+		diags = plan.Integrations.ElementsAs(ctx, &integrationObjects, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		for _, obj := range integrationObjects {
+			integrations = append(integrations, models.AgentIntegration{
+				Type:      obj.Type.ValueString(),
+				ChannelID: obj.ChannelID.ValueString(),
+			})
+		}
+	}
+
 	// Get enable data access (defaults to false if not set)
 	enableDataAccess := false
 	if !plan.EnableDataAccess.IsUnknown() && !plan.EnableDataAccess.IsNull() {
@@ -286,7 +332,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		userAccess = []string{}
 	}
 
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, []models.AgentIntegration{}, groupAccess, userAccess, enableDataAccess, enableSelfImprovement)
+	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -302,6 +348,35 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
 	plan.Name = types.StringValue(agent.Name)
+
+	// Handle integrations
+	if agent.Integrations != nil {
+		integrationObjects := []integrationObjectModel{}
+		for _, integration := range agent.Integrations {
+			integrationObjects = append(integrationObjects, integrationObjectModel{
+				Type:      types.StringValue(integration.Type),
+				ChannelID: types.StringValue(integration.ChannelID),
+			})
+		}
+		integrationsList, diags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}, integrationObjects)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.Integrations = integrationsList
+	} else {
+		plan.Integrations = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		})
+	}
 
 	// Handle Instruction - required field, cannot be null or empty
 	var instructionTf types.String
@@ -408,6 +483,35 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	state.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	state.AgentUUID = types.StringValue(agent.AgentUUID)
 	state.Name = types.StringValue(agent.Name)
+
+	// Handle integrations
+	if agent.Integrations != nil {
+		integrationObjects := []integrationObjectModel{}
+		for _, integration := range agent.Integrations {
+			integrationObjects = append(integrationObjects, integrationObjectModel{
+				Type:      types.StringValue(integration.Type),
+				ChannelID: types.StringValue(integration.ChannelID),
+			})
+		}
+		integrationsList, diags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}, integrationObjects)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Integrations = integrationsList
+	} else {
+		state.Integrations = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		})
+	}
 
 	// Handle Instruction - required field, cannot be null or empty
 	var instructionTf types.String
@@ -523,7 +627,21 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// For integrations, since they're not exposed in the schema, we pass empty slice
-	integrations := []models.AgentIntegration{}
+	var integrations []models.AgentIntegration
+	if !plan.Integrations.IsUnknown() && !plan.Integrations.IsNull() {
+		var integrationObjects []integrationObjectModel
+		diags := plan.Integrations.ElementsAs(ctx, &integrationObjects, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		for _, obj := range integrationObjects {
+			integrations = append(integrations, models.AgentIntegration{
+				Type:      obj.Type.ValueString(),
+				ChannelID: obj.ChannelID.ValueString(),
+			})
+		}
+	}
 
 	// Always send groupAccess
 	var groupAccess []string
@@ -575,6 +693,35 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
 	plan.Name = types.StringValue(agent.Name)
+
+	// Handle integrations
+	if agent.Integrations != nil {
+		integrationObjects := []integrationObjectModel{}
+		for _, integration := range agent.Integrations {
+			integrationObjects = append(integrationObjects, integrationObjectModel{
+				Type:      types.StringValue(integration.Type),
+				ChannelID: types.StringValue(integration.ChannelID),
+			})
+		}
+		integrationsList, diags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}, integrationObjects)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.Integrations = integrationsList
+	} else {
+		plan.Integrations = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		})
+	}
 
 	// Handle Instruction - required field, cannot be null or empty
 	var instructionTf types.String
@@ -735,6 +882,35 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("tags"), tagsList)...)
+
+	// Handle integrations
+	if agent.Integrations != nil {
+		integrationObjects := []integrationObjectModel{}
+		for _, integration := range agent.Integrations {
+			integrationObjects = append(integrationObjects, integrationObjectModel{
+				Type:      types.StringValue(integration.Type),
+				ChannelID: types.StringValue(integration.ChannelID),
+			})
+		}
+		integrationsList, diags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}, integrationObjects)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), integrationsList)...)
+	} else {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}))...)
+	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("updated_at"), agent.UpdatedAt)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("created_at"), agent.CreatedAt)...)

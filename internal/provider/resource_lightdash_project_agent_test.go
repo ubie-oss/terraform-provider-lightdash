@@ -72,6 +72,7 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "integrations.#", "0"),
 					// Check that agent references match data sources
 					resource.TestCheckResourceAttrPair(
 						"lightdash_project_agent.test",
@@ -97,6 +98,7 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "tags.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "integrations.#", "0"),
 					// Check that data source matches resource
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",

@@ -29,6 +29,13 @@ resource "lightdash_project_agent" "test" {
 
   deletion_protection = true
 
+  integrations = [
+    {
+      type       = "slack"
+      channel_id = "<YOUR_SLACK_CHANNEL_ID>"
+    }
+  ]
+
   # If you want to manually change the instruction on the web UI of LIghtdash,
   # you can ignore the changes to the instruction.
   # lifecycle {
@@ -57,6 +64,7 @@ resource "lightdash_project_agent" "test" {
 - `enable_self_improvement` (Boolean) Whether the agent can improve itself based on user interactions.
 - `group_access` (List of String) UUIDs of user groups with access.
 - `image_url` (String) URL for the agent's icon/image.
+- `integrations` (Attributes List) List of integrations for the agent. (see [below for nested schema](#nestedatt--integrations))
 - `tags` (List of String) Tags associated with the agent.
 - `user_access` (List of String) UUIDs of individual users with access.
 
@@ -65,6 +73,17 @@ resource "lightdash_project_agent" "test" {
 - `created_at` (String) Timestamp of creation.
 - `id` (String) The resource identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/agents/<agent_uuid>`.
 - `updated_at` (String) Timestamp of the last update.
+
+<a id="nestedatt--integrations"></a>
+### Nested Schema for `integrations`
+
+Required:
+
+- `type` (String) The type of integration (e.g., `slack`).
+
+Optional:
+
+- `channel_id` (String) The channel ID for the integration.
 
 ## Import
 
