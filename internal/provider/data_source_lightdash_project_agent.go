@@ -41,19 +41,20 @@ type projectAgentDataSource struct {
 
 // projectAgentDataSourceModel describes the data source data model.
 type projectAgentDataSourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String `tfsdk:"project_uuid"`
-	AgentUUID        types.String `tfsdk:"agent_uuid"`
-	Name             types.String `tfsdk:"name"`
-	Instruction      types.String `tfsdk:"instruction"`
-	Tags             types.List   `tfsdk:"tags"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	ImageURL         types.String `tfsdk:"image_url"`
-	EnableDataAccess types.Bool   `tfsdk:"enable_data_access"`
-	GroupAccess      types.List   `tfsdk:"group_access"`
-	UserAccess       types.List   `tfsdk:"user_access"`
+	ID                    types.String `tfsdk:"id"`
+	OrganizationUUID      types.String `tfsdk:"organization_uuid"`
+	ProjectUUID           types.String `tfsdk:"project_uuid"`
+	AgentUUID             types.String `tfsdk:"agent_uuid"`
+	Name                  types.String `tfsdk:"name"`
+	Instruction           types.String `tfsdk:"instruction"`
+	Tags                  types.List   `tfsdk:"tags"`
+	UpdatedAt             types.String `tfsdk:"updated_at"`
+	CreatedAt             types.String `tfsdk:"created_at"`
+	ImageURL              types.String `tfsdk:"image_url"`
+	EnableDataAccess      types.Bool   `tfsdk:"enable_data_access"`
+	EnableSelfImprovement types.Bool   `tfsdk:"enable_self_improvement"`
+	GroupAccess           types.List   `tfsdk:"group_access"`
+	UserAccess            types.List   `tfsdk:"user_access"`
 }
 
 func (d *projectAgentDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -117,6 +118,10 @@ func (d *projectAgentDataSource) Schema(ctx context.Context, req datasource.Sche
 			},
 			"enable_data_access": schema.BoolAttribute{
 				MarkdownDescription: "Whether the agent can access underlying project data.",
+				Computed:            true,
+			},
+			"enable_self_improvement": schema.BoolAttribute{
+				MarkdownDescription: "Whether the agent can improve itself based on user interactions.",
 				Computed:            true,
 			},
 			"group_access": schema.ListAttribute{
@@ -201,6 +206,7 @@ func (d *projectAgentDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	config.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
+	config.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
 
 	// Handle group access
 	groupAccess, diags := types.ListValueFrom(ctx, types.StringType, agent.GroupAccess)
