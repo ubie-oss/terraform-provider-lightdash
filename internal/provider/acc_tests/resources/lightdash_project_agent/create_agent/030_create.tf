@@ -9,6 +9,12 @@ resource "lightdash_project_agent" "test" {
   enable_data_access      = true
   enable_self_improvement = false
   deletion_protection     = false
+  integrations = [
+    # {
+    #   type       = "slack"
+    #   channel_id = "<YOUR_SLACK_CHANNEL_ID>"
+    # }
+  ]
 }
 
 output "is_agent_uuid_set" {

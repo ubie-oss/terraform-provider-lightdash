@@ -11,4 +11,5 @@ resource "lightdash_project_agent" "test_agent" {
   enable_data_access      = true
   enable_self_improvement = true
   deletion_protection     = false
+  integrations            = []
 }

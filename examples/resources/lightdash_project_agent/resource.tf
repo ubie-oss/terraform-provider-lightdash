@@ -14,6 +14,13 @@ resource "lightdash_project_agent" "test" {
 
   deletion_protection = true
 
+  integrations = [
+    {
+      type       = "slack"
+      channel_id = "<YOUR_SLACK_CHANNEL_ID>"
+    }
+  ]
+
   # If you want to manually change the instruction on the web UI of LIghtdash,
   # you can ignore the changes to the instruction.
   # lifecycle {
