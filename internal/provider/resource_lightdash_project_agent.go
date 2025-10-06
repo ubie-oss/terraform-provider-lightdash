@@ -53,20 +53,21 @@ type projectAgentResource struct {
 
 // projectAgentResourceModel describes the resource data model.
 type projectAgentResourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String `tfsdk:"project_uuid"`
-	AgentUUID        types.String `tfsdk:"agent_uuid"`
-	Name             types.String `tfsdk:"name"`
-	Instruction      types.String `tfsdk:"instruction"`
-	Tags             types.List   `tfsdk:"tags"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	ImageURL         types.String `tfsdk:"image_url"`
-	EnableDataAccess types.Bool   `tfsdk:"enable_data_access"`
-	GroupAccess      types.List   `tfsdk:"group_access"`
-	UserAccess       types.List   `tfsdk:"user_access"`
-	DeleteProtection types.Bool   `tfsdk:"deletion_protection"`
+	ID                    types.String `tfsdk:"id"`
+	OrganizationUUID      types.String `tfsdk:"organization_uuid"`
+	ProjectUUID           types.String `tfsdk:"project_uuid"`
+	AgentUUID             types.String `tfsdk:"agent_uuid"`
+	Name                  types.String `tfsdk:"name"`
+	Instruction           types.String `tfsdk:"instruction"`
+	Tags                  types.List   `tfsdk:"tags"`
+	UpdatedAt             types.String `tfsdk:"updated_at"`
+	CreatedAt             types.String `tfsdk:"created_at"`
+	ImageURL              types.String `tfsdk:"image_url"`
+	EnableDataAccess      types.Bool   `tfsdk:"enable_data_access"`
+	EnableSelfImprovement types.Bool   `tfsdk:"enable_self_improvement"`
+	GroupAccess           types.List   `tfsdk:"group_access"`
+	UserAccess            types.List   `tfsdk:"user_access"`
+	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
 }
 
 func (r *projectAgentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -149,6 +150,12 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
+			},
+			"enable_self_improvement": schema.BoolAttribute{
+				MarkdownDescription: "Whether the agent can improve itself based on user interactions.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
 			},
 			"group_access": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -259,6 +266,12 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		enableDataAccess = plan.EnableDataAccess.ValueBool()
 	}
 
+	// Get enable self improvement (defaults to false if not set)
+	enableSelfImprovement := false
+	if !plan.EnableSelfImprovement.IsUnknown() && !plan.EnableSelfImprovement.IsNull() {
+		enableSelfImprovement = plan.EnableSelfImprovement.ValueBool()
+	}
+
 	// Create agent via service
 	agentService := services.NewAgentService(r.client)
 
@@ -273,7 +286,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		userAccess = []string{}
 	}
 
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, []models.AgentIntegration{}, groupAccess, userAccess, enableDataAccess)
+	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, []models.AgentIntegration{}, groupAccess, userAccess, enableDataAccess, enableSelfImprovement)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -325,6 +338,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	plan.ImageURL = imageURL
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
+	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -430,6 +444,7 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	state.ImageURL = imageURL
 
 	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
+	state.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -538,9 +553,13 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	enableDataAccessVal := plan.EnableDataAccess.ValueBool()
 	enableDataAccess := &enableDataAccessVal
 
+	// Always include enableSelfImprovement in updates since it's a required field
+	enableSelfImprovementVal := plan.EnableSelfImprovement.ValueBool()
+	enableSelfImprovement := &enableSelfImprovementVal
+
 	// Update agent via service
 	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess)
+	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Lightdash project agent",
@@ -592,6 +611,7 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	plan.ImageURL = imageURL
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
+	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -727,6 +747,7 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_data_access"), agent.EnableDataAccess)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), agent.EnableSelfImprovement)...)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess

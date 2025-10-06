@@ -20,17 +20,18 @@ type AgentIntegration struct {
 }
 
 type Agent struct {
-	AgentUUID        string
-	OrganizationUUID string
-	ProjectUUID      string
-	Name             string
-	Tags             []string
-	Integrations     []AgentIntegration
-	UpdatedAt        string
-	CreatedAt        string
-	Instruction      *string
-	ImageURL         *string
-	EnableDataAccess bool
-	GroupAccess      []string
-	UserAccess       []string
+	AgentUUID             string
+	OrganizationUUID      string
+	ProjectUUID           string
+	Name                  string
+	Tags                  []string
+	Integrations          []AgentIntegration
+	UpdatedAt             string
+	CreatedAt             string
+	Instruction           *string
+	ImageURL              *string
+	EnableDataAccess      bool
+	EnableSelfImprovement bool
+	GroupAccess           []string
+	UserAccess            []string
 }

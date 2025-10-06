@@ -19,10 +19,13 @@ resource "lightdash_project_agent" "test" {
   name              = "Test Agent"
   instruction       = "You are a helpful AI assistant for data analysis."
 
-  tags               = ["test", "terraform"]
-  enable_data_access = true
-  group_access       = ["xxxx-xxxx-xxxx"]
-  user_access        = ["xxxx-xxxx-xxxx"]
+  tags = ["test", "terraform"]
+
+  enable_data_access      = true
+  enable_self_improvement = true
+
+  group_access = ["xxxx-xxxx-xxxx"]
+  user_access  = ["xxxx-xxxx-xxxx"]
 
   deletion_protection = true
 
@@ -51,6 +54,7 @@ resource "lightdash_project_agent" "test" {
 
 - `agent_uuid` (String) The UUID of the Lightdash agent.
 - `enable_data_access` (Boolean) Whether the agent can access underlying project data.
+- `enable_self_improvement` (Boolean) Whether the agent can improve itself based on user interactions.
 - `group_access` (List of String) UUIDs of user groups with access.
 - `image_url` (String) URL for the agent's icon/image.
 - `tags` (List of String) Tags associated with the agent.
