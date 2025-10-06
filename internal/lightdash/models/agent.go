@@ -15,22 +15,23 @@
 package models
 
 type AgentIntegration struct {
-	Type      string
-	ChannelID string
+	Type      string `json:"type"`
+	ChannelID string `json:"channelId"`
 }
 
 type Agent struct {
-	AgentUUID        string
-	OrganizationUUID string
-	ProjectUUID      string
-	Name             string
-	Tags             []string
-	Integrations     []AgentIntegration
-	UpdatedAt        string
-	CreatedAt        string
-	Instruction      *string
-	ImageURL         *string
-	EnableDataAccess bool
-	GroupAccess      []string
-	UserAccess       []string
+	AgentUUID             string             `json:"uuid"`
+	OrganizationUUID      string             `json:"organizationUuid"`
+	ProjectUUID           string             `json:"projectUuid"`
+	Name                  string             `json:"name"`
+	Tags                  []string           `json:"tags"`
+	Integrations          []AgentIntegration `json:"integrations,omitempty"`
+	UpdatedAt             string             `json:"updatedAt"`
+	CreatedAt             string             `json:"createdAt"`
+	Instruction           *string            `json:"instruction"`
+	ImageURL              *string            `json:"imageUrl,omitempty"`
+	EnableDataAccess      bool               `json:"enableDataAccess"`
+	GroupAccess           []string           `json:"groupAccess,omitempty"`
+	UserAccess            []string           `json:"userAccess,omitempty"`
+	EnableSelfImprovement *bool              `json:"enableSelfImprovement,omitempty"`
 }

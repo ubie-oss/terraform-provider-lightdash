@@ -4,10 +4,12 @@ resource "lightdash_project_agent" "test" {
   name              = "Test Agent"
   instruction       = "You are a helpful AI assistant for data analysis."
 
-  tags               = ["test", "terraform"]
-  enable_data_access = true
-  group_access       = ["xxxx-xxxx-xxxx"]
-  user_access        = ["xxxx-xxxx-xxxx"]
+  enable_data_access      = true
+  enable_self_improvement = true
+
+  tags         = ["test", "terraform"]
+  group_access = ["xxxx-xxxx-xxxx"]
+  user_access  = ["xxxx-xxxx-xxxx"]
 
   deletion_protection = true
 

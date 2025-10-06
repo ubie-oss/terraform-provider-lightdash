@@ -53,19 +53,20 @@ func (s *AgentService) GetAllAgents(ctx context.Context) ([]models.Agent, error)
 		}
 
 		results = append(results, models.Agent{
-			AgentUUID:        agent.UUID,
-			OrganizationUUID: agent.OrganizationUUID,
-			ProjectUUID:      agent.ProjectUUID,
-			Name:             agent.Name,
-			Tags:             agent.Tags,
-			Integrations:     integrations,
-			UpdatedAt:        agent.UpdatedAt,
-			CreatedAt:        agent.CreatedAt,
-			Instruction:      agent.Instruction,
-			ImageURL:         agent.ImageURL,
-			EnableDataAccess: agent.EnableDataAccess,
-			GroupAccess:      agent.GroupAccess,
-			UserAccess:       agent.UserAccess,
+			AgentUUID:             agent.UUID,
+			OrganizationUUID:      agent.OrganizationUUID,
+			ProjectUUID:           agent.ProjectUUID,
+			Name:                  agent.Name,
+			Tags:                  agent.Tags,
+			Integrations:          integrations,
+			UpdatedAt:             agent.UpdatedAt,
+			CreatedAt:             agent.CreatedAt,
+			Instruction:           agent.Instruction,
+			ImageURL:              agent.ImageURL,
+			EnableDataAccess:      agent.EnableDataAccess,
+			GroupAccess:           agent.GroupAccess,
+			UserAccess:            agent.UserAccess,
+			EnableSelfImprovement: agent.EnableSelfImprovement,
 		})
 	}
 
@@ -93,25 +94,26 @@ func (s *AgentService) GetAgent(ctx context.Context, projectUuid string, agentUu
 	}
 
 	result := &models.Agent{
-		AgentUUID:        agent.UUID,
-		OrganizationUUID: agent.OrganizationUUID,
-		ProjectUUID:      agent.ProjectUUID,
-		Name:             agent.Name,
-		Tags:             agent.Tags,
-		Integrations:     integrations,
-		UpdatedAt:        agent.UpdatedAt,
-		CreatedAt:        agent.CreatedAt,
-		Instruction:      agent.Instruction,
-		ImageURL:         agent.ImageURL,
-		EnableDataAccess: agent.EnableDataAccess,
-		GroupAccess:      agent.GroupAccess,
-		UserAccess:       agent.UserAccess,
+		AgentUUID:             agent.UUID,
+		OrganizationUUID:      agent.OrganizationUUID,
+		ProjectUUID:           agent.ProjectUUID,
+		Name:                  agent.Name,
+		Tags:                  agent.Tags,
+		Integrations:          integrations,
+		UpdatedAt:             agent.UpdatedAt,
+		CreatedAt:             agent.CreatedAt,
+		Instruction:           agent.Instruction,
+		ImageURL:              agent.ImageURL,
+		EnableDataAccess:      agent.EnableDataAccess,
+		GroupAccess:           agent.GroupAccess,
+		UserAccess:            agent.UserAccess,
+		EnableSelfImprovement: agent.EnableSelfImprovement,
 	}
 
 	return result, nil
 }
 
-func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess bool) (*models.Agent, error) {
+func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess bool, enableSelfImprovement *bool) (*models.Agent, error) {
 	tflog.Debug(ctx, "Creating agent", map[string]interface{}{
 		"projectUuid":      projectUuid,
 		"name":             name,
@@ -128,14 +130,15 @@ func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name
 	}
 
 	request := api.CreateAgentV1Request{
-		Name:             name,
-		Instruction:      instruction,
-		ImageURL:         imageUrl,
-		Tags:             tags,
-		Integrations:     apiIntegrations,
-		GroupAccess:      groupAccess,
-		UserAccess:       userAccess,
-		EnableDataAccess: enableDataAccess,
+		Name:                  name,
+		Instruction:           instruction,
+		ImageURL:              imageUrl,
+		Tags:                  tags,
+		Integrations:          apiIntegrations,
+		GroupAccess:           groupAccess,
+		UserAccess:            userAccess,
+		EnableDataAccess:      enableDataAccess,
+		EnableSelfImprovement: enableSelfImprovement,
 	}
 
 	agent, err := s.client.CreateAgentV1(projectUuid, request)
@@ -153,19 +156,20 @@ func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name
 	}
 
 	result := &models.Agent{
-		AgentUUID:        agent.UUID,
-		OrganizationUUID: agent.OrganizationUUID,
-		ProjectUUID:      agent.ProjectUUID,
-		Name:             agent.Name,
-		Tags:             agent.Tags,
-		Integrations:     modelIntegrations,
-		UpdatedAt:        agent.UpdatedAt,
-		CreatedAt:        agent.CreatedAt,
-		Instruction:      agent.Instruction,
-		ImageURL:         agent.ImageURL,
-		EnableDataAccess: agent.EnableDataAccess,
-		GroupAccess:      agent.GroupAccess,
-		UserAccess:       agent.UserAccess,
+		AgentUUID:             agent.UUID,
+		OrganizationUUID:      agent.OrganizationUUID,
+		ProjectUUID:           agent.ProjectUUID,
+		Name:                  agent.Name,
+		Tags:                  agent.Tags,
+		Integrations:          modelIntegrations,
+		UpdatedAt:             agent.UpdatedAt,
+		CreatedAt:             agent.CreatedAt,
+		Instruction:           agent.Instruction,
+		ImageURL:              agent.ImageURL,
+		EnableDataAccess:      agent.EnableDataAccess,
+		GroupAccess:           agent.GroupAccess,
+		UserAccess:            agent.UserAccess,
+		EnableSelfImprovement: agent.EnableSelfImprovement,
 	}
 
 	return result, nil
@@ -185,7 +189,7 @@ func (s *AgentService) DeleteAgent(ctx context.Context, projectUuid string, agen
 	return nil
 }
 
-func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess *bool) (*models.Agent, error) {
+func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess *bool, enableSelfImprovement *bool) (*models.Agent, error) {
 	tflog.Debug(ctx, "Updating agent", map[string]interface{}{
 		"projectUuid": projectUuid,
 		"agentUuid":   agentUuid,
@@ -201,15 +205,16 @@ func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agen
 	}
 
 	request := api.UpdateAgentV1Request{
-		UUID:             agentUuid,
-		Name:             name,
-		Instruction:      instruction,
-		ImageURL:         imageUrl,
-		Tags:             tags,
-		Integrations:     apiIntegrations,
-		GroupAccess:      groupAccess,
-		UserAccess:       userAccess,
-		EnableDataAccess: enableDataAccess,
+		UUID:                  agentUuid,
+		Name:                  name,
+		Instruction:           instruction,
+		ImageURL:              imageUrl,
+		Tags:                  tags,
+		Integrations:          apiIntegrations,
+		GroupAccess:           groupAccess,
+		UserAccess:            userAccess,
+		EnableDataAccess:      enableDataAccess,
+		EnableSelfImprovement: enableSelfImprovement,
 	}
 
 	agent, err := s.client.UpdateAgentV1(projectUuid, agentUuid, request)
@@ -227,19 +232,20 @@ func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agen
 	}
 
 	result := &models.Agent{
-		AgentUUID:        agent.UUID,
-		OrganizationUUID: agent.OrganizationUUID,
-		ProjectUUID:      agent.ProjectUUID,
-		Name:             agent.Name,
-		Tags:             agent.Tags,
-		Integrations:     modelIntegrations,
-		UpdatedAt:        agent.UpdatedAt,
-		CreatedAt:        agent.CreatedAt,
-		Instruction:      agent.Instruction,
-		ImageURL:         agent.ImageURL,
-		EnableDataAccess: agent.EnableDataAccess,
-		GroupAccess:      agent.GroupAccess,
-		UserAccess:       agent.UserAccess,
+		AgentUUID:             agent.UUID,
+		OrganizationUUID:      agent.OrganizationUUID,
+		ProjectUUID:           agent.ProjectUUID,
+		Name:                  agent.Name,
+		Tags:                  agent.Tags,
+		Integrations:          modelIntegrations,
+		UpdatedAt:             agent.UpdatedAt,
+		CreatedAt:             agent.CreatedAt,
+		Instruction:           agent.Instruction,
+		ImageURL:              agent.ImageURL,
+		EnableDataAccess:      agent.EnableDataAccess,
+		GroupAccess:           agent.GroupAccess,
+		UserAccess:            agent.UserAccess,
+		EnableSelfImprovement: agent.EnableSelfImprovement,
 	}
 
 	return result, nil

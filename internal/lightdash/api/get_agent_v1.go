@@ -21,19 +21,20 @@ import (
 )
 
 type GetAgentV1Results struct {
-	UUID             string             `json:"uuid"`
-	OrganizationUUID string             `json:"organizationUuid"`
-	ProjectUUID      string             `json:"projectUuid"`
-	Name             string             `json:"name"`
-	Tags             []string           `json:"tags,omitempty"`
-	Integrations     []AgentIntegration `json:"integrations"`
-	UpdatedAt        string             `json:"updatedAt"`
-	CreatedAt        string             `json:"createdAt"`
-	Instruction      *string            `json:"instruction"`
-	ImageURL         *string            `json:"imageUrl,omitempty"`
-	EnableDataAccess bool               `json:"enableDataAccess,omitempty"`
-	GroupAccess      []string           `json:"groupAccess,omitempty"`
-	UserAccess       []string           `json:"userAccess,omitempty"`
+	UUID                  string             `json:"uuid"`
+	OrganizationUUID      string             `json:"organizationUuid"`
+	ProjectUUID           string             `json:"projectUuid"`
+	Name                  string             `json:"name"`
+	Tags                  []string           `json:"tags,omitempty"`
+	Integrations          []AgentIntegration `json:"integrations"`
+	UpdatedAt             string             `json:"updatedAt"`
+	CreatedAt             string             `json:"createdAt"`
+	Instruction           *string            `json:"instruction"`
+	ImageURL              *string            `json:"imageUrl,omitempty"`
+	EnableDataAccess      bool               `json:"enableDataAccess,omitempty"`
+	GroupAccess           []string           `json:"groupAccess,omitempty"`
+	UserAccess            []string           `json:"userAccess,omitempty"`
+	EnableSelfImprovement *bool              `json:"enableSelfImprovement,omitempty"`
 }
 
 type GetAgentV1Response struct {

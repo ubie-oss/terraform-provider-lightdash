@@ -91,6 +91,7 @@ data "lightdash_project_agent" "example" {
 
 - `created_at` (String) Timestamp of creation.
 - `enable_data_access` (Boolean) Whether the agent can access underlying project data.
+- `enable_self_improvement` (Boolean) Whether the agent can improve itself.
 - `group_access` (List of String) UUIDs of user groups with access.
 - `id` (String) The data source identifier. It is computed as `organizations/<organization_uuid>/projects/<project_uuid>/agents/<agent_uuid>`.
 - `image_url` (String) URL for the agent's icon/image.

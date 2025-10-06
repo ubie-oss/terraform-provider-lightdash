@@ -19,11 +19,13 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,8 +33,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/controllers"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
-	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -48,25 +50,28 @@ func NewProjectAgentResource() resource.Resource {
 
 // projectAgentResource defines the resource implementation.
 type projectAgentResource struct {
-	client *api.Client
+	client     *api.Client
+	controller *controllers.AgentController
 }
 
 // projectAgentResourceModel describes the resource data model.
 type projectAgentResourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	OrganizationUUID types.String `tfsdk:"organization_uuid"`
-	ProjectUUID      types.String `tfsdk:"project_uuid"`
-	AgentUUID        types.String `tfsdk:"agent_uuid"`
-	Name             types.String `tfsdk:"name"`
-	Instruction      types.String `tfsdk:"instruction"`
-	Tags             types.List   `tfsdk:"tags"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	ImageURL         types.String `tfsdk:"image_url"`
-	EnableDataAccess types.Bool   `tfsdk:"enable_data_access"`
-	GroupAccess      types.List   `tfsdk:"group_access"`
-	UserAccess       types.List   `tfsdk:"user_access"`
-	DeleteProtection types.Bool   `tfsdk:"deletion_protection"`
+	ID                    types.String `tfsdk:"id"`
+	OrganizationUUID      types.String `tfsdk:"organization_uuid"`
+	ProjectUUID           types.String `tfsdk:"project_uuid"`
+	AgentUUID             types.String `tfsdk:"agent_uuid"`
+	Name                  types.String `tfsdk:"name"`
+	Instruction           types.String `tfsdk:"instruction"`
+	Tags                  types.List   `tfsdk:"tags"`
+	UpdatedAt             types.String `tfsdk:"updated_at"`
+	CreatedAt             types.String `tfsdk:"created_at"`
+	ImageURL              types.String `tfsdk:"image_url"`
+	EnableDataAccess      types.Bool   `tfsdk:"enable_data_access"`
+	GroupAccess           types.List   `tfsdk:"group_access"`
+	UserAccess            types.List   `tfsdk:"user_access"`
+	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
+	Integrations          types.List   `tfsdk:"integrations"`
+	EnableSelfImprovement types.Bool   `tfsdk:"enable_self_improvement"`
 }
 
 func (r *projectAgentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -168,6 +173,32 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
 				Required:            true,
 			},
+			"integrations": schema.ListNestedAttribute{
+				MarkdownDescription: "Agent integrations.",
+				Optional:            true,
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							MarkdownDescription: "The type of integration (e.g., `slack`).",
+							Required:            true,
+						},
+						"channel_id": schema.StringAttribute{
+							MarkdownDescription: "The channel ID for the integration.",
+							Required:            true,
+						},
+					},
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"enable_self_improvement": schema.BoolAttribute{
+				MarkdownDescription: "Whether the agent can improve itself based on user interactions.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
+			},
 		},
 	}
 }
@@ -187,6 +218,7 @@ func (r *projectAgentResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 	r.client = client
+	r.controller = controllers.NewAgentController(client)
 }
 
 func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -253,27 +285,46 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
+	// Convert integrations list to slice
+	var integrations []models.AgentIntegration
+	if !plan.Integrations.IsUnknown() && !plan.Integrations.IsNull() {
+		var diags diag.Diagnostics
+		integrations = make([]models.AgentIntegration, len(plan.Integrations.Elements()))
+		diags = plan.Integrations.ElementsAs(ctx, &integrations, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		integrations = []models.AgentIntegration{}
+	}
+
 	// Get enable data access (defaults to false if not set)
 	enableDataAccess := false
 	if !plan.EnableDataAccess.IsUnknown() && !plan.EnableDataAccess.IsNull() {
 		enableDataAccess = plan.EnableDataAccess.ValueBool()
 	}
 
+	// Get enable self improvement (defaults to false if not set)
+	var enableSelfImprovement *bool
+	if !plan.EnableSelfImprovement.IsUnknown() && !plan.EnableSelfImprovement.IsNull() {
+		val := plan.EnableSelfImprovement.ValueBool()
+		enableSelfImprovement = &val
+	}
+
 	// Create agent via service
-	agentService := services.NewAgentService(r.client)
-
-	// Ensure all required fields have proper defaults
-	if tags == nil {
-		tags = []string{}
-	}
-	if groupAccess == nil {
-		groupAccess = []string{}
-	}
-	if userAccess == nil {
-		userAccess = []string{}
-	}
-
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, []models.AgentIntegration{}, groupAccess, userAccess, enableDataAccess)
+	agent, err := r.controller.CreateAgent(ctx, controllers.CreateAgentOptions{
+		ProjectUUID:           projectUuid,
+		Name:                  plan.Name.ValueString(),
+		Instruction:           instruction,
+		ImageURL:              imageUrl,
+		Tags:                  tags,
+		Integrations:          integrations,
+		GroupAccess:           groupAccess,
+		UserAccess:            userAccess,
+		EnableDataAccess:      enableDataAccess,
+		EnableSelfImprovement: enableSelfImprovement,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -326,6 +377,13 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
+	// Handle nullable EnableSelfImprovement
+	if agent.EnableSelfImprovement != nil {
+		plan.EnableSelfImprovement = types.BoolValue(*agent.EnableSelfImprovement)
+	} else {
+		plan.EnableSelfImprovement = types.BoolNull()
+	}
+
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
 	if groupAccessVal == nil {
@@ -349,6 +407,31 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 	plan.UserAccess = userAccessList
+
+	// Convert integrations slice to Terraform List (ensure never null)
+	if agent.Integrations == nil {
+		agent.Integrations = []models.AgentIntegration{}
+	}
+	integrationsList, diags := types.ListValueFrom(context.Background(), types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"type":       types.StringType,
+			"channel_id": types.StringType,
+		},
+	}, agent.Integrations)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if integrationsList.IsNull() {
+		plan.Integrations, _ = types.ListValue(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}, nil)
+	} else {
+		plan.Integrations = integrationsList
+	}
 
 	// Set state
 	diags = resp.State.Set(ctx, &plan)
@@ -377,8 +460,7 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Get agent from service
-	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.GetAgent(ctx, projectUuid, agentUuid)
+	agent, err := r.controller.GetAgent(ctx, projectUuid, agentUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Lightdash project agent",
@@ -431,6 +513,13 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 
 	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
+	// Handle nullable EnableSelfImprovement
+	if agent.EnableSelfImprovement != nil {
+		state.EnableSelfImprovement = types.BoolValue(*agent.EnableSelfImprovement)
+	} else {
+		state.EnableSelfImprovement = types.BoolNull()
+	}
+
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
 	if groupAccessVal == nil {
@@ -457,6 +546,29 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 
 	// Preserve deletion protection from current state - this is a Terraform setting
 	// (already populated by req.State.Get(ctx, &state))
+
+	// Convert integrations slice to Terraform List (ensure never null)
+	if agent.Integrations == nil {
+		agent.Integrations = []models.AgentIntegration{}
+	}
+	integrationsList, diags := types.ListValueFrom(context.Background(), types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"type":       types.StringType,
+			"channel_id": types.StringType,
+		},
+	}, agent.Integrations)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.Integrations = integrationsList
+
+	// Handle nullable EnableSelfImprovement
+	if agent.EnableSelfImprovement != nil {
+		state.EnableSelfImprovement = types.BoolValue(*agent.EnableSelfImprovement)
+	} else {
+		state.EnableSelfImprovement = types.BoolNull()
+	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
@@ -495,22 +607,7 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		imageUrl = &imageUrlVal
 	}
 
-	// Always send tags
-	var tags []string
-	if !plan.Tags.IsNull() {
-		diags := plan.Tags.ElementsAs(ctx, &tags, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		tags = []string{}
-	}
-
 	// For integrations, since they're not exposed in the schema, we pass empty slice
-	integrations := []models.AgentIntegration{}
-
-	// Always send groupAccess
 	var groupAccess []string
 	if !plan.GroupAccess.IsNull() {
 		diags := plan.GroupAccess.ElementsAs(ctx, &groupAccess, false)
@@ -534,13 +631,54 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		userAccess = []string{}
 	}
 
+	// Always send tags
+	var tags []string
+	if !plan.Tags.IsNull() {
+		diags := plan.Tags.ElementsAs(ctx, &tags, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		tags = []string{}
+	}
+
+	var integrations []models.AgentIntegration
+	if !plan.Integrations.IsNull() {
+		diags := plan.Integrations.ElementsAs(ctx, &integrations, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		integrations = []models.AgentIntegration{}
+	}
+
 	// Always include enableDataAccess in updates since it's a required field
 	enableDataAccessVal := plan.EnableDataAccess.ValueBool()
 	enableDataAccess := &enableDataAccessVal
 
+	// Handle optional enableSelfImprovement
+	var enableSelfImprovement *bool
+	if !plan.EnableSelfImprovement.IsNull() {
+		val := plan.EnableSelfImprovement.ValueBool()
+		enableSelfImprovement = &val
+	}
+
 	// Update agent via service
-	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess)
+	agent, err := r.controller.UpdateAgent(ctx, controllers.UpdateAgentOptions{
+		ProjectUUID:           projectUuid,
+		AgentUUID:             agentUuid,
+		Name:                  name,
+		Instruction:           instruction,
+		ImageURL:              imageUrl,
+		Tags:                  tags,
+		Integrations:          integrations,
+		GroupAccess:           groupAccess,
+		UserAccess:            userAccess,
+		EnableDataAccess:      enableDataAccess,
+		EnableSelfImprovement: enableSelfImprovement,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Lightdash project agent",
@@ -593,6 +731,13 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 
+	// Handle nullable EnableSelfImprovement
+	if agent.EnableSelfImprovement != nil {
+		plan.EnableSelfImprovement = types.BoolValue(*agent.EnableSelfImprovement)
+	} else {
+		plan.EnableSelfImprovement = types.BoolNull()
+	}
+
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
 	if groupAccessVal == nil {
@@ -616,6 +761,31 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 	plan.UserAccess = userAccessList
+
+	// Convert integrations slice to Terraform List (ensure never null)
+	if agent.Integrations == nil {
+		agent.Integrations = []models.AgentIntegration{}
+	}
+	integrationsList, diags := types.ListValueFrom(context.Background(), types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"type":       types.StringType,
+			"channel_id": types.StringType,
+		},
+	}, agent.Integrations)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if integrationsList.IsNull() {
+		plan.Integrations, _ = types.ListValue(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"type":       types.StringType,
+				"channel_id": types.StringType,
+			},
+		}, nil)
+	} else {
+		plan.Integrations = integrationsList
+	}
 
 	// Set state
 	diags = resp.State.Set(ctx, &plan)
@@ -649,8 +819,11 @@ func (r *projectAgentResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	// Delete agent via service
-	agentService := services.NewAgentService(r.client)
-	err := agentService.DeleteAgent(ctx, projectUuid, agentUuid)
+	err := r.controller.DeleteAgent(ctx, controllers.DeleteAgentOptions{
+		ProjectUUID:        projectUuid,
+		AgentUUID:          agentUuid,
+		DeletionProtection: deletionProtection,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting Lightdash project agent",
@@ -677,8 +850,7 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, fmt.Sprintf("Importing agent with Organization UUID %s, Project UUID %s, Agent UUID %s", organization_uuid, project_uuid, agent_uuid))
 
 	// Fetch the agent data from the API
-	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.GetAgent(ctx, project_uuid, agent_uuid)
+	agent, err := r.controller.GetAgent(ctx, project_uuid, agent_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing Lightdash project agent",
@@ -728,6 +900,13 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_data_access"), agent.EnableDataAccess)...)
 
+	// Handle nullable EnableSelfImprovement
+	if agent.EnableSelfImprovement != nil {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), *agent.EnableSelfImprovement)...)
+	} else {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), types.BoolNull())...)
+	}
+
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
 	if groupAccessVal == nil {
@@ -751,6 +930,29 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_access"), userAccessList)...)
+
+	// Convert integrations slice to Terraform List (ensure never null)
+	if agent.Integrations == nil {
+		agent.Integrations = []models.AgentIntegration{}
+	}
+	integrationsList, diags := types.ListValueFrom(context.Background(), types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"type":       types.StringType,
+			"channel_id": types.StringType,
+		},
+	}, agent.Integrations)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("integrations"), integrationsList)...)
+
+	// Handle nullable EnableSelfImprovement
+	if agent.EnableSelfImprovement != nil {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), *agent.EnableSelfImprovement)...)
+	} else {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), types.BoolNull())...)
+	}
 
 	// Set deletion protection to false by default for imported resources (matches schema default)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("deletion_protection"), false)...)

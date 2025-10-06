@@ -69,6 +69,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_self_improvement", "false"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
 					// Check that agent references match data sources
@@ -95,6 +97,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "tags.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "enable_self_improvement", "false"),
 					// Check that data source matches resource
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
@@ -132,6 +136,24 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 						"lightdash_project_agent.test",
 						"enable_data_access",
 					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"group_access.#",
+						"lightdash_project_agent.test",
+						"group_access.#",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"user_access.#",
+						"lightdash_project_agent.test",
+						"user_access.#",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"enable_self_improvement",
+						"lightdash_project_agent.test",
+						"enable_self_improvement",
+					),
 				),
 			},
 			{
@@ -151,6 +173,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "false"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_self_improvement", "true"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
 					// Check that agent references match data sources
@@ -181,6 +205,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "enable_data_access", "true"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "enable_self_improvement", "true"),
 					// Check that data source matches resource
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
@@ -236,6 +262,12 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 						"lightdash_project_agent.test",
 						"user_access.#",
 					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"enable_self_improvement",
+						"lightdash_project_agent.test",
+						"enable_self_improvement",
+					),
 				),
 			},
 			{
@@ -254,6 +286,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_self_improvement", "false"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "updated_at"),
 					resource.TestCheckResourceAttrSet("lightdash_project_agent.test", "created_at"),
 					// Check that agent references match data sources
@@ -282,6 +316,8 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "tags.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "user_access.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_project_agent.test", "enable_self_improvement", "false"),
 					// Check that data source matches resource
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_project_agent.test",
@@ -336,6 +372,12 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 						"user_access.#",
 						"lightdash_project_agent.test",
 						"user_access.#",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.lightdash_project_agent.test",
+						"enable_self_improvement",
+						"lightdash_project_agent.test",
+						"enable_self_improvement",
 					),
 				),
 			},
@@ -378,6 +420,8 @@ func TestAccProjectAgentResource_import(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "tags.1", "test"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "enable_data_access", "true"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "deletion_protection", "false"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "integrations.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test_agent", "enable_self_improvement", "false"),
 				),
 			},
 			{

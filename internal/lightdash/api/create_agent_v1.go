@@ -22,31 +22,33 @@ import (
 )
 
 type CreateAgentV1Request struct {
-	ProjectUUID      string             `json:"projectUuid"`
-	Name             string             `json:"name"`
-	Instruction      *string            `json:"instruction"`
-	ImageURL         *string            `json:"imageUrl"`
-	Tags             []string           `json:"tags"`
-	Integrations     []AgentIntegration `json:"integrations"`
-	GroupAccess      []string           `json:"groupAccess"`
-	UserAccess       []string           `json:"userAccess"`
-	EnableDataAccess bool               `json:"enableDataAccess"`
+	ProjectUUID           string             `json:"projectUuid"`
+	Name                  string             `json:"name"`
+	Instruction           *string            `json:"instruction"`
+	ImageURL              *string            `json:"imageUrl"`
+	Tags                  []string           `json:"tags"`
+	Integrations          []AgentIntegration `json:"integrations"`
+	GroupAccess           []string           `json:"groupAccess"`
+	UserAccess            []string           `json:"userAccess"`
+	EnableDataAccess      bool               `json:"enableDataAccess"`
+	EnableSelfImprovement *bool              `json:"enableSelfImprovement,omitempty"`
 }
 
 type CreateAgentV1Results struct {
-	UUID             string             `json:"uuid"`
-	OrganizationUUID string             `json:"organizationUuid"`
-	ProjectUUID      string             `json:"projectUuid"`
-	Name             string             `json:"name"`
-	Tags             []string           `json:"tags,omitempty"`
-	Integrations     []AgentIntegration `json:"integrations,omitempty"`
-	UpdatedAt        string             `json:"updatedAt"`
-	CreatedAt        string             `json:"createdAt"`
-	Instruction      *string            `json:"instruction"`
-	ImageURL         *string            `json:"imageUrl,omitempty"`
-	EnableDataAccess bool               `json:"enableDataAccess,omitempty"`
-	GroupAccess      []string           `json:"groupAccess,omitempty"`
-	UserAccess       []string           `json:"userAccess,omitempty"`
+	UUID                  string             `json:"uuid"`
+	OrganizationUUID      string             `json:"organizationUuid"`
+	ProjectUUID           string             `json:"projectUuid"`
+	Name                  string             `json:"name"`
+	Tags                  []string           `json:"tags,omitempty"`
+	Integrations          []AgentIntegration `json:"integrations,omitempty"`
+	UpdatedAt             string             `json:"updatedAt"`
+	CreatedAt             string             `json:"createdAt"`
+	Instruction           *string            `json:"instruction"`
+	ImageURL              *string            `json:"imageUrl,omitempty"`
+	EnableDataAccess      bool               `json:"enableDataAccess,omitempty"`
+	GroupAccess           []string           `json:"groupAccess,omitempty"`
+	UserAccess            []string           `json:"userAccess,omitempty"`
+	EnableSelfImprovement *bool              `json:"enableSelfImprovement,omitempty"`
 }
 
 type CreateAgentV1Response struct {
