@@ -161,7 +161,7 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "Whether the agent can improve itself based on user interactions.",
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				Default:             booldefault.StaticBool(true),
 			},
 			"group_access": schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -307,16 +307,10 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Get enable data access (defaults to false if not set)
-	enableDataAccess := false
-	if !plan.EnableDataAccess.IsUnknown() && !plan.EnableDataAccess.IsNull() {
-		enableDataAccess = plan.EnableDataAccess.ValueBool()
-	}
+	enableDataAccess := plan.EnableDataAccess.ValueBool()
 
 	// Get enable self improvement (defaults to false if not set)
-	enableSelfImprovement := false
-	if !plan.EnableSelfImprovement.IsUnknown() && !plan.EnableSelfImprovement.IsNull() {
-		enableSelfImprovement = plan.EnableSelfImprovement.ValueBool()
-	}
+	enableSelfImprovement := plan.EnableSelfImprovement.ValueBool()
 
 	// Create agent via service
 	agentService := services.NewAgentService(r.client)

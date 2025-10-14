@@ -6,7 +6,7 @@ resource "lightdash_project_agent" "test" {
   project_uuid            = data.lightdash_project.test.project_uuid
   name                    = "Test Agent Updated"
   instruction             = "You are an updated helpful AI assistant for data analysis and insights."
-  enable_data_access      = true
+  enable_data_access      = false
   enable_self_improvement = false
   deletion_protection     = false
   integrations = [
