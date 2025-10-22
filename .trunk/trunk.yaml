@@ -35,18 +35,18 @@ lint:
         - internal/provider/docs/**
   enabled:
     - golangci-lint2@2.5.0
-    - renovate@41.148.2
+    - renovate@41.156.1
     - taplo@0.10.0
     - terraform@1.1.0
-    - semgrep@1.139.0
+    - semgrep@1.140.0
     - gitleaks@8.28.0
     - goimports@0.9.1
     - bandit@1.8.6
     - black@25.9.0
     - isort@7.0.0
-    - ruff@0.14.0
+    - ruff@0.14.1
     - actionlint@1.7.8
-    - checkov@3.2.483
+    - checkov@3.2.485
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.45.0
@@ -56,7 +56,7 @@ lint:
     - shfmt@3.6.0
     - tflint@0.59.1
     - trivy@0.67.2
-    - trufflehog@3.90.8
+    - trufflehog@3.90.11
     - yamllint@1.37.1
 actions:
   enabled:
