@@ -32,6 +32,7 @@ type CreateAgentV1Request struct {
 	UserAccess            []string           `json:"userAccess"`
 	EnableDataAccess      bool               `json:"enableDataAccess"`
 	EnableSelfImprovement bool               `json:"enableSelfImprovement"`
+	Version               int64              `json:"version"`
 }
 
 type CreateAgentV1Results struct {

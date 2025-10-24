@@ -2,8 +2,10 @@ data "lightdash_organization" "test" {
 }
 
 resource "lightdash_project_agent" "test" {
-  organization_uuid       = data.lightdash_organization.test.organization_uuid
-  project_uuid            = data.lightdash_project.test.project_uuid
+  organization_uuid = data.lightdash_organization.test.organization_uuid
+  project_uuid      = data.lightdash_project.test.project_uuid
+
+  version                 = 1
   name                    = "Test Agent"
   instruction             = "You are a helpful AI assistant for data analysis."
   enable_data_access      = false

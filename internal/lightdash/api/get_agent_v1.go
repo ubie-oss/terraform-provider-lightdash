@@ -35,6 +35,7 @@ type GetAgentV1Results struct {
 	EnableSelfImprovement bool               `json:"enableSelfImprovement,omitempty"`
 	GroupAccess           []string           `json:"groupAccess,omitempty"`
 	UserAccess            []string           `json:"userAccess,omitempty"`
+	Version               int64              `json:"version,omitempty"`
 }
 
 type GetAgentV1Response struct {

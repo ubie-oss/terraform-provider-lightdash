@@ -113,7 +113,7 @@ func (s *AgentService) GetAgent(ctx context.Context, projectUuid string, agentUu
 	return result, nil
 }
 
-func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess bool, enableSelfImprovement bool) (*models.Agent, error) {
+func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess bool, enableSelfImprovement bool, version int64) (*models.Agent, error) {
 	tflog.Debug(ctx, "Creating agent", map[string]interface{}{
 		"projectUuid":           projectUuid,
 		"name":                  name,
@@ -140,6 +140,7 @@ func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name
 		UserAccess:            userAccess,
 		EnableDataAccess:      enableDataAccess,
 		EnableSelfImprovement: enableSelfImprovement,
+		Version:               version,
 	}
 
 	agent, err := s.client.CreateAgentV1(projectUuid, request)
@@ -190,7 +191,7 @@ func (s *AgentService) DeleteAgent(ctx context.Context, projectUuid string, agen
 	return nil
 }
 
-func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess *bool, enableSelfImprovement *bool) (*models.Agent, error) {
+func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess *bool, enableSelfImprovement *bool, version int64) (*models.Agent, error) {
 	tflog.Debug(ctx, "Updating agent", map[string]interface{}{
 		"projectUuid": projectUuid,
 		"agentUuid":   agentUuid,
@@ -216,6 +217,7 @@ func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agen
 		UserAccess:            userAccess,
 		EnableDataAccess:      enableDataAccess,
 		EnableSelfImprovement: enableSelfImprovement,
+		Version:               version,
 	}
 
 	agent, err := s.client.UpdateAgentV1(projectUuid, agentUuid, request)

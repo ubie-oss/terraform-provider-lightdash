@@ -55,6 +55,7 @@ type projectAgentDataSourceModel struct {
 	EnableSelfImprovement types.Bool   `tfsdk:"enable_self_improvement"`
 	GroupAccess           types.List   `tfsdk:"group_access"`
 	UserAccess            types.List   `tfsdk:"user_access"`
+	Version               types.Int64  `tfsdk:"version"`
 }
 
 func (d *projectAgentDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -134,6 +135,10 @@ func (d *projectAgentDataSource) Schema(ctx context.Context, req datasource.Sche
 				MarkdownDescription: "UUIDs of individual users with access.",
 				Computed:            true,
 			},
+			"version": schema.Int64Attribute{
+				MarkdownDescription: "Version of the agent.",
+				Computed:            true,
+			},
 		},
 	}
 }
@@ -179,6 +184,7 @@ func (d *projectAgentDataSource) Read(ctx context.Context, req datasource.ReadRe
 	config.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	config.AgentUUID = types.StringValue(agent.UUID)
 	config.Name = types.StringValue(agent.Name)
+	config.Version = types.Int64Value(agent.Version)
 
 	// Handle optional instruction
 	if agent.Instruction != nil {

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -69,6 +70,7 @@ type projectAgentResourceModel struct {
 	UserAccess            types.List   `tfsdk:"user_access"`
 	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
 	Integrations          types.List   `tfsdk:"integrations"`
+	Version               types.Int64  `tfsdk:"version"`
 }
 
 type integrationObjectModel struct {
@@ -204,6 +206,12 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 				},
 			},
+			"version": schema.Int64Attribute{
+				MarkdownDescription: "The version of the agent.",
+				Optional:            true,
+				Computed:            true,
+				Default:             int64default.StaticInt64(2),
+			},
 		},
 	}
 }
@@ -312,6 +320,9 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	// Get enable self improvement (defaults to false if not set)
 	enableSelfImprovement := plan.EnableSelfImprovement.ValueBool()
 
+	// Get version (defaults to 2 if not set)
+	version := plan.Version.ValueInt64()
+
 	// Create agent via service
 	agentService := services.NewAgentService(r.client)
 
@@ -326,7 +337,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		userAccess = []string{}
 	}
 
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement)
+	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -432,6 +443,9 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 	plan.UserAccess = userAccessList
+
+	// Set version (should be the same as what was sent)
+	plan.Version = types.Int64Value(version)
 
 	// Set state
 	diags = resp.State.Set(ctx, &plan)
@@ -669,9 +683,13 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	enableSelfImprovementVal := plan.EnableSelfImprovement.ValueBool()
 	enableSelfImprovement := &enableSelfImprovementVal
 
+	// Always include version in updates
+	versionVal := plan.Version.ValueInt64()
+	version := versionVal
+
 	// Update agent via service
 	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement)
+	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Lightdash project agent",
@@ -945,6 +963,8 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 
 	// Set deletion protection to false by default for imported resources (matches schema default)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("deletion_protection"), false)...)
+	// Set version to default value for imported resources
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("version"), int64(2))...)
 }
 
 func getProjectAgentResourceId(organization_uuid string, project_uuid string, agent_uuid string) string {

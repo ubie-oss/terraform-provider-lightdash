@@ -1,8 +1,10 @@
 resource "lightdash_project_agent" "test" {
   organization_uuid = "xxxx-xxxx-xxxx"
   project_uuid      = "xxxx-xxxx-xxxx"
-  name              = "Test Agent"
-  instruction       = "You are a helpful AI assistant for data analysis."
+
+  version     = 2
+  name        = "Test Agent"
+  instruction = "You are a helpful AI assistant for data analysis."
 
   tags = ["test", "terraform"]
 
