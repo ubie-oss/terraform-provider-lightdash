@@ -101,3 +101,4 @@ data "lightdash_project_agent" "example" {
 - `tags` (List of String) Tags associated with the agent.
 - `updated_at` (String) Timestamp of the last update.
 - `user_access` (List of String) UUIDs of individual users with access.
+- `version` (Number) Version of the agent.

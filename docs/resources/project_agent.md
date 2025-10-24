@@ -16,8 +16,10 @@ Manages a Lightdash project agent. This resource represents an AI agent configur
 resource "lightdash_project_agent" "test" {
   organization_uuid = "xxxx-xxxx-xxxx"
   project_uuid      = "xxxx-xxxx-xxxx"
-  name              = "Test Agent"
-  instruction       = "You are a helpful AI assistant for data analysis."
+
+  version     = 2
+  name        = "Test Agent"
+  instruction = "You are a helpful AI assistant for data analysis."
 
   tags = ["test", "terraform"]
 
@@ -67,6 +69,7 @@ resource "lightdash_project_agent" "test" {
 - `integrations` (Attributes List) List of integrations for the agent. (see [below for nested schema](#nestedatt--integrations))
 - `tags` (List of String) Tags associated with the agent.
 - `user_access` (List of String) UUIDs of individual users with access.
+- `version` (Number) The version of the agent.
 
 ### Read-Only
 
