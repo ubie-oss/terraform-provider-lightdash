@@ -57,6 +57,49 @@ make build
 make test
 ```
 
+### Acceptance Tests
+
+#### Running the Acceptance Tests
+
+To run the acceptance tests, follow these steps:
+
+1. Obtain an API token from your Lightdash instance to authenticate requests.
+2. Copy the [`.env.example`](./.env.template) file to `.env` and set the variables.
+3. Run the acceptance tests using the following command:
+
+```shell
+make testacc
+```
+
+#### Implementing Acceptance Tests
+
+Please refer to the following documentation for basic information on how to implement the acceptance tests:
+
+<https://developer.hashicorp.com/terraform/plugin/framework/acctests>
+
+[internal/provider/acc_tests/](./internal/provider/acc_tests/) is the directory for the acceptance tests.
+We load the terraform configurations for the acceptance tests.
+We separate the acceptance tests into different files for each resource.
+By doing so, we can separately manage the acceptance tests for each test case.
+
+For instance, [internal/provider/resource_lightdash_space_test.go](./internal/provider/resource_lightdash_space_test.go) is the file for the acceptance tests for the `lightdash_space` resource.
+We load the terraform configurations for the acceptance tests from the [internal/provider/acc_tests/resource_lightdash_space/](./internal/provider/acc_tests/resource_lightdash_space/) directory.
+
+```shell
+# `internal/provider/acc_tests/<resource>/<test_case>/<step_configuration>.tf`
+
+internal/provider/acc_tests/resource_lightdash_space/
+├── create_space
+│   ├── 010_create_space.tf
+│   └── 020_create_space.tf
+├── nested_space
+│   ├── 010_nested_space.tf
+│   └── 020_nested_space.tf
+└── space_access
+    ├── 010_space_access.tf
+    └── 020_space_access.tf
+```
+
 ### Integration Testing
 
 To validate the integration of your changes with a live Lightdash instance, follow these steps:
