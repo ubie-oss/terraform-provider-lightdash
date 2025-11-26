@@ -44,16 +44,100 @@ provider_installation {
 }
 ```
 
-### Building and Testing the Provider Locally
+### Building the Provider
 
-To ensure the quality and functionality of your changes, it's essential to build and test the provider before submitting a contribution.
-Follow the steps below to compile the provider and run the automated test suite.
+To compile the provider binary from source, run:
 
 ```shell
-# Compile the provider binary from source
 make build
+```
 
-# Execute the automated test suite to verify your changes
+## Understanding the Codebase
+
+This section provides an overview of the codebase structure and architecture to help contributors understand how the provider is organized.
+
+### Directory Structure Overview
+
+The provider codebase is organized into two main directories under `internal/`:
+
+- **`internal/provider/`**: Contains the Terraform provider implementation, including data sources, resources, functions, and provider configuration
+- **`internal/lightdash/`**: Contains the Lightdash API client and business logic organized in a layered architecture
+
+### Architecture Layers
+
+The provider follows a layered architecture pattern where each layer has a specific responsibility:
+
+```mermaid
+graph LR
+    A["Terraform"]
+
+    subgraph Provider["Provider Layer"]
+        B["Terraform Provider"]
+    end
+
+    subgraph BusinessLogic["Business Logic Layers"]
+        C["Controller Layer"]
+        D["Service Layer"]
+    end
+
+    subgraph API["API Layer"]
+        E["HTTP Client"]
+    end
+
+    F["Lightdash API"]
+
+    subgraph Models["Models Layer"]
+        G["Data Structures"]
+    end
+
+    A --> B
+    B --> C
+    B --> D
+    C --> D
+    D --> E
+    E --> F
+
+    G -.-> B
+    G -.-> C
+    G -.-> D
+    G -.-> E
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#ffe1f5
+    style D fill:#e1ffe1
+    style E fill:#f5e1ff
+    style F fill:#ffe1e1
+    style G fill:#f0f0f0
+```
+
+### Data Flow
+
+When a Terraform operation is executed, data flows through the layers as follows:
+
+1. **Terraform** invokes the provider resource/data source method
+2. **Provider Layer** validates input and calls controllers or services
+3. **Controller Layer** (if needed) orchestrates multiple services for complex operations
+4. **Service Layer** encapsulates business logic and calls API functions
+5. **API Layer** makes HTTP requests to the Lightdash API
+6. **Models Layer** provides data structures used throughout the flow
+
+This layered architecture provides:
+
+- **Separation of Concerns**: Each layer has a clear, single responsibility
+- **Testability**: Layers can be tested independently
+- **Maintainability**: Changes to API endpoints only affect the API layer
+- **Reusability**: Services and controllers can be reused across multiple resources
+
+## Testing
+
+To ensure the quality and functionality of your changes, it's essential to test the provider before submitting a contribution.
+
+### Unit Testing
+
+Run the unit tests to verify your changes:
+
+```shell
 make test
 ```
 
@@ -64,12 +148,25 @@ make test
 To run the acceptance tests, follow these steps:
 
 1. Obtain an API token from your Lightdash instance to authenticate requests.
-2. Copy the [`.env.example`](./.env.template) file to `.env` and set the variables.
-3. Run the acceptance tests using the following command:
 
-```shell
-make testacc
-```
+2. Copy the `.env.template` file to `.env`:
+
+   ```shell
+   cp .env.template .env
+   ```
+
+3. Modify the `.env` file with your Lightdash instance credentials:
+   - `LIGHTDASH_URL`: The URL of your Lightdash instance
+   - `LIGHTDASH_API_KEY`: Your Lightdash API key
+   - `LIGHTDASH_PROJECT`: The UUID of the Lightdash project to use for testing
+
+4. Run the acceptance tests using the following command:
+
+   ```shell
+   make testacc
+   ```
+
+Note: Acceptance tests require a Lightdash instance and may take longer to complete.
 
 #### Implementing Acceptance Tests
 
@@ -90,40 +187,14 @@ We load the terraform configurations for the acceptance tests from the [internal
 
 internal/provider/acc_tests/resource_lightdash_space/
 ├── create_space
-│   ├── 010_create_space.tf
-│   └── 020_create_space.tf
+│   ├── 010_create_space.tf
+│   └── 020_create_space.tf
 ├── nested_space
-│   ├── 010_nested_space.tf
-│   └── 020_nested_space.tf
+│   ├── 010_nested_space.tf
+│   └── 020_nested_space.tf
 └── space_access
     ├── 010_space_access.tf
     └── 020_space_access.tf
-```
-
-### Integration Testing
-
-To validate the integration of your changes with a live Lightdash instance, follow these steps:
-
-1. Obtain an API token from your Lightdash instance to authenticate requests.
-2. Optionally, set up a Lightdash project specifically for testing the provider's functionality.
-3. Generate a `.tfvars` file using the provided template at [integration_tests/testing.tfvars.template](./integration_tests/testing.tfvars.template).
-4. Rebuild the provider binary to include your latest changes by running `make build`.
-5. Execute the integration tests to ensure your changes interact correctly with Lightdash.
-6. After testing, clean up by destroying the test resources to avoid lingering infrastructure.
-
-Execute the following commands within the `integration_tests` directory to perform the integration testing:
-
-```shell
-cd integration_tests
-
-# Review the planned changes for the test resources
-terraform plan -var-file="testing.tfvars"
-
-# Apply the changes to create the test resources
-terraform apply -var-file="testing.tfvars"
-
-# Remove the test resources after testing is complete
-terraform destroy -var-file="testing.tfvars"
 ```
 
 ## Publishing the Provider to the Terraform Registry
