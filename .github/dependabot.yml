@@ -18,46 +18,20 @@
 # https://docs.github.com/en/code-security/dependabot/dependabot-security-updates/customizing-dependabot-security-prs
 version: 2
 updates:
-  # Monthly version updates for GitHub Actions
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
-  # Monthly version updates for Go modules
-  - package-ecosystem: gomod
-    directory: /
-    schedule:
-      interval: monthly
-  # Security updates configuration for GitHub Actions
+  # GitHub Actions: Monthly version updates and automatic security updates
   # Note: Security updates are triggered automatically by security advisories.
-  # This configuration customizes how security PRs are handled (labels, grouping).
-  # Setting open-pull-requests-limit: 0 ensures this entry only handles security updates.
+  # This configuration handles both version updates (monthly) and security updates (automatic).
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    # Disable version updates for this entry (security updates only)
-    open-pull-requests-limit: 0
-    # Group security updates together for easier review
-    groups:
-      github-actions-security:
-        applies-to: security-updates
-        dependency-type: production
-    # Label security PRs for easier identification and prioritization
-    labels:
-      - security
-      - dependencies
-      - github-actions
-  # Security updates configuration for Go modules
+  # Go modules: Monthly version updates and automatic security updates
   # Note: Security updates are triggered automatically by security advisories.
-  # This configuration customizes how security PRs are handled (labels, grouping).
-  # Setting open-pull-requests-limit: 0 ensures this entry only handles security updates.
+  # This configuration handles both version updates (monthly) and security updates (automatic).
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
-    # Disable version updates for this entry (security updates only)
-    open-pull-requests-limit: 0
+      interval: daily
     # Group security updates together for easier review
     groups:
       golang-security:
