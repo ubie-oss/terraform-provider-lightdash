@@ -57,7 +57,7 @@ jobs:
           go mod vendor
       - run: go build -v .
       - name: Run linters
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
 
