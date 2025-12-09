@@ -207,11 +207,22 @@ To publish the provider to the Terraform Registry, a series of steps must be fol
 For instance, we need to:
 
 - Register a PGP key to the Terraform Registry
-- Register GtiHub Actions' secrets
+- Configure GitHub Actions' secrets
 
 The official tutorials describes the steps in detail.
 
 - [Release and Publish a Provider to the Terraform Registry](https://developer.hashicorp.com/terraform/tutorials/providers/provider-release-publish)
+
+### Configure GitHub Secrets
+
+The release workflow (`.github/workflows/release.yml`) requires two GitHub repository secrets to be configured by a repository administrator:
+
+- **`GPG_PRIVATE_KEY`**: The private GPG key used to sign provider releases. This key must be generated and registered with the Terraform Registry.
+- **`PASSPHRASE`**: The passphrase for the GPG private key.
+
+These secrets are used by the GitHub Actions workflow to sign the provider binaries during the release process.
+
+To generate the GPG keys and configure these secrets, follow the "Generate GPG Signing Key" and "Add GitHub secrets for GitHub Action" sections in the [HashiCorp tutorial](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-release-publish#generate-gpg-signing-key).
 
 ### Publish a New Release
 
