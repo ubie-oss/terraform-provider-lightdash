@@ -39,7 +39,10 @@ jobs:
         with:
           egress-policy: audit
       - name: Set up Go
-        uses: actions/setup-go@v6.1.0
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: go.mod
+          cache: true
       - name: Run GoReleaser Check
         uses: goreleaser/goreleaser-action@v6
         with:
