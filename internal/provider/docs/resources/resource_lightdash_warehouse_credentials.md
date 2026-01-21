@@ -1,0 +1,1 @@
+Manages Lightdash warehouse credentials at the organization level. Warehouse credentials are used to connect Lightdash to your data warehouse. This resource currently supports BigQuery with service account key authentication. The credentials allow Lightdash projects to query data from your warehouse without requiring individual user credentials.
