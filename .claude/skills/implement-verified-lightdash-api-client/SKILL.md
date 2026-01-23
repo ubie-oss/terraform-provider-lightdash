@@ -7,7 +7,7 @@ description: Implement verified Lightdash API clients with documentation researc
 
 ## Description
 
-This skill implements a new Lightdash API operation in the `internal/lightdash/api` directory, along with necessary models in `internal/lightdash/models`. It follows a strict verification process: researching the official documentation and, if possible, verifying the actual JSON schema against the live API using an API key from the environment.
+This skill implements a new Lightdash API operation in the `internal/lightdash/api` directory, along with necessary models in `internal/lightdash/models`. It relies on the [research-lightdash-api](../research-lightdash-api/SKILL.md) skill for researching and verifying the API schema before implementation.
 
 ## Input
 
@@ -22,17 +22,8 @@ The user should provide:
 
 ### 1. Research & Verification
 
-- **Documentation Search**: Use `web_search` or `WebFetch` to find the schema in the [Lightdash API Docs](https://docs.lightdash.com/api-reference/v1/introduction).
-- **Live Verification**:
-  - Check for `LIGHTDASH_API_KEY` in `./.env`.
-  - If missing, ask the user: "Please set `LIGHTDASH_API_KEY` in `.env` to verify the API schema."
-  - If present, use the [Schema Verification Script](assets/verify_schema.go) to fetch the actual JSON response:
-
-    ```bash
-    LIGHTDASH_API_KEY=your_key go run .claude/skills/implement-verified-lightdash-api-client/assets/verify_schema.go /api/v1/endpoint
-    ```
-
-  - Compare the live response with the documentation to identify any undocumented fields or discrepancies.
+- **Invoke Research**: Use the [research-lightdash-api](../research-lightdash-api/SKILL.md) skill to research the endpoint and verify its schema against the live API (if `LIGHTDASH_API_KEY` is available).
+- **Outcome**: Ensure you have a **verified** JSON response or documentation-based schema before proceeding to model generation.
 
 ### 2. Model Analysis & Generation
 
@@ -54,7 +45,7 @@ The user should provide:
 - **Execution**:
   - Call `c.doRequest(req)`.
   - Unmarshal the response body into the typed model.
-  - Return the `Results` field if the API wraps the response in a `{ "results": ... }` envelope.
+  - Return the `Results` field if the API wraps the response in a [Results envelope](references/response_envelope.md).
 
 ### 4. Verification
 
@@ -119,4 +110,4 @@ func (c *Client) GetResourceV1(id string) (*models.Resource, error) {
 - [API Operation Boilerplate](assets/api_boilerplate.go)
 - [Model Boilerplate](assets/model_boilerplate.go)
 - [Unit Test Boilerplate](assets/api_test_boilerplate.go)
-- [Schema Verification Script](assets/verify_schema.go)
+- [Schema Verification Script](../research-lightdash-api/assets/verify_schema.go)
