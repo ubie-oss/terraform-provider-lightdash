@@ -148,17 +148,17 @@ Register the resources and data sources the provider manages.
 
 ```go
 func (p *exampleProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewServerResource,
-		// Register other resources here
-	}
+ return []func() resource.Resource{
+  NewServerResource,
+  // Register other resources here
+ }
 }
 
 func (p *exampleProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewServerDataSource,
-		// Register other data sources here
-	}
+ return []func() datasource.DataSource{
+  NewServerDataSource,
+  // Register other data sources here
+ }
 }
 ```
 
@@ -173,25 +173,25 @@ Define the resource struct and its model struct. The resource struct often holds
 ```go
 // Ensure resource implements required interfaces
 var (
-	_ resource.Resource                = &serverResource{}
-	_ resource.ResourceWithConfigure   = &serverResource{}
-	_ resource.ResourceWithImportState = &serverResource{}
+ _ resource.Resource                = &serverResource{}
+ _ resource.ResourceWithConfigure   = &serverResource{}
+ _ resource.ResourceWithImportState = &serverResource{}
 )
 
 type serverResource struct {
-	client *lightdash.Client
+ client *lightdash.Client
 }
 
 type serverResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Address     types.String `tfsdk:"address"`
-	LastUpdated types.String `tfsdk:"last_updated"`
+ ID          types.String `tfsdk:"id"`
+ Name        types.String `tfsdk:"name"`
+ Address     types.String `tfsdk:"address"`
+ LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 // NewServerResource is a helper function to instantiate the resource.
 func NewServerResource() resource.Resource {
-	return &serverResource{}
+ return &serverResource{}
 }
 ```
 
@@ -199,38 +199,38 @@ func NewServerResource() resource.Resource {
 
 ```go
 func (r *serverResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Description: "Manages a server instance.",
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Description: "Unique identifier for the server.",
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "Name of the server.",
-			},
-			"address": schema.StringAttribute{
-				Required:    true,
-				Description: "Server address.",
-			},
-			"last_updated": schema.StringAttribute{
-				Computed: true,
-				Description: "Timestamp of the last update.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(), // Example: requires replacement on change
-				},
-			},
-			// Add other attributes as needed
-		},
-		// Define Block types here if necessary
-		// Blocks: map[string]schema.Block{
-		//	"settings": schema.SingleNestedBlock{...
-		// },
-	}
+ resp.Schema = schema.Schema{
+  Description: "Manages a server instance.",
+  Attributes: map[string]schema.Attribute{
+   "id": schema.StringAttribute{
+    Computed: true,
+    PlanModifiers: []planmodifier.String{
+     stringplanmodifier.UseStateForUnknown(),
+    },
+    Description: "Unique identifier for the server.",
+   },
+   "name": schema.StringAttribute{
+    Required:    true,
+    Description: "Name of the server.",
+   },
+   "address": schema.StringAttribute{
+    Required:    true,
+    Description: "Server address.",
+   },
+   "last_updated": schema.StringAttribute{
+    Computed: true,
+    Description: "Timestamp of the last update.",
+    PlanModifiers: []planmodifier.String{
+     stringplanmodifier.RequiresReplace(), // Example: requires replacement on change
+    },
+   },
+   // Add other attributes as needed
+  },
+  // Define Block types here if necessary
+  // Blocks: map[string]schema.Block{
+  // "settings": schema.SingleNestedBlock{...
+  // },
+ }
 }
 ```
 
@@ -240,21 +240,21 @@ If a resource needs the provider's configured data (e.g., the API client), imple
 
 ```go
 func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Retrieve client from provider data
-	if req.ProviderData == nil {
-		return
-	}
+ // Retrieve client from provider data
+ if req.ProviderData == nil {
+  return
+ }
 
-	client, ok := req.ProviderData.(*lightdash.Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *lightdash.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
+ client, ok := req.ProviderData.(*lightdash.Client)
+ if !ok {
+  resp.Diagnostics.AddError(
+   "Unexpected Resource Configure Type",
+   fmt.Sprintf("Expected *lightdash.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+  )
+  return
+ }
 
-	r.client = client
+ r.client = client
 }
 ```
 
@@ -264,35 +264,35 @@ func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRe
 
 ```go
 func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	// Read plan data into model
-	var plan serverResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+ // Read plan data into model
+ var plan serverResourceModel
+ diags := req.Plan.Get(ctx, &plan)
+ resp.Diagnostics.Append(diags...)
+ if resp.Diagnostics.HasError() {
+  return
+ }
 
-	// Create resource via API
-	createServerRequest := lightdash.CreateServerRequest{
-		Name:    plan.Name.ValueString(),
-		Address: plan.Address.ValueString(),
-	}
-	server, err := r.client.CreateServer(ctx, createServerRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating server",
-			"Could not create server, unexpected API error: " + err.Error(),
-		)
-		return
-	}
+ // Create resource via API
+ createServerRequest := lightdash.CreateServerRequest{
+  Name:    plan.Name.ValueString(),
+  Address: plan.Address.ValueString(),
+ }
+ server, err := r.client.CreateServer(ctx, createServerRequest)
+ if err != nil {
+  resp.Diagnostics.AddError(
+   "Error creating server",
+   "Could not create server, unexpected API error: " + err.Error(),
+  )
+  return
+ }
 
-	// Map response to model
-	plan.ID = types.StringValue(server.ID)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+ // Map response to model
+ plan.ID = types.StringValue(server.ID)
+ plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Set state
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
+ // Set state
+ diags = resp.State.Set(ctx, plan)
+ resp.Diagnostics.Append(diags...)
 }
 ```
 
@@ -300,36 +300,36 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 
 ```go
 func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// Get current state
-	var state serverResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+ // Get current state
+ var state serverResourceModel
+ diags := req.State.Get(ctx, &state)
+ resp.Diagnostics.Append(diags...)
+ if resp.Diagnostics.HasError() {
+  return
+ }
 
-	// Get refreshed server from API
-	server, err := r.client.GetServer(ctx, state.ID.ValueString())
-	if err != nil {
-		if lightdash.IsNotFoundError(err) { // Example: Check for a not found error
-			resp.State.RemoveResource(ctx) // Resource no longer exists, remove from state
-			return
-		}
-		resp.Diagnostics.AddError(
-			"Error Reading server",
-			"Could not read server ID " + state.ID.ValueString() + ": " + err.Error(),
-		)
-		return
-	}
+ // Get refreshed server from API
+ server, err := r.client.GetServer(ctx, state.ID.ValueString())
+ if err != nil {
+  if lightdash.IsNotFoundError(err) { // Example: Check for a not found error
+   resp.State.RemoveResource(ctx) // Resource no longer exists, remove from state
+   return
+  }
+  resp.Diagnostics.AddError(
+   "Error Reading server",
+   "Could not read server ID " + state.ID.ValueString() + ": " + err.Error(),
+  )
+  return
+ }
 
-	// Map response to model
-	state.Name = types.StringValue(server.Name)
-	state.Address = types.StringValue(server.Address)
-	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850)) // Update computed fields
+ // Map response to model
+ state.Name = types.StringValue(server.Name)
+ state.Address = types.StringValue(server.Address)
+ state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850)) // Update computed fields
 
-	// Set refreshed state
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
+ // Set refreshed state
+ diags = resp.State.Set(ctx, &state)
+ resp.Diagnostics.Append(diags...)
 }
 ```
 
@@ -337,35 +337,35 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 ```go
 func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Read plan and state data
-	var plan, state serverResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+ // Read plan and state data
+ var plan, state serverResourceModel
+ resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+ resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+ if resp.Diagnostics.HasError() {
+  return
+ }
 
-	// Update server via API
-	updateServerRequest := lightdash.UpdateServerRequest{
-		Name:    plan.Name.ValueString(),
-		Address: plan.Address.ValueString(),
-	}
-	server, err := r.client.UpdateServer(ctx, state.ID.ValueString(), updateServerRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating server",
-			"Could not update server ID " + state.ID.ValueString() + ": " + err.Error(),
-		)
-		return
-	}
+ // Update server via API
+ updateServerRequest := lightdash.UpdateServerRequest{
+  Name:    plan.Name.ValueString(),
+  Address: plan.Address.ValueString(),
+ }
+ server, err := r.client.UpdateServer(ctx, state.ID.ValueString(), updateServerRequest)
+ if err != nil {
+  resp.Diagnostics.AddError(
+   "Error updating server",
+   "Could not update server ID " + state.ID.ValueString() + ": " + err.Error(),
+  )
+  return
+ }
 
-	// Map response to model
-	plan.ID = types.StringValue(server.ID) // ID should not change on update
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+ // Map response to model
+ plan.ID = types.StringValue(server.ID) // ID should not change on update
+ plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Set state
-	diags := resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
+ // Set state
+ diags := resp.State.Set(ctx, plan)
+ resp.Diagnostics.Append(diags...)
 }
 ```
 
@@ -373,27 +373,27 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 ```go
 func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state serverResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+ var state serverResourceModel
+ diags := req.State.Get(ctx, &state)
+ resp.Diagnostics.Append(diags...)
+ if resp.Diagnostics.HasError() {
+  return
+ }
 
-	// Delete server via API
-	err := r.client.DeleteServer(ctx, state.ID.ValueString())
-	if err != nil {
-		if lightdash.IsNotFoundError(err) { // Example: Resource already deleted
-			return
-		}
-		resp.Diagnostics.AddError(
-			"Error deleting server",
-			"Could not delete server ID " + state.ID.ValueString() + ": " + err.Error(),
-		)
-		return
-	}
+ // Delete server via API
+ err := r.client.DeleteServer(ctx, state.ID.ValueString())
+ if err != nil {
+  if lightdash.IsNotFoundError(err) { // Example: Resource already deleted
+   return
+  }
+  resp.Diagnostics.AddError(
+   "Error deleting server",
+   "Could not delete server ID " + state.ID.ValueString() + ": " + err.Error(),
+  )
+  return
+ }
 
-	// Upon successful deletion, the resource is automatically removed from state.
+ // Upon successful deletion, the resource is automatically removed from state.
 }
 ```
 
@@ -401,8 +401,8 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 ```go
 func (r *serverResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import server using ID
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+ // Import server using ID
+ resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 ```
 
@@ -429,24 +429,24 @@ Define the data source struct and its model struct.
 ```go
 // Ensure data source implements required interfaces
 var (
-	_ datasource.DataSource               = &serverDataSource{}
-	_ datasource.DataSourceWithConfigure  = &serverDataSource{}
+ _ datasource.DataSource               = &serverDataSource{}
+ _ datasource.DataSourceWithConfigure  = &serverDataSource{}
 )
 
 type serverDataSource struct {
-	client *lightdash.Client
+ client *lightdash.Client
 }
 
 type serverDataSourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Address     types.String `tfsdk:"address"`
-	LastUpdated types.String `tfsdk:"last_updated"`
+ ID          types.String `tfsdk:"id"`
+ Name        types.String `tfsdk:"name"`
+ Address     types.String `tfsdk:"address"`
+ LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 // NewServerDataSource is a helper function to instantiate the data source.
 func NewServerDataSource() datasource.DataSource {
-	return &serverDataSource{}
+ return &serverDataSource{}
 }
 ```
 
@@ -454,29 +454,29 @@ func NewServerDataSource() datasource.DataSource {
 
 ```go
 func (d *serverDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Description: "Reads information about a server instance.",
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Optional:    true, // Allow lookup by ID or name
-				Computed:    true,
-				Description: "Unique identifier for the server.",
-			},
-			"name": schema.StringAttribute{
-				Optional:    true, // Allow lookup by ID or name
-				Computed:    true,
-				Description: "Name of the server.",
-			},
-			"address": schema.StringAttribute{
-				Computed:    true,
-				Description: "Server address.",
-			},
-			"last_updated": schema.StringAttribute{
-				Computed:    true,
-				Description: "Timestamp of the last update.",
-			},
-		},
-	}
+ resp.Schema = schema.Schema{
+  Description: "Reads information about a server instance.",
+  Attributes: map[string]schema.Attribute{
+   "id": schema.StringAttribute{
+    Optional:    true, // Allow lookup by ID or name
+    Computed:    true,
+    Description: "Unique identifier for the server.",
+   },
+   "name": schema.StringAttribute{
+    Optional:    true, // Allow lookup by ID or name
+    Computed:    true,
+    Description: "Name of the server.",
+   },
+   "address": schema.StringAttribute{
+    Computed:    true,
+    Description: "Server address.",
+   },
+   "last_updated": schema.StringAttribute{
+    Computed:    true,
+    Description: "Timestamp of the last update.",
+   },
+  },
+ }
 }
 ```
 
@@ -486,21 +486,21 @@ If the data source needs the provider's configured data (e.g., the API client), 
 
 ```go
 func (d *serverDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Retrieve client from provider data
-	if req.ProviderData == nil {
-		return
-	}
+ // Retrieve client from provider data
+ if req.ProviderData == nil {
+  return
+ }
 
-	client, ok := req.ProviderData.(*lightdash.Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *lightdash.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
+ client, ok := req.ProviderData.(*lightdash.Client)
+ if !ok {
+  resp.Diagnostics.AddError(
+   "Unexpected Data Source Configure Type",
+   fmt.Sprintf("Expected *lightdash.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+  )
+  return
+ }
 
-	d.client = client
+ d.client = client
 }
 ```
 
@@ -510,57 +510,57 @@ Read the configuration data (arguments), call the API to fetch the data, map the
 
 ```go
 func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config serverDataSourceModel
-	diags := req.Config.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+ var config serverDataSourceModel
+ diags := req.Config.Get(ctx, &config)
+ resp.Diagnostics.Append(diags...)
+ if resp.Diagnostics.HasError() {
+  return
+ }
 
-	// Read server from API based on provided ID or Name (replace with actual API call logic)
-	var server *lightdash.Server
-	var err error
+ // Read server from API based on provided ID or Name (replace with actual API call logic)
+ var server *lightdash.Server
+ var err error
 
-	if !config.ID.IsUnknown() && !config.ID.IsNull() {
-		server, err = d.client.GetServer(ctx, config.ID.ValueString())
-	} else if !config.Name.IsUnknown() && !config.Name.IsNull() {
-		// Assuming an API method exists to get server by name
-		server, err = d.client.GetServerByName(ctx, config.Name.ValueString())
-	} else {
-		resp.Diagnostics.AddError(
-			"Missing Identifier",
-			"Either 'id' or 'name' must be provided to read a server data source.",
-		)
-		return
-	}
+ if !config.ID.IsUnknown() && !config.ID.IsNull() {
+  server, err = d.client.GetServer(ctx, config.ID.ValueString())
+ } else if !config.Name.IsUnknown() && !config.Name.IsNull() {
+  // Assuming an API method exists to get server by name
+  server, err = d.client.GetServerByName(ctx, config.Name.ValueString())
+ } else {
+  resp.Diagnostics.AddError(
+   "Missing Identifier",
+   "Either 'id' or 'name' must be provided to read a server data source.",
+  )
+  return
+ }
 
-	if err != nil {
-		if lightdash.IsNotFoundError(err) { // Example: Data not found
-			resp.Diagnostics.AddError(
-				"Server Not Found",
-				fmt.Sprintf("Could not find server with ID %q or Name %q", config.ID.ValueString(), config.Name.ValueString()),
-			)
-			return
-		}
-		resp.Diagnostics.AddError(
-			"Error Reading server",
-			"Could not read server: " + err.Error(),
-		)
-		return
-	}
+ if err != nil {
+  if lightdash.IsNotFoundError(err) { // Example: Data not found
+   resp.Diagnostics.AddError(
+    "Server Not Found",
+    fmt.Sprintf("Could not find server with ID %q or Name %q", config.ID.ValueString(), config.Name.ValueString()),
+   )
+   return
+  }
+  resp.Diagnostics.AddError(
+   "Error Reading server",
+   "Could not read server: " + err.Error(),
+  )
+  return
+ }
 
-	// Map response to model
-	state := serverDataSourceModel{
-		ID:          types.StringValue(server.ID),
-		Name:        types.StringValue(server.Name),
-		Address:     types.StringValue(server.Address),
-		LastUpdated: types.StringValue(time.Now().Format(time.RFC850)), // Update computed fields
-		// Map other computed fields
-	}
+ // Map response to model
+ state := serverDataSourceModel{
+  ID:          types.StringValue(server.ID),
+  Name:        types.StringValue(server.Name),
+  Address:     types.StringValue(server.Address),
+  LastUpdated: types.StringValue(time.Now().Format(time.RFC850)), // Update computed fields
+  // Map other computed fields
+ }
 
-	// Set state
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
+ // Set state
+ diags = resp.State.Set(ctx, &state)
+ resp.Diagnostics.Append(diags...)
 }
 ```
 
@@ -579,16 +579,16 @@ var _ function.Function = &exampleFunction{}
 type exampleFunction struct{}
 
 type exampleFunctionParameters struct {
-	Input types.String `tfsdk:"input"`
+ Input types.String `tfsdk:"input"`
 }
 
 type exampleFunctionReturn struct {
-	Output types.String `tfsdk:"output"`
+ Output types.String `tfsdk:"output"`
 }
 
 // NewExampleFunction is a helper function to instantiate the function.
 func NewExampleFunction() function.Function {
-	return &exampleFunction{}
+ return &exampleFunction{}
 }
 ```
 
@@ -598,23 +598,23 @@ Define the function's parameters and return types using `function.Definition`.
 
 ```go
 func (f *exampleFunction) Definition(ctx context.Context, req function.DefinitionRequest, resp *function.DefinitionResponse) {
-	resp.Definition = function.Definition{
-		Summary:     "Transforms input string to uppercase.",
-		Description: "Takes an input string and returns its uppercase version.",
-		Parameters: function.Parameters{
-			"input": function.StringParameter{ // Use appropriate parameter type
-				Description: "The string to convert to uppercase.",
-			},
-		},
-		Return: function.Return{ // Use appropriate return type
-			Types: types.ObjectType{ // Functions return object types
-				AttrTypes: map[string]attr.Type{
-					"output": types.StringType,
-				},
-			},
-			Description: "The uppercase version of the input string.",
-		},
-	}
+ resp.Definition = function.Definition{
+  Summary:     "Transforms input string to uppercase.",
+  Description: "Takes an input string and returns its uppercase version.",
+  Parameters: function.Parameters{
+   "input": function.StringParameter{ // Use appropriate parameter type
+    Description: "The string to convert to uppercase.",
+   },
+  },
+  Return: function.Return{ // Use appropriate return type
+   Types: types.ObjectType{ // Functions return object types
+    AttrTypes: map[string]attr.Type{
+     "output": types.StringType,
+    },
+   },
+   Description: "The uppercase version of the input string.",
+  },
+ }
 }
 ```
 
@@ -624,20 +624,20 @@ Perform the computation based on the input parameters and return the result.
 
 ```go
 func (f *exampleFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
-	// Read parameters
-	var params exampleFunctionParameters
-	diags := req.Parameters.Get(ctx, &params)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+ // Read parameters
+ var params exampleFunctionParameters
+ diags := req.Parameters.Get(ctx, &params)
+ resp.Diagnostics.Append(diags...)
+ if resp.Diagnostics.HasError() {
+  return
+ }
 
-	// Perform computation
-	inputString := params.Input.ValueString()
-	outputString := strings.ToUpper(inputString)
+ // Perform computation
+ inputString := params.Input.ValueString()
+ outputString := strings.ToUpper(inputString)
 
-	// Set return value
-	resp.Returns.Set(ctx, exampleFunctionReturn{Output: types.StringValue(outputString)})
+ // Set return value
+ resp.Returns.Set(ctx, exampleFunctionReturn{Output: types.StringValue(outputString)})
 }
 ```
 
@@ -691,55 +691,55 @@ Use the framework's built-in mechanisms for marking attributes or resources as d
 
 ## 11. Best Practices
 
-*   **Provider Design Principles:** Focus on a single API or problem domain. Resources should represent a single API object. Resource and attribute schema should closely match the underlying API. Resources should be importable. Consider state and versioning carefully.
-*   **Error Handling:** Use `resp.Diagnostics` for all errors and warnings.
-*   **Logging:** Use `tflog` for structured logging.
-*   **State Management:** Use framework types and plan modifiers.
-*   **Testing:** Write comprehensive acceptance tests.
-*   **Documentation:** Maintain detailed documentation in the `docs/` directory.
+- **Provider Design Principles:** Focus on a single API or problem domain. Resources should represent a single API object. Resource and attribute schema should closely match the underlying API. Resources should be importable. Consider state and versioning carefully.
+- **Error Handling:** Use `resp.Diagnostics` for all errors and warnings.
+- **Logging:** Use `tflog` for structured logging.
+- **State Management:** Use framework types and plan modifiers.
+- **Testing:** Write comprehensive acceptance tests.
+- **Documentation:** Maintain detailed documentation in the `docs/` directory.
 
 ## References
 
-*   [Provider Servers](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/provider-servers)
-*   [Providers](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/providers)
-*   [Validate Provider Configuration](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/providers/validate-configuration)
-*   [Getting Started Code Walkthrough](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/getting-started/code-walkthrough)
-*   [Resources](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources)
-*   [Resource Create](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/create)
-*   [Resource Read](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/read)
-*   [Resource Update](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/update)
-*   [Resource Delete](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/delete)
-*   [Resource Identity](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/identity)
-*   [Resource Configure](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/configure)
-*   [Resource Validate Configuration](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/validate-configuration)
-*   [Resource Plan Modification](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/plan-modification)
-*   [Resource Default](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/default)
-*   [Resource Import](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/import)
-*   [Resource State Move](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/state-move)
-*   [Resource State Upgrade](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/state-upgrade)
-*   [Resource Identity Upgrade](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/identity-upgrade)
-*   [Resource Private State](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/private-state)
-*   [Resource Timeouts](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/timeouts)
-*   [Resource Write-Only Arguments](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/write-only-arguments)
-*   [Data Sources](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources)
-*   [Data Source Configure](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources/configure)
-*   [Data Source Validate Configuration](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources/validate-configuration)
-*   [Data Source Timeouts](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources/timeouts)
-*   [Functions](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions)
-*   [Function Concepts](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/concepts)
-*   [Function Implementation](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/implementation)
-*   [Function Parameters](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/parameters)
-*   [Function Returns](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/returns)
-*   [Function Errors](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/errors)
-*   [Function Testing](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/testing)
-*   [Function Documentation](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/documentation)
-*   [Ephemeral Resources](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/ephemeral-resources)
-*   [Path Expressions](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/path-expressions)
-*   [Accessing Values](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values)
-*   [Writing State](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/writing-state)
-*   [Dynamic Data](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/dynamic-data)
-*   [Diagnostics](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/diagnostics)
-*   [Validation](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/validation)
-*   [Acceptance Tests](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/acctests)
-*   [Debugging](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/debugging)
-*   [Deprecations](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/deprecations)
+- [Provider Servers](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/provider-servers)
+- [Providers](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/providers)
+- [Validate Provider Configuration](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/providers/validate-configuration)
+- [Getting Started Code Walkthrough](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/getting-started/code-walkthrough)
+- [Resources](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources)
+- [Resource Create](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/create)
+- [Resource Read](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/read)
+- [Resource Update](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/update)
+- [Resource Delete](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/delete)
+- [Resource Identity](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/identity)
+- [Resource Configure](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/configure)
+- [Resource Validate Configuration](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/validate-configuration)
+- [Resource Plan Modification](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/plan-modification)
+- [Resource Default](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/default)
+- [Resource Import](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/import)
+- [Resource State Move](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/state-move)
+- [Resource State Upgrade](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/state-upgrade)
+- [Resource Identity Upgrade](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/identity-upgrade)
+- [Resource Private State](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/private-state)
+- [Resource Timeouts](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/timeouts)
+- [Resource Write-Only Arguments](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/resources/write-only-arguments)
+- [Data Sources](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources)
+- [Data Source Configure](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources/configure)
+- [Data Source Validate Configuration](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources/validate-configuration)
+- [Data Source Timeouts](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/data-sources/timeouts)
+- [Functions](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions)
+- [Function Concepts](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/concepts)
+- [Function Implementation](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/implementation)
+- [Function Parameters](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/parameters)
+- [Function Returns](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/returns)
+- [Function Errors](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/errors)
+- [Function Testing](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/testing)
+- [Function Documentation](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/functions/documentation)
+- [Ephemeral Resources](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/ephemeral-resources)
+- [Path Expressions](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/path-expressions)
+- [Accessing Values](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values)
+- [Writing State](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/writing-state)
+- [Dynamic Data](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/handling-data/dynamic-data)
+- [Diagnostics](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/diagnostics)
+- [Validation](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/validation)
+- [Acceptance Tests](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/acctests)
+- [Debugging](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/debugging)
+- [Deprecations](mdc:https:/developer.hashicorp.com/terraform/plugin/framework/deprecations)

@@ -66,3 +66,23 @@ The `internal/lightdash` directory implements a layered Lightdash API client:
 - The `controllers/` package is reserved for future use.
 
 This structure abstracts HTTP details and provides a clean, testable interface for the Terraform provider code in `internal/provider` to interact with Lightdash.
+
+---
+
+## Implementation Workflows
+
+When implementing new functionality, use the defined Agent Skills to ensure verification and consistency.
+
+### Adding New API Endpoints
+
+To implement a new API endpoint in `internal/lightdash/api`:
+
+1. **Use the Skill**: `@.claude/skills/implement-verified-lightdash-api-client/SKILL.md`
+2. **Workflow**: This skill enforces a "Verify First" approach, requiring research of the official docs and live verification of the JSON schema using the provided script before generating models or client code.
+
+### Adding Terraform Resources
+
+After implementing the client methods, if you are exposing them as a Terraform Resource:
+
+1. **Use the Skill**: `@.claude/skills/implement-terraform-provider-resource/SKILL.md`
+2. **Workflow**: This skill guides the creation of the resource/data source in `internal/provider`, ensuring proper schema definitions, acceptance tests, and integration with the client.
