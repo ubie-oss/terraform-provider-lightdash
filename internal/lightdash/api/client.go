@@ -25,11 +25,18 @@ type Client struct {
 	HTTPClient *http.Client
 	HostUrl    string
 	Token      string
+	Semaphore  chan struct{}
 }
 
-func NewClient(host, token *string) (*Client, error) {
+func NewClient(host, token *string, maxConcurrentRequests *int64) (*Client, error) {
+	var maxRequests int64 = 10
+	if maxConcurrentRequests != nil {
+		maxRequests = *maxConcurrentRequests
+	}
+
 	c := Client{
 		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		Semaphore:  make(chan struct{}, maxRequests),
 	}
 
 	if host != nil {
@@ -49,7 +56,12 @@ func NewClient(host, token *string) (*Client, error) {
 	return &c, nil
 }
 
-func (c *Client) doRequest(req *http.Request) ([]byte, error) {
+func (c *Client) DoRequest(req *http.Request) ([]byte, error) {
+	if c.Semaphore != nil {
+		c.Semaphore <- struct{}{}
+		defer func() { <-c.Semaphore }()
+	}
+
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("ApiKey %s", c.Token))

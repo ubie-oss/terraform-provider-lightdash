@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sort"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	slices "golang.org/x/exp/slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -134,7 +136,7 @@ func (d *organizationMembersByEmailsDataSource) Read(ctx context.Context, req da
 	}
 
 	// Get information of the organization
-	organization, err := d.client.GetMyOrganizationV1()
+	organization, err := apiv1.GetMyOrganizationV1(d.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get organization",

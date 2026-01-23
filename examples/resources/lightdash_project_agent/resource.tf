@@ -4,15 +4,18 @@ resource "lightdash_project_agent" "test" {
 
   version     = 2
   name        = "Test Agent"
+  description = "A helpful AI assistant for data analysis."
   instruction = "You are a helpful AI assistant for data analysis."
 
   tags = ["test", "terraform"]
 
   enable_data_access      = true
   enable_self_improvement = true
+  enable_reasoning        = true
 
   group_access = ["xxxx-xxxx-xxxx"]
   user_access  = ["xxxx-xxxx-xxxx"]
+  space_access = ["xxxx-xxxx-xxxx"]
 
   deletion_protection = true
 

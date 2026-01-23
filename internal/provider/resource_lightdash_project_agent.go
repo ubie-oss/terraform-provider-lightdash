@@ -68,6 +68,9 @@ type projectAgentResourceModel struct {
 	EnableSelfImprovement types.Bool   `tfsdk:"enable_self_improvement"`
 	GroupAccess           types.List   `tfsdk:"group_access"`
 	UserAccess            types.List   `tfsdk:"user_access"`
+	Description           types.String `tfsdk:"description"`
+	SpaceAccess           types.List   `tfsdk:"space_access"`
+	EnableReasoning       types.Bool   `tfsdk:"enable_reasoning"`
 	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
 	Integrations          types.List   `tfsdk:"integrations"`
 	Version               types.Int64  `tfsdk:"version"`
@@ -178,6 +181,19 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+			},
+			"description": schema.StringAttribute{
+				MarkdownDescription: "The description of the Lightdash agent.",
+				Required:            true,
+			},
+			"space_access": schema.ListAttribute{
+				ElementType:         types.StringType,
+				MarkdownDescription: "UUIDs of spaces the agent has access to.",
+				Required:            true,
+			},
+			"enable_reasoning": schema.BoolAttribute{
+				MarkdownDescription: "Whether to enable reasoning for the agent.",
+				Required:            true,
 			},
 			"deletion_protection": schema.BoolAttribute{
 				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
@@ -297,6 +313,16 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
+	// Convert space access list to slice
+	var spaceAccess []string
+	if !plan.SpaceAccess.IsUnknown() && !plan.SpaceAccess.IsNull() {
+		diags = plan.SpaceAccess.ElementsAs(ctx, &spaceAccess, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Convert integrations list to slice
 	var integrations []models.AgentIntegration
 	if !plan.Integrations.IsUnknown() && !plan.Integrations.IsNull() {
@@ -320,6 +346,12 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	// Get enable self improvement (defaults to false if not set)
 	enableSelfImprovement := plan.EnableSelfImprovement.ValueBool()
 
+	// Get enable reasoning
+	enableReasoning := plan.EnableReasoning.ValueBool()
+
+	// Get description
+	description := plan.Description.ValueString()
+
 	// Get version (defaults to 2 if not set)
 	version := plan.Version.ValueInt64()
 
@@ -336,8 +368,11 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	if userAccess == nil {
 		userAccess = []string{}
 	}
+	if spaceAccess == nil {
+		spaceAccess = []string{}
+	}
 
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement, version)
+	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, enableReasoning, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -419,6 +454,8 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
+	plan.EnableReasoning = types.BoolValue(agent.EnableReasoning)
+	plan.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -443,6 +480,18 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 	plan.UserAccess = userAccessList
+
+	// Convert space access slice to Terraform List (ensure never null)
+	spaceAccessVal := agent.SpaceAccess
+	if spaceAccessVal == nil {
+		spaceAccessVal = []string{}
+	}
+	spaceAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, spaceAccessVal)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	plan.SpaceAccess = spaceAccessList
 
 	// Set version (should be the same as what was sent)
 	plan.Version = types.Int64Value(version)
@@ -557,6 +606,8 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 
 	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	state.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
+	state.EnableReasoning = types.BoolValue(agent.EnableReasoning)
+	state.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -581,6 +632,18 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 	state.UserAccess = userAccessList
+
+	// Convert space access slice to Terraform List (ensure never null)
+	spaceAccessVal := agent.SpaceAccess
+	if spaceAccessVal == nil {
+		spaceAccessVal = []string{}
+	}
+	spaceAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, spaceAccessVal)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.SpaceAccess = spaceAccessList
 
 	// Preserve deletion protection from current state - this is a Terraform setting
 	// (already populated by req.State.Get(ctx, &state))
@@ -614,6 +677,10 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	// Always send instruction (required field)
 	instructionVal := plan.Instruction.ValueString()
 	instruction := &instructionVal
+
+	// Always send description
+	descriptionVal := plan.Description.ValueString()
+	description := &descriptionVal
 
 	// Handle optional imageUrl
 	var imageUrl *string
@@ -675,6 +742,18 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		userAccess = []string{}
 	}
 
+	// Always send spaceAccess
+	var spaceAccess []string
+	if !plan.SpaceAccess.IsNull() {
+		diags := plan.SpaceAccess.ElementsAs(ctx, &spaceAccess, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		spaceAccess = []string{}
+	}
+
 	// Always include enableDataAccess in updates since it's a required field
 	enableDataAccessVal := plan.EnableDataAccess.ValueBool()
 	enableDataAccess := &enableDataAccessVal
@@ -683,13 +762,17 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	enableSelfImprovementVal := plan.EnableSelfImprovement.ValueBool()
 	enableSelfImprovement := &enableSelfImprovementVal
 
+	// Always include enableReasoning in updates
+	enableReasoningVal := plan.EnableReasoning.ValueBool()
+	enableReasoning := &enableReasoningVal
+
 	// Always include version in updates
 	versionVal := plan.Version.ValueInt64()
 	version := versionVal
 
 	// Update agent via service
 	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, instruction, imageUrl, tags, integrations, groupAccess, userAccess, enableDataAccess, enableSelfImprovement, version)
+	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, enableReasoning, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Lightdash project agent",
@@ -771,6 +854,8 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
+	plan.EnableReasoning = types.BoolValue(agent.EnableReasoning)
+	plan.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -795,6 +880,18 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 	plan.UserAccess = userAccessList
+
+	// Convert space access slice to Terraform List (ensure never null)
+	spaceAccessVal := agent.SpaceAccess
+	if spaceAccessVal == nil {
+		spaceAccessVal = []string{}
+	}
+	spaceAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, spaceAccessVal)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	plan.SpaceAccess = spaceAccessList
 
 	// Set state
 	diags = resp.State.Set(ctx, &plan)
@@ -936,6 +1033,8 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_data_access"), agent.EnableDataAccess)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), agent.EnableSelfImprovement)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_reasoning"), agent.EnableReasoning)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("description"), agent.Description)...)
 
 	// Convert group access slice to Terraform List (ensure never null)
 	groupAccessVal := agent.GroupAccess
@@ -960,6 +1059,18 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_access"), userAccessList)...)
+
+	// Convert space access slice to Terraform List (ensure never null)
+	spaceAccessVal := agent.SpaceAccess
+	if spaceAccessVal == nil {
+		spaceAccessVal = []string{}
+	}
+	spaceAccessList, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, spaceAccessVal)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("space_access"), spaceAccessList)...)
 
 	// Set deletion protection to false by default for imported resources (matches schema default)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("deletion_protection"), false)...)

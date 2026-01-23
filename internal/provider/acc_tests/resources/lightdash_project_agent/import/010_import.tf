@@ -9,10 +9,13 @@ resource "lightdash_project_agent" "test_agent" {
 
   version                 = 2
   name                    = "Test Agent for Import"
+  description             = "Test Description for Import"
   instruction             = "You are a helpful AI assistant for data analysis and imports."
   tags                    = ["import", "test"]
   enable_data_access      = true
   enable_self_improvement = true
+  enable_reasoning        = false
+  space_access            = []
   deletion_protection     = false
   integrations            = []
 }

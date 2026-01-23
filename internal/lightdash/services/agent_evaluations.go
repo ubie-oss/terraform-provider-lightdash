@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -40,7 +42,7 @@ func (s *AgentEvaluationsService) GetEvaluations(ctx context.Context, projectUUI
 		"evalUUID":    evalUUID,
 	})
 
-	evaluation, err := s.client.GetEvaluationsV1(projectUUID, agentUUID, evalUUID)
+	evaluation, err := apiv1.GetEvaluationsV1(s.client, projectUUID, agentUUID, evalUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get evaluations: %w", err)
 	}
@@ -58,20 +60,20 @@ func (s *AgentEvaluationsService) GetEvaluations(ctx context.Context, projectUUI
 	return result, nil
 }
 
-func (s *AgentEvaluationsService) CreateEvaluations(ctx context.Context, projectUUID string, agentUUID string, title string, description *string, prompts []string) (*models.AgentEvaluations, error) {
+func (s *AgentEvaluationsService) CreateEvaluations(ctx context.Context, projectUUID string, agentUUID string, title string, description *string, prompts []models.EvaluationsPrompt) (*models.AgentEvaluations, error) {
 	tflog.Debug(ctx, "Creating evaluation", map[string]interface{}{
 		"projectUUID": projectUUID,
 		"agentUUID":   agentUUID,
 		"title":       title,
 	})
 
-	request := api.CreateEvaluationsV1Request{
+	request := apiv1.CreateEvaluationsV1Request{
 		Title:       title,
 		Description: description,
 		Prompts:     prompts,
 	}
 
-	evaluation, err := s.client.CreateEvaluationsV1(projectUUID, agentUUID, request)
+	evaluation, err := apiv1.CreateEvaluationsV1(s.client, projectUUID, agentUUID, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create evaluations: %w", err)
 	}
@@ -80,20 +82,20 @@ func (s *AgentEvaluationsService) CreateEvaluations(ctx context.Context, project
 	return s.GetEvaluations(ctx, projectUUID, agentUUID, evaluation.EvalUUID)
 }
 
-func (s *AgentEvaluationsService) UpdateEvaluations(ctx context.Context, projectUUID string, agentUUID string, evalUUID string, title *string, description *string, prompts []string) (*models.AgentEvaluations, error) {
+func (s *AgentEvaluationsService) UpdateEvaluations(ctx context.Context, projectUUID string, agentUUID string, evalUUID string, title *string, description *string, prompts []models.EvaluationsPrompt) (*models.AgentEvaluations, error) {
 	tflog.Debug(ctx, "Updating evaluation", map[string]interface{}{
 		"projectUUID": projectUUID,
 		"agentUUID":   agentUUID,
 		"evalUUID":    evalUUID,
 	})
 
-	request := api.UpdateEvaluationsV1Request{
+	request := apiv1.UpdateEvaluationsV1Request{
 		Title:       title,
 		Description: description,
 		Prompts:     prompts,
 	}
 
-	_, err := s.client.UpdateEvaluationsV1(projectUUID, agentUUID, evalUUID, request)
+	_, err := apiv1.UpdateEvaluationsV1(s.client, projectUUID, agentUUID, evalUUID, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update evaluations: %w", err)
 	}
@@ -102,18 +104,18 @@ func (s *AgentEvaluationsService) UpdateEvaluations(ctx context.Context, project
 	return s.GetEvaluations(ctx, projectUUID, agentUUID, evalUUID)
 }
 
-func (s *AgentEvaluationsService) AppendEvaluations(ctx context.Context, projectUUID string, agentUUID string, evalUUID string, prompts []string) (*models.AgentEvaluations, error) {
+func (s *AgentEvaluationsService) AppendEvaluations(ctx context.Context, projectUUID string, agentUUID string, evalUUID string, prompts []models.EvaluationsPrompt) (*models.AgentEvaluations, error) {
 	tflog.Debug(ctx, "Appending to evaluation", map[string]interface{}{
 		"projectUUID": projectUUID,
 		"agentUUID":   agentUUID,
 		"evalUUID":    evalUUID,
 	})
 
-	request := api.AppendEvaluationsV1Request{
+	request := apiv1.AppendEvaluationsV1Request{
 		Prompts: prompts,
 	}
 
-	_, err := s.client.AppendEvaluationsV1(projectUUID, agentUUID, evalUUID, request)
+	_, err := apiv1.AppendEvaluationsV1(s.client, projectUUID, agentUUID, evalUUID, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to append to evaluations: %w", err)
 	}
@@ -129,7 +131,7 @@ func (s *AgentEvaluationsService) DeleteEvaluations(ctx context.Context, project
 		"evalUUID":    evalUUID,
 	})
 
-	err := s.client.DeleteEvaluationsV1(projectUUID, agentUUID, evalUUID)
+	err := apiv1.DeleteEvaluationsV1(s.client, projectUUID, agentUUID, evalUUID)
 	if err != nil {
 		return fmt.Errorf("failed to delete evaluations: %w", err)
 	}

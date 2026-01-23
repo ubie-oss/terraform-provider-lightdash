@@ -7,10 +7,13 @@ resource "lightdash_project_agent" "test" {
 
   version                 = 1
   name                    = "Test Agent"
+  description             = "Test Description"
   instruction             = "You are a helpful AI assistant for data analysis."
   enable_data_access      = false
   enable_self_improvement = false
-  deletion_protection     = true
+  enable_reasoning        = false
+  space_access            = []
+  deletion_protection     = false
   integrations = [
     # {
     #   type       = "slack"

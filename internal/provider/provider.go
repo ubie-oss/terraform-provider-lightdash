@@ -17,6 +17,8 @@ package provider
 import (
 	"context"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -40,8 +42,9 @@ type lightdashProvider struct {
 
 // lightdashProviderModel describes the provider data model.
 type lightdashProviderModel struct {
-	HostURL types.String `tfsdk:"host"`
-	Token   types.String `tfsdk:"token"`
+	HostURL               types.String `tfsdk:"host"`
+	Token                 types.String `tfsdk:"token"`
+	MaxConcurrentRequests types.Int64  `tfsdk:"max_concurrent_requests"`
 }
 
 func (p *lightdashProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -61,6 +64,10 @@ func (p *lightdashProvider) Schema(ctx context.Context, req provider.SchemaReque
 				MarkdownDescription: "Personal access token for Lightdash",
 				Required:            true,
 				Sensitive:           true,
+			},
+			"max_concurrent_requests": schema.Int64Attribute{
+				MarkdownDescription: "Maximum number of concurrent requests to the Lightdash API. Defaults to 10.",
+				Optional:            true,
 			},
 		},
 	}
@@ -97,11 +104,16 @@ func (p *lightdashProvider) Configure(ctx context.Context, req provider.Configur
 	// if data.Endpoint.IsNull() { /* ... */ }
 	host := config.HostURL.ValueString()
 	token := config.Token.ValueString()
-	client, _ := api.NewClient(&host, &token)
+	var maxConcurrentRequests *int64
+	if !config.MaxConcurrentRequests.IsNull() && !config.MaxConcurrentRequests.IsUnknown() {
+		val := config.MaxConcurrentRequests.ValueInt64()
+		maxConcurrentRequests = &val
+	}
+	client, _ := api.NewClient(&host, &token, maxConcurrentRequests)
 
 	// Check if the token is valid as long as the test mode is not disabled
 	if !isIntegrationTestMode() {
-		_, err := client.GetMyOrganizationV1()
+		_, err := apiv1.GetMyOrganizationV1(client)
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("token"),

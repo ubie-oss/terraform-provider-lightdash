@@ -15,10 +15,13 @@
 package models
 
 type EvaluationsPrompt struct {
-	EvalPromptUUID string `json:"evalPromptUuid,omitempty"`
-	CreatedAt      string `json:"createdAt,omitempty"`
-	Type           string `json:"type,omitempty"`
-	Prompt         string `json:"prompt"`
+	EvalPromptUUID   string `json:"evalPromptUuid,omitempty"`
+	CreatedAt        string `json:"createdAt,omitempty"`
+	Type             string `json:"type,omitempty"`
+	Prompt           string `json:"prompt"`
+	ExpectedResponse string `json:"expectedResponse"`
+	ThreadUUID       string `json:"threadUuid,omitempty"`
+	PromptUUID       string `json:"promptUuid,omitempty"`
 }
 
 type AgentEvaluations struct {

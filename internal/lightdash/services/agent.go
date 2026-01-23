@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -36,7 +38,7 @@ func NewAgentService(client *api.Client) *AgentService {
 func (s *AgentService) GetAllAgents(ctx context.Context) ([]models.Agent, error) {
 	tflog.Debug(ctx, "Getting all agents")
 
-	agents, err := s.client.GetAllAgentsV1()
+	agents, err := apiv1.GetAllAgentsV1(s.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all agents: %w", err)
 	}
@@ -67,6 +69,9 @@ func (s *AgentService) GetAllAgents(ctx context.Context) ([]models.Agent, error)
 			EnableSelfImprovement: agent.EnableSelfImprovement,
 			GroupAccess:           agent.GroupAccess,
 			UserAccess:            agent.UserAccess,
+			Description:           agent.Description,
+			SpaceAccess:           agent.SpaceAccess,
+			EnableReasoning:       agent.EnableReasoning,
 		})
 	}
 
@@ -79,7 +84,7 @@ func (s *AgentService) GetAgent(ctx context.Context, projectUuid string, agentUu
 		"agentUuid":   agentUuid,
 	})
 
-	agent, err := s.client.GetAgentV1(projectUuid, agentUuid)
+	agent, err := apiv1.GetAgentV1(s.client, projectUuid, agentUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get agent: %w", err)
 	}
@@ -108,42 +113,49 @@ func (s *AgentService) GetAgent(ctx context.Context, projectUuid string, agentUu
 		EnableSelfImprovement: agent.EnableSelfImprovement,
 		GroupAccess:           agent.GroupAccess,
 		UserAccess:            agent.UserAccess,
+		Description:           agent.Description,
+		SpaceAccess:           agent.SpaceAccess,
+		EnableReasoning:       agent.EnableReasoning,
 	}
 
 	return result, nil
 }
 
-func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess bool, enableSelfImprovement bool, version int64) (*models.Agent, error) {
+func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, description string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, spaceAccess []string, enableDataAccess bool, enableSelfImprovement bool, enableReasoning bool, version int64) (*models.Agent, error) {
 	tflog.Debug(ctx, "Creating agent", map[string]interface{}{
 		"projectUuid":           projectUuid,
 		"name":                  name,
 		"enableDataAccess":      enableDataAccess,
 		"enableSelfImprovement": enableSelfImprovement,
+		"enableReasoning":       enableReasoning,
 	})
 
 	// Convert model integrations to API integrations
-	apiIntegrations := []api.AgentIntegration{}
+	apiIntegrations := []apiv1.AgentIntegration{}
 	for _, integration := range integrations {
-		apiIntegrations = append(apiIntegrations, api.AgentIntegration{
+		apiIntegrations = append(apiIntegrations, apiv1.AgentIntegration{
 			Type:      integration.Type,
 			ChannelID: integration.ChannelID,
 		})
 	}
 
-	request := api.CreateAgentV1Request{
+	request := apiv1.CreateAgentV1Request{
 		Name:                  name,
+		Description:           description,
 		Instruction:           instruction,
 		ImageURL:              imageUrl,
 		Tags:                  tags,
 		Integrations:          apiIntegrations,
 		GroupAccess:           groupAccess,
 		UserAccess:            userAccess,
+		SpaceAccess:           spaceAccess,
 		EnableDataAccess:      enableDataAccess,
 		EnableSelfImprovement: enableSelfImprovement,
+		EnableReasoning:       enableReasoning,
 		Version:               version,
 	}
 
-	agent, err := s.client.CreateAgentV1(projectUuid, request)
+	agent, err := apiv1.CreateAgentV1(s.client, projectUuid, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}
@@ -172,6 +184,9 @@ func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name
 		EnableSelfImprovement: agent.EnableSelfImprovement,
 		GroupAccess:           agent.GroupAccess,
 		UserAccess:            agent.UserAccess,
+		Description:           agent.Description,
+		SpaceAccess:           agent.SpaceAccess,
+		EnableReasoning:       agent.EnableReasoning,
 	}
 
 	return result, nil
@@ -183,7 +198,7 @@ func (s *AgentService) DeleteAgent(ctx context.Context, projectUuid string, agen
 		"agentUuid":   agentUuid,
 	})
 
-	err := s.client.DeleteAgentV1(projectUuid, agentUuid)
+	err := apiv1.DeleteAgentV1(s.client, projectUuid, agentUuid)
 	if err != nil {
 		return fmt.Errorf("failed to delete agent: %w", err)
 	}
@@ -191,36 +206,39 @@ func (s *AgentService) DeleteAgent(ctx context.Context, projectUuid string, agen
 	return nil
 }
 
-func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, enableDataAccess *bool, enableSelfImprovement *bool, version int64) (*models.Agent, error) {
+func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, description *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, spaceAccess []string, enableDataAccess *bool, enableSelfImprovement *bool, enableReasoning *bool, version int64) (*models.Agent, error) {
 	tflog.Debug(ctx, "Updating agent", map[string]interface{}{
 		"projectUuid": projectUuid,
 		"agentUuid":   agentUuid,
 	})
 
 	// Convert model integrations to API integrations
-	apiIntegrations := []api.AgentIntegration{}
+	apiIntegrations := []apiv1.AgentIntegration{}
 	for _, integration := range integrations {
-		apiIntegrations = append(apiIntegrations, api.AgentIntegration{
+		apiIntegrations = append(apiIntegrations, apiv1.AgentIntegration{
 			Type:      integration.Type,
 			ChannelID: integration.ChannelID,
 		})
 	}
 
-	request := api.UpdateAgentV1Request{
+	request := apiv1.UpdateAgentV1Request{
 		UUID:                  agentUuid,
 		Name:                  name,
+		Description:           description,
 		Instruction:           instruction,
 		ImageURL:              imageUrl,
 		Tags:                  tags,
 		Integrations:          apiIntegrations,
 		GroupAccess:           groupAccess,
 		UserAccess:            userAccess,
+		SpaceAccess:           spaceAccess,
 		EnableDataAccess:      enableDataAccess,
 		EnableSelfImprovement: enableSelfImprovement,
+		EnableReasoning:       enableReasoning,
 		Version:               version,
 	}
 
-	agent, err := s.client.UpdateAgentV1(projectUuid, agentUuid, request)
+	agent, err := apiv1.UpdateAgentV1(s.client, projectUuid, agentUuid, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update agent: %w", err)
 	}
@@ -249,6 +267,9 @@ func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agen
 		EnableSelfImprovement: agent.EnableSelfImprovement,
 		GroupAccess:           agent.GroupAccess,
 		UserAccess:            agent.UserAccess,
+		Description:           agent.Description,
+		SpaceAccess:           agent.SpaceAccess,
+		EnableReasoning:       agent.EnableReasoning,
 	}
 
 	return result, nil

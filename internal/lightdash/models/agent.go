@@ -34,4 +34,7 @@ type Agent struct {
 	EnableSelfImprovement bool
 	GroupAccess           []string
 	UserAccess            []string
+	Description           string
+	SpaceAccess           []string
+	EnableReasoning       bool
 }

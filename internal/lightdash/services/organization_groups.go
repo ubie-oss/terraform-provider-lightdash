@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
@@ -35,7 +37,7 @@ func NewOrganizationGroupsService(client *api.Client) *OrganizationGroupsService
 // GetGroup retrieves a single group by UUID
 func (s *OrganizationGroupsService) GetGroup(ctx context.Context, groupUUID string) (*models.OrganizationGroup, error) {
 	// Get the group from the API
-	group, err := s.client.GetGroupV1(groupUUID)
+	group, err := apiv1.GetGroupV1(s.client, groupUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group with UUID %s: %w", groupUUID, err)
 	}
@@ -58,7 +60,7 @@ func (s *OrganizationGroupsService) GetOrganizationGroups(ctx context.Context) (
 
 	for {
 		// Fetch the groups from the organization using the API client
-		groups, err := s.client.GetOrganizationGroupsV1(float64(page), float64(pageSize), 0, "")
+		groups, err := apiv1.GetOrganizationGroupsV1(s.client, float64(page), float64(pageSize), 0, "")
 		if err != nil {
 			return nil, err
 		}

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -126,7 +128,7 @@ func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.Crea
 
 	// Get the group
 	group_uuid := plan.GroupUUID.ValueString()
-	_, err := r.client.GetGroupV1(group_uuid)
+	_, err := apiv1.GetGroupV1(r.client, group_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
@@ -138,7 +140,7 @@ func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.Crea
 	// Grant the project role to the group
 	project_uuid := plan.ProjectUUID.ValueString()
 	project_role := plan.ProjectRole
-	grantedGroup, err := r.client.AddProjectAccessToGroupV1(project_uuid, group_uuid, project_role)
+	grantedGroup, err := apiv1.AddProjectAccessToGroupV1(r.client, project_uuid, group_uuid, project_role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting project role to group",
@@ -180,7 +182,7 @@ func (r *projectRoleGroupResource) Read(ctx context.Context, req resource.ReadRe
 
 	// Retrieve group details using the API
 	groupUuid = state.GroupUUID.ValueString()
-	groupsInProject, err := r.client.GetProjectGroupAccessesV1(projectUuid)
+	groupsInProject, err := apiv1.GetProjectGroupAccessesV1(r.client, projectUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
@@ -190,7 +192,7 @@ func (r *projectRoleGroupResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Find the group in the groups of the project
-	var group *api.GetProjectGroupAccessesV1Results
+	var group *apiv1.GetProjectGroupAccessesV1Results
 	found := false
 	for i := range groupsInProject {
 		if groupsInProject[i].GroupUUID == groupUuid {
@@ -232,7 +234,7 @@ func (r *projectRoleGroupResource) Update(ctx context.Context, req resource.Upda
 	project_uuid := plan.ProjectUUID.ValueString()
 	group_uuid := plan.GroupUUID.ValueString()
 	role := plan.ProjectRole
-	updatedGroupAccess, err := r.client.UpdateProjectAccessForGroupV1(project_uuid, group_uuid, role)
+	updatedGroupAccess, err := apiv1.UpdateProjectAccessForGroupV1(r.client, project_uuid, group_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project group's role",
@@ -267,7 +269,7 @@ func (r *projectRoleGroupResource) Delete(ctx context.Context, req resource.Dele
 	project_uuid := state.ProjectUUID.ValueString()
 	group_uuid := state.GroupUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Revoking project role for group %s", group_uuid))
-	err := r.client.RemoveProjectAccessFromGroupV1(project_uuid, group_uuid)
+	err := apiv1.RemoveProjectAccessFromGroupV1(r.client, project_uuid, group_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Revoking project group role: "+group_uuid+", project: "+project_uuid,
@@ -292,7 +294,7 @@ func (r *projectRoleGroupResource) ImportState(ctx context.Context, req resource
 
 	// Retrieve group details using the API
 	groupUuid := group_uuid
-	groupsInProject, err := r.client.GetProjectGroupAccessesV1(project_uuid)
+	groupsInProject, err := apiv1.GetProjectGroupAccessesV1(r.client, project_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
@@ -302,7 +304,7 @@ func (r *projectRoleGroupResource) ImportState(ctx context.Context, req resource
 	}
 
 	// Find the group in the groups of the project
-	var group *api.GetProjectGroupAccessesV1Results
+	var group *apiv1.GetProjectGroupAccessesV1Results
 	found := false
 	for i := range groupsInProject {
 		if groupsInProject[i].GroupUUID == groupUuid {

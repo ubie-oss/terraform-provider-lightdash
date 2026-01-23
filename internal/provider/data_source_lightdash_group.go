@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -121,7 +123,7 @@ func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	groupUuid := state.GroupUUID.ValueString()
-	group, err := d.client.GetGroupV1(groupUuid)
+	group, err := apiv1.GetGroupV1(d.client, groupUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to read Lightdash group",

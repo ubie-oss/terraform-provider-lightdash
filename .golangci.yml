@@ -26,6 +26,7 @@ linters:
     - predeclared
     - unconvert
     - unparam
+    - gosec
   exclusions:
     presets:
       - comments

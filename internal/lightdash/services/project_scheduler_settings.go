@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
@@ -36,7 +38,7 @@ func NewProjectSchedulerSettingsService(client *api.Client, projectUuid string) 
 
 func (s *ProjectSchedulerSettingsService) GetProjectSchedulerSettings(ctx context.Context, projectUuid string) (*models.ProjectSchedulerSettings, error) {
 	// Get the project
-	project, err := s.client.GetProjectV1(projectUuid)
+	project, err := apiv1.GetProjectV1(s.client, projectUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project (%s): %w", projectUuid, err)
 	}
@@ -54,7 +56,7 @@ func (s *ProjectSchedulerSettingsService) UpdateProjectSchedulerSettings(
 
 	// Update the project scheduler settings
 	var schedulerTimezone = projectSchedulerSettings.SchedulerTimezone
-	_, err := s.client.UpdateSchedulerSettingsV1(s.projectUuid, schedulerTimezone)
+	_, err := apiv1.UpdateSchedulerSettingsV1(s.client, s.projectUuid, schedulerTimezone)
 	if err != nil {
 		return fmt.Errorf("failed to update project scheduler settings in project (%s) with timezone (%s): %w", s.projectUuid, schedulerTimezone, err)
 	}
