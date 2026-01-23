@@ -59,6 +59,7 @@ This directory contains the Go code responsible for communicating with the Light
 
 **Summary:**
 The `internal/lightdash` directory implements a layered Lightdash API client:
+
 - The `api/` package handles low-level HTTP and endpoint logic.
 - The `models/` package defines all data structures and enums.
 - The `services/` package provides business logic and resource-oriented operations.
