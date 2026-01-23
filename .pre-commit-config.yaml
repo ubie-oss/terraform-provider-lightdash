@@ -44,6 +44,7 @@ repos:
       # - id: go-cyclo
       #   args: [-over=15]
       - id: no-go-testing
+        exclude: ^\.claude/
       # - id: golangci-lint
       # - id: go-critic
       - id: go-mod-tidy

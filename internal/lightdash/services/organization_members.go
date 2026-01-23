@@ -21,6 +21,8 @@ import (
 	"sort"
 	"sync"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
@@ -32,7 +34,7 @@ var once sync.Once
 type OrganizationMembersService struct {
 	client *api.Client
 	// members are cached results from GetOrganizationMembers
-	members []api.GetOrganizationMembersV1Results
+	members []apiv1.GetOrganizationMembersV1Results
 }
 
 // GetOrganizationMembersService returns the singleton instance of OrganizationMembersService.
@@ -43,22 +45,22 @@ func GetOrganizationMembersService(client *api.Client) *OrganizationMembersServi
 	once.Do(func() {
 		organizationMembersServiceInstance = &OrganizationMembersService{
 			client:  client,
-			members: []api.GetOrganizationMembersV1Results{}, // Initialize empty cache
+			members: []apiv1.GetOrganizationMembersV1Results{}, // Initialize empty cache
 		}
 	})
 	return organizationMembersServiceInstance
 }
 
 // Fetch the members from the organization using the API client
-func (s *OrganizationMembersService) GetOrganizationMembers(ctx context.Context) ([]api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMembers(ctx context.Context) ([]apiv1.GetOrganizationMembersV1Results, error) {
 	pageSize := 100
-	members := []api.GetOrganizationMembersV1Results{}
+	members := []apiv1.GetOrganizationMembersV1Results{}
 
 	// Fetch the members from the organization using the API client
 	page := 0
 	for {
 		// Fetch the members from the organization using the API client
-		pageMembers, err := s.client.GetOrganizationMembersV1(0, pageSize, page, "")
+		pageMembers, err := apiv1.GetOrganizationMembersV1(s.client, 0, pageSize, page, "")
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +86,7 @@ func (s *OrganizationMembersService) GetOrganizationMembers(ctx context.Context)
 
 // Fetch the members from the organization using the API client and cache the results
 // If the members list is already populated, it returns the cached results
-func (s *OrganizationMembersService) GetOrganizationMembersByCache(ctx context.Context) ([]api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMembersByCache(ctx context.Context) ([]apiv1.GetOrganizationMembersV1Results, error) {
 	// Check if the members list is already populated
 	if len(s.members) == 0 {
 		// Fetch the members from the organization using the API client
@@ -100,14 +102,14 @@ func (s *OrganizationMembersService) GetOrganizationMembersByCache(ctx context.C
 
 // GetOrganizationAdmins retrieves the admins of an organization.
 // It leverages the GetOrganizationMembers method to fetch all members and filters out non-admins.
-func (s *OrganizationMembersService) GetOrganizationMembersByRole(ctx context.Context, role models.OrganizationMemberRole) ([]api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMembersByRole(ctx context.Context, role models.OrganizationMemberRole) ([]apiv1.GetOrganizationMembersV1Results, error) {
 	// Retrieve all members of the organization
 	allMembers, err := s.GetOrganizationMembersByCache(ctx)
 	if err != nil {
 		return nil, err
 	}
 	// Initialize a slice to hold members with the specified role
-	var admins []api.GetOrganizationMembersV1Results
+	var admins []apiv1.GetOrganizationMembersV1Results
 	for _, member := range allMembers {
 		// Check if the member's role matches the specified role
 		if member.OrganizationRole == role {
@@ -119,7 +121,7 @@ func (s *OrganizationMembersService) GetOrganizationMembersByRole(ctx context.Co
 }
 
 // GetOrganizationMemberByUserUuid retrieves a member of an organization by their UUID.
-func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(ctx context.Context, userUuid string) (*api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(ctx context.Context, userUuid string) (*apiv1.GetOrganizationMembersV1Results, error) {
 	// Retrieve all organization members
 	organizationMembers, err := s.GetOrganizationMembersByCache(ctx)
 	if err != nil {
@@ -136,7 +138,7 @@ func (s *OrganizationMembersService) GetOrganizationMemberByUserUuid(ctx context
 }
 
 // GetOrganizationMemberByEmail retrieves a member of an organization by their email.
-func (s *OrganizationMembersService) GetOrganizationMemberByEmail(ctx context.Context, email string) (*api.GetOrganizationMembersV1Results, error) {
+func (s *OrganizationMembersService) GetOrganizationMemberByEmail(ctx context.Context, email string) (*apiv1.GetOrganizationMembersV1Results, error) {
 	// Retrieve all organization members
 	organizationMembers, err := s.GetOrganizationMembersByCache(ctx)
 	if err != nil {

@@ -22,7 +22,8 @@ func TestNewClient(t *testing.T) {
 	// Test case 1: Both host and token provided
 	host := "example.com"
 	token := "abc123"
-	client, err := NewClient(&host, &token)
+	maxRequests := int64(15)
+	client, err := NewClient(&host, &token, &maxRequests)
 	if err != nil {
 		t.Errorf("Error creating client: %s", err.Error())
 	}
@@ -37,11 +38,14 @@ func TestNewClient(t *testing.T) {
 	if client.Token != token {
 		t.Errorf("Expected Token: %s, got: %s", token, client.Token)
 	}
+	if cap(client.Semaphore) != 15 {
+		t.Errorf("Expected Semaphore capacity: 15, got: %d", cap(client.Semaphore))
+	}
 
 	// Test case 2: Only host provided
 	host = "example.com"
 	token = ""
-	client, err = NewClient(&host, nil)
+	client, err = NewClient(&host, nil, nil)
 	if err != nil {
 		t.Errorf("Error creating client: %s", err.Error())
 	}
@@ -56,11 +60,14 @@ func TestNewClient(t *testing.T) {
 	if client.Token != "" {
 		t.Errorf("Expected empty Token, got: %s", client.Token)
 	}
+	if cap(client.Semaphore) != 10 {
+		t.Errorf("Expected default Semaphore capacity: 10, got: %d", cap(client.Semaphore))
+	}
 
 	// Test case 3: Only token provided
 	host = ""
 	token = "abc123"
-	client, err = NewClient(nil, &token)
+	client, err = NewClient(nil, &token, nil)
 	if err != nil {
 		t.Errorf("Error creating client: %s", err.Error())
 	}
@@ -79,7 +86,7 @@ func TestNewClient(t *testing.T) {
 	// Test case 4: Neither host nor token provided
 	host = ""
 	token = ""
-	client, err = NewClient(nil, nil)
+	client, err = NewClient(nil, nil, nil)
 	if err != nil {
 		t.Errorf("Error creating client: %s", err.Error())
 	}

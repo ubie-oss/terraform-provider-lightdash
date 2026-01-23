@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sort"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -133,7 +135,7 @@ func (d *groupMembersDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	group_uuid := state.GroupUUID.ValueString()
-	members, err := d.client.GetGroupMembersV1(group_uuid)
+	members, err := apiv1.GetGroupMembersV1(d.client, group_uuid)
 	updatedMembers := []groupMemberModelForGroupMembers{}
 	if err != nil {
 		resp.Diagnostics.AddError(

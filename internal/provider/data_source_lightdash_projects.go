@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sort"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -129,7 +131,7 @@ func (d *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	projects, err := d.client.ListOrganizationProjectsV1()
+	projects, err := apiv1.ListOrganizationProjectsV1(d.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Lightdash project",

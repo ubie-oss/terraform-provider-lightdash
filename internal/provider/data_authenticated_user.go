@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -102,7 +104,7 @@ func (d *authenticatedUserDataSource) Configure(ctx context.Context, req datasou
 func (d *authenticatedUserDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state authenticatedUserDataSourceModel
 
-	authenticatedUser, err := d.client.GetAuthenticatedUserV1()
+	authenticatedUser, err := apiv1.GetAuthenticatedUserV1(d.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to get Lightdash authenticated user",

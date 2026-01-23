@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sort"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -130,7 +132,7 @@ func (d *projectMembersDataSource) Read(ctx context.Context, req datasource.Read
 	}
 	// Get project members
 	project_uuid := state.ProjectUUID.ValueString()
-	members, err := d.client.GetProjectAccessListV1(project_uuid)
+	members, err := apiv1.GetProjectAccessListV1(d.client, project_uuid)
 	updatedMembers := []projectMemberModel{}
 	if err != nil {
 		resp.Diagnostics.AddError(

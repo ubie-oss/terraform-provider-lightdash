@@ -7,9 +7,12 @@ resource "lightdash_project_agent" "test" {
 
   version                 = 2
   name                    = "Test Agent Updated"
+  description             = "Test Description Updated"
   instruction             = "You are an updated helpful AI assistant for data analysis and insights."
   enable_data_access      = false
   enable_self_improvement = false
+  enable_reasoning        = false
+  space_access            = []
   deletion_protection     = false
   integrations = [
     # {

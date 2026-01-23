@@ -17,6 +17,8 @@ package services
 import (
 	"context"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
@@ -31,7 +33,7 @@ func NewProjectService(client *api.Client) *ProjectService {
 
 // TODO refactoring the returned data type
 func (s *ProjectService) GetProjectMembers(ctx context.Context, projectUuid string) ([]models.ProjectMember, error) {
-	apiMembers, err := s.client.GetProjectAccessListV1(projectUuid)
+	apiMembers, err := apiv1.GetProjectAccessListV1(s.client, projectUuid)
 	if err != nil {
 		return nil, err
 	}

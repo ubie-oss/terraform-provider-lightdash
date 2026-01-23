@@ -13,7 +13,7 @@ Manages a Lightdash project agent evaluations. This resource allows you to creat
 ## Example Usage
 
 ```terraform
-resource "lightdash_project_agent_evaluation" "test" {
+resource "lightdash_project_agent_evaluations" "test" {
   organization_uuid = "xxxx-xxxx-xxxx"
   project_uuid      = "xxxx-xxxx-xxxx"
   agent_uuid        = "xxxx-xxxx-xxxx"
@@ -64,8 +64,31 @@ Required:
 Optional:
 
 - `eval_prompt_uuid` (String) The UUID of the evaluation prompt.
+- `expected_response` (String) The expected response for the prompt. This is required by the API.
+- `prompt_uuid` (String) The UUID of the prompt.
+- `thread_uuid` (String) The UUID of the thread.
 - `type` (String) The type of the prompt.
 
 Read-Only:
 
 - `created_at` (String) Timestamp of creation.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+#!/bin/sh
+
+# The resource "lightdash_project_agent_evaluations" can be imported using the organization, project, agent, and evaluation UUIDs.
+# The ID is in the format "organizations/<organization_uuid>/projects/<project_uuid>/agents/<agent_uuid>/evaluations/<evaluation_uuid>".
+
+organization_uuid="xxxx-xxxx-xxxx"
+project_uuid="xxxx-xxxx-xxxx"
+agent_uuid="xxxx-xxxx-xxxx"
+evaluation_uuid="xxxx-xxxx-xxxx"
+
+terraform import lightdash_project_agent_evaluations.test "organizations/${organization_uuid}/projects/${project_uuid}/agents/${agent_uuid}/evaluations/${evaluation_uuid}"
+```

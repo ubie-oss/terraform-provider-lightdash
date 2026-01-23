@@ -24,12 +24,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
@@ -146,6 +148,22 @@ func (r *projectAgentEvaluationsResource) Schema(ctx context.Context, req resour
 							MarkdownDescription: "Timestamp of creation.",
 							Computed:            true,
 						},
+						"expected_response": schema.StringAttribute{
+							MarkdownDescription: "The expected response for the prompt. This is required by the API.",
+							Optional:            true,
+							Computed:            true,
+							Default:             stringdefault.StaticString(""),
+						},
+						"thread_uuid": schema.StringAttribute{
+							MarkdownDescription: "The UUID of the thread.",
+							Optional:            true,
+							Computed:            true,
+						},
+						"prompt_uuid": schema.StringAttribute{
+							MarkdownDescription: "The UUID of the prompt.",
+							Optional:            true,
+							Computed:            true,
+						},
 					},
 				},
 			},
@@ -205,8 +223,8 @@ func (r *projectAgentEvaluationsResource) Create(ctx context.Context, req resour
 		description = &desc
 	}
 
-	// Convert prompts list to slice of strings
-	var prompts []string
+	// Convert prompts list to slice of models.EvaluationsPrompt
+	var prompts []models.EvaluationsPrompt
 	if !plan.Prompts.IsUnknown() && !plan.Prompts.IsNull() {
 		var promptObjects []types.Object
 		diags = plan.Prompts.ElementsAs(ctx, &promptObjects, false)
@@ -220,7 +238,12 @@ func (r *projectAgentEvaluationsResource) Create(ctx context.Context, req resour
 			if promptAttr != nil {
 				promptValue, ok := promptAttr.(types.String)
 				if ok {
-					prompts = append(prompts, promptValue.ValueString())
+					prompts = append(prompts, models.EvaluationsPrompt{
+						Prompt:           promptValue.ValueString(),
+						ExpectedResponse: extractStringAttribute(obj, "expected_response"),
+						ThreadUUID:       extractStringAttribute(obj, "thread_uuid"),
+						PromptUUID:       extractStringAttribute(obj, "prompt_uuid"),
+					})
 				}
 			}
 		}
@@ -257,16 +280,22 @@ func (r *projectAgentEvaluationsResource) Create(ctx context.Context, req resour
 	for _, prompt := range evaluation.Prompts {
 		obj, diags := basetypes.NewObjectValue(
 			map[string]attr.Type{
-				"prompt":           types.StringType,
-				"eval_prompt_uuid": types.StringType,
-				"type":             types.StringType,
-				"created_at":       types.StringType,
+				"prompt":            types.StringType,
+				"eval_prompt_uuid":  types.StringType,
+				"type":              types.StringType,
+				"created_at":        types.StringType,
+				"expected_response": types.StringType,
+				"thread_uuid":       types.StringType,
+				"prompt_uuid":       types.StringType,
 			},
 			map[string]attr.Value{
-				"prompt":           types.StringValue(prompt.Prompt),
-				"eval_prompt_uuid": types.StringValue(prompt.EvalPromptUUID),
-				"type":             types.StringValue(prompt.Type),
-				"created_at":       types.StringValue(prompt.CreatedAt),
+				"prompt":            types.StringValue(prompt.Prompt),
+				"eval_prompt_uuid":  types.StringValue(prompt.EvalPromptUUID),
+				"type":              types.StringValue(prompt.Type),
+				"created_at":        types.StringValue(prompt.CreatedAt),
+				"expected_response": types.StringValue(prompt.ExpectedResponse),
+				"thread_uuid":       types.StringValue(prompt.ThreadUUID),
+				"prompt_uuid":       types.StringValue(prompt.PromptUUID),
 			},
 		)
 		resp.Diagnostics.Append(diags...)
@@ -277,10 +306,13 @@ func (r *projectAgentEvaluationsResource) Create(ctx context.Context, req resour
 	}
 	promptsList, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: map[string]attr.Type{
-			"prompt":           types.StringType,
-			"eval_prompt_uuid": types.StringType,
-			"type":             types.StringType,
-			"created_at":       types.StringType,
+			"prompt":            types.StringType,
+			"eval_prompt_uuid":  types.StringType,
+			"type":              types.StringType,
+			"created_at":        types.StringType,
+			"expected_response": types.StringType,
+			"thread_uuid":       types.StringType,
+			"prompt_uuid":       types.StringType,
 		},
 	}, promptObjects)
 	resp.Diagnostics.Append(diags...)
@@ -357,16 +389,22 @@ func (r *projectAgentEvaluationsResource) Read(ctx context.Context, req resource
 	for _, prompt := range evaluation.Prompts {
 		obj, diags := basetypes.NewObjectValue(
 			map[string]attr.Type{
-				"prompt":           types.StringType,
-				"eval_prompt_uuid": types.StringType,
-				"type":             types.StringType,
-				"created_at":       types.StringType,
+				"prompt":            types.StringType,
+				"eval_prompt_uuid":  types.StringType,
+				"type":              types.StringType,
+				"created_at":        types.StringType,
+				"expected_response": types.StringType,
+				"thread_uuid":       types.StringType,
+				"prompt_uuid":       types.StringType,
 			},
 			map[string]attr.Value{
-				"prompt":           types.StringValue(prompt.Prompt),
-				"eval_prompt_uuid": types.StringValue(prompt.EvalPromptUUID),
-				"type":             types.StringValue(prompt.Type),
-				"created_at":       types.StringValue(prompt.CreatedAt),
+				"prompt":            types.StringValue(prompt.Prompt),
+				"eval_prompt_uuid":  types.StringValue(prompt.EvalPromptUUID),
+				"type":              types.StringValue(prompt.Type),
+				"created_at":        types.StringValue(prompt.CreatedAt),
+				"expected_response": types.StringValue(prompt.ExpectedResponse),
+				"thread_uuid":       types.StringValue(prompt.ThreadUUID),
+				"prompt_uuid":       types.StringValue(prompt.PromptUUID),
 			},
 		)
 		resp.Diagnostics.Append(diags...)
@@ -377,10 +415,13 @@ func (r *projectAgentEvaluationsResource) Read(ctx context.Context, req resource
 	}
 	promptsList, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: map[string]attr.Type{
-			"prompt":           types.StringType,
-			"eval_prompt_uuid": types.StringType,
-			"type":             types.StringType,
-			"created_at":       types.StringType,
+			"prompt":            types.StringType,
+			"eval_prompt_uuid":  types.StringType,
+			"type":              types.StringType,
+			"created_at":        types.StringType,
+			"expected_response": types.StringType,
+			"thread_uuid":       types.StringType,
+			"prompt_uuid":       types.StringType,
 		},
 	}, promptObjects)
 	resp.Diagnostics.Append(diags...)
@@ -431,10 +472,10 @@ func (r *projectAgentEvaluationsResource) Update(ctx context.Context, req resour
 		}
 	}
 
-	var prompts []string
+	var prompts []models.EvaluationsPrompt
 	if !plan.Prompts.Equal(state.Prompts) {
 		if plan.Prompts.IsNull() {
-			prompts = []string{}
+			prompts = []models.EvaluationsPrompt{}
 		} else {
 			var promptObjects []types.Object
 			diags := plan.Prompts.ElementsAs(ctx, &promptObjects, false)
@@ -448,7 +489,12 @@ func (r *projectAgentEvaluationsResource) Update(ctx context.Context, req resour
 				if promptAttr != nil {
 					promptValue, ok := promptAttr.(types.String)
 					if ok {
-						prompts = append(prompts, promptValue.ValueString())
+						prompts = append(prompts, models.EvaluationsPrompt{
+							Prompt:           promptValue.ValueString(),
+							ExpectedResponse: extractStringAttribute(obj, "expected_response"),
+							ThreadUUID:       extractStringAttribute(obj, "thread_uuid"),
+							PromptUUID:       extractStringAttribute(obj, "prompt_uuid"),
+						})
 					}
 				}
 			}
@@ -486,16 +532,22 @@ func (r *projectAgentEvaluationsResource) Update(ctx context.Context, req resour
 	for _, prompt := range evaluation.Prompts {
 		obj, diags := basetypes.NewObjectValue(
 			map[string]attr.Type{
-				"prompt":           types.StringType,
-				"eval_prompt_uuid": types.StringType,
-				"type":             types.StringType,
-				"created_at":       types.StringType,
+				"prompt":            types.StringType,
+				"eval_prompt_uuid":  types.StringType,
+				"type":              types.StringType,
+				"created_at":        types.StringType,
+				"expected_response": types.StringType,
+				"thread_uuid":       types.StringType,
+				"prompt_uuid":       types.StringType,
 			},
 			map[string]attr.Value{
-				"prompt":           types.StringValue(prompt.Prompt),
-				"eval_prompt_uuid": types.StringValue(prompt.EvalPromptUUID),
-				"type":             types.StringValue(prompt.Type),
-				"created_at":       types.StringValue(prompt.CreatedAt),
+				"prompt":            types.StringValue(prompt.Prompt),
+				"eval_prompt_uuid":  types.StringValue(prompt.EvalPromptUUID),
+				"type":              types.StringValue(prompt.Type),
+				"created_at":        types.StringValue(prompt.CreatedAt),
+				"expected_response": types.StringValue(prompt.ExpectedResponse),
+				"thread_uuid":       types.StringValue(prompt.ThreadUUID),
+				"prompt_uuid":       types.StringValue(prompt.PromptUUID),
 			},
 		)
 		resp.Diagnostics.Append(diags...)
@@ -506,10 +558,13 @@ func (r *projectAgentEvaluationsResource) Update(ctx context.Context, req resour
 	}
 	promptsList, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: map[string]attr.Type{
-			"prompt":           types.StringType,
-			"eval_prompt_uuid": types.StringType,
-			"type":             types.StringType,
-			"created_at":       types.StringType,
+			"prompt":            types.StringType,
+			"eval_prompt_uuid":  types.StringType,
+			"type":              types.StringType,
+			"created_at":        types.StringType,
+			"expected_response": types.StringType,
+			"thread_uuid":       types.StringType,
+			"prompt_uuid":       types.StringType,
 		},
 	}, promptObjects)
 	resp.Diagnostics.Append(diags...)
@@ -613,16 +668,22 @@ func (r *projectAgentEvaluationsResource) ImportState(ctx context.Context, req r
 	for _, prompt := range evaluation.Prompts {
 		obj, diags := basetypes.NewObjectValue(
 			map[string]attr.Type{
-				"prompt":           types.StringType,
-				"eval_prompt_uuid": types.StringType,
-				"type":             types.StringType,
-				"created_at":       types.StringType,
+				"prompt":            types.StringType,
+				"eval_prompt_uuid":  types.StringType,
+				"type":              types.StringType,
+				"created_at":        types.StringType,
+				"expected_response": types.StringType,
+				"thread_uuid":       types.StringType,
+				"prompt_uuid":       types.StringType,
 			},
 			map[string]attr.Value{
-				"prompt":           types.StringValue(prompt.Prompt),
-				"eval_prompt_uuid": types.StringValue(prompt.EvalPromptUUID),
-				"type":             types.StringValue(prompt.Type),
-				"created_at":       types.StringValue(prompt.CreatedAt),
+				"prompt":            types.StringValue(prompt.Prompt),
+				"eval_prompt_uuid":  types.StringValue(prompt.EvalPromptUUID),
+				"type":              types.StringValue(prompt.Type),
+				"created_at":        types.StringValue(prompt.CreatedAt),
+				"expected_response": types.StringValue(prompt.ExpectedResponse),
+				"thread_uuid":       types.StringValue(prompt.ThreadUUID),
+				"prompt_uuid":       types.StringValue(prompt.PromptUUID),
 			},
 		)
 		resp.Diagnostics.Append(diags...)
@@ -633,10 +694,13 @@ func (r *projectAgentEvaluationsResource) ImportState(ctx context.Context, req r
 	}
 	promptsList, diags := basetypes.NewListValueFrom(ctx, basetypes.ObjectType{
 		AttrTypes: map[string]attr.Type{
-			"prompt":           types.StringType,
-			"eval_prompt_uuid": types.StringType,
-			"type":             types.StringType,
-			"created_at":       types.StringType,
+			"prompt":            types.StringType,
+			"eval_prompt_uuid":  types.StringType,
+			"type":              types.StringType,
+			"created_at":        types.StringType,
+			"expected_response": types.StringType,
+			"thread_uuid":       types.StringType,
+			"prompt_uuid":       types.StringType,
 		},
 	}, promptObjects)
 	resp.Diagnostics.Append(diags...)
@@ -666,4 +730,16 @@ func extractProjectAgentEvaluationResourceId(input string) ([]string, error) {
 	agent_uuid := groups[2]
 	evaluation_uuid := groups[3]
 	return []string{organization_uuid, project_uuid, agent_uuid, evaluation_uuid}, nil
+}
+
+func extractStringAttribute(obj types.Object, attrName string) string {
+	attr, ok := obj.Attributes()[attrName]
+	if !ok || attr.IsNull() || attr.IsUnknown() {
+		return ""
+	}
+	strAttr, ok := attr.(types.String)
+	if !ok {
+		return ""
+	}
+	return strAttr.ValueString()
 }

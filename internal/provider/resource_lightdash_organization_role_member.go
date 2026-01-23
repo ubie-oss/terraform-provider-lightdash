@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -136,7 +138,7 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 	// Update existing organization member
 	user_uuid := plan.UserUUID.ValueString()
 	role := models.OrganizationMemberRole(plan.OrganizationRole.ValueString())
-	user, err := r.client.UpdateOrganizationMemberV1(user_uuid, role)
+	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -180,7 +182,7 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 
 	// Get space
 	user_uuid = state.UserUUID.ValueString()
-	user, err := r.client.GetOrganizationMemberByUuidV1(user_uuid)
+	user, err := apiv1.GetOrganizationMemberByUuidV1(r.client, user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading organization member",
@@ -215,7 +217,7 @@ func (r *organizationRoleMemberResource) Update(ctx context.Context, req resourc
 	// Update existing organization member
 	user_uuid := plan.UserUUID.ValueString()
 	role := models.OrganizationMemberRole(plan.OrganizationRole.ValueString())
-	user, err := r.client.UpdateOrganizationMemberV1(user_uuid, role)
+	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -250,7 +252,7 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 	// Update the role of the user to "member"
 	user_uuid := state.UserUUID.ValueString()
 	role := models.ORGANIZATION_MEMBER_ROLE
-	user, err := r.client.UpdateOrganizationMemberV1(user_uuid, role)
+	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",

@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -116,7 +118,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	project_uuid := state.ProjectUuid.ValueString()
-	project, err := d.client.GetProjectV1(project_uuid)
+	project, err := apiv1.GetProjectV1(d.client, project_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Lightdash project",

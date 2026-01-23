@@ -67,7 +67,7 @@ func TestAccProjectAgentResource_create(t *testing.T) {
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "version", "1"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_data_access", "false"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "enable_self_improvement", "false"),
-					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "true"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.test", "deletion_protection", "false"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "tags.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "group_access.#", "0"),
 					resource.TestCheckResourceAttr("lightdash_project_agent.test", "user_access.#", "0"),

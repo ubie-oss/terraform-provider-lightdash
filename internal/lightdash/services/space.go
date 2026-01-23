@@ -18,6 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+	apiv2 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v2"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
@@ -38,7 +41,7 @@ func NewSpaceService(client *api.Client) *SpaceService {
 
 // CreateSpace creates a new space with specified properties
 func (s *SpaceService) CreateSpace(ctx context.Context, projectUuid, spaceName string, isPrivate *bool, parentSpaceUuid *string) (*models.SpaceDetails, error) {
-	createdSpace, err := s.client.CreateSpaceV1(projectUuid, spaceName, isPrivate, parentSpaceUuid)
+	createdSpace, err := apiv1.CreateSpaceV1(s.client, projectUuid, spaceName, isPrivate, parentSpaceUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create space: %w", err)
 	}
@@ -58,12 +61,12 @@ func (s *SpaceService) CreateSpace(ctx context.Context, projectUuid, spaceName s
 }
 
 // GetSpace retrieves a space by UUID
-func (s *SpaceService) GetSpace(ctx context.Context, projectUuid, spaceUuid string) (*api.GetSpaceV1Results, error) {
-	return s.client.GetSpaceV1(projectUuid, spaceUuid)
+func (s *SpaceService) GetSpace(ctx context.Context, projectUuid, spaceUuid string) (*apiv1.GetSpaceV1Results, error) {
+	return apiv1.GetSpaceV1(s.client, projectUuid, spaceUuid)
 }
 
 // UpdateRootSpace updates the space properties for a root space
-func (s *SpaceService) UpdateRootSpace(ctx context.Context, projectUuid, spaceUuid, spaceName string, isPrivate *bool) (*api.UpdateSpaceV1Results, error) {
+func (s *SpaceService) UpdateRootSpace(ctx context.Context, projectUuid, spaceUuid, spaceName string, isPrivate *bool) (*apiv1.UpdateSpaceV1Results, error) {
 	tflog.Debug(ctx, "(SpaceService.UpdateRootSpace) Updating root space", map[string]interface{}{
 		"projectUuid": projectUuid,
 		"spaceUuid":   spaceUuid,
@@ -71,7 +74,7 @@ func (s *SpaceService) UpdateRootSpace(ctx context.Context, projectUuid, spaceUu
 		"isPrivate":   isPrivate,
 	})
 	// Pass the address of the determined boolean value to the API call.
-	updatedSpace, err := s.client.UpdateSpaceV1(ctx, projectUuid, spaceUuid, spaceName, isPrivate)
+	updatedSpace, err := apiv1.UpdateSpaceV1(s.client, ctx, projectUuid, spaceUuid, spaceName, isPrivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update space properties: %w", err)
 	}
@@ -85,8 +88,8 @@ func (s *SpaceService) UpdateRootSpace(ctx context.Context, projectUuid, spaceUu
 }
 
 // UpdateNestedSpace updates the space properties for a nested space
-func (s *SpaceService) UpdateNestedSpace(ctx context.Context, projectUuid, spaceUuid string, spaceName string, isPrivate *bool) (*api.UpdateSpaceV1Results, error) {
-	updatedSpace, err := s.client.UpdateSpaceV1(ctx, projectUuid, spaceUuid, spaceName, isPrivate)
+func (s *SpaceService) UpdateNestedSpace(ctx context.Context, projectUuid, spaceUuid string, spaceName string, isPrivate *bool) (*apiv1.UpdateSpaceV1Results, error) {
+	updatedSpace, err := apiv1.UpdateSpaceV1(s.client, ctx, projectUuid, spaceUuid, spaceName, isPrivate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update nested space: %w", err)
 	}
@@ -95,13 +98,13 @@ func (s *SpaceService) UpdateNestedSpace(ctx context.Context, projectUuid, space
 
 // DeleteSpace deletes a space
 func (s *SpaceService) DeleteSpace(ctx context.Context, projectUuid, spaceUuid string) error {
-	return s.client.DeleteSpaceV1(projectUuid, spaceUuid)
+	return apiv1.DeleteSpaceV1(s.client, projectUuid, spaceUuid)
 }
 
 // MoveSpace moves a space to a new parent space
 // parentSpaceUuidPointer == nil means the space should become a root space
 func (s *SpaceService) MoveSpace(ctx context.Context, projectUuid, spaceUuid string, parentSpaceUuidPointer *string) error {
-	err := s.client.MoveSpaceV2(projectUuid, spaceUuid, parentSpaceUuidPointer)
+	err := apiv2.MoveSpaceV2(s.client, projectUuid, spaceUuid, parentSpaceUuidPointer)
 	if err != nil {
 		return fmt.Errorf("failed to move space: %w", err)
 	}
@@ -129,35 +132,35 @@ func (s *SpaceService) ExtractSpaceResourceID(resourceID string) (projectUuid st
 // AddUserToSpace grants a user access to a space with the specified role
 // NOTE: Should only be called for root spaces
 func (s *SpaceService) AddUserToSpace(ctx context.Context, projectUuid, spaceUuid, userUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceShareToUserV1(projectUuid, spaceUuid, userUuid, role)
+	return apiv1.AddSpaceShareToUserV1(s.client, projectUuid, spaceUuid, userUuid, role)
 }
 
 // RemoveUserFromSpace revokes a user's access to a space
 // NOTE: Should only be called for root spaces
 func (s *SpaceService) RemoveUserFromSpace(ctx context.Context, projectUuid, spaceUuid, userUuid string) error {
-	return s.client.RevokeSpaceAccessV1(projectUuid, spaceUuid, userUuid)
+	return apiv1.RevokeSpaceAccessV1(s.client, projectUuid, spaceUuid, userUuid)
 }
 
 // AddGroupToSpace grants a group access to a space with the specified role
 // NOTE: Should only be called for root spaces
 func (s *SpaceService) AddGroupToSpace(ctx context.Context, projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
+	return apiv1.AddSpaceGroupAccessV1(s.client, projectUuid, spaceUuid, groupUuid, role)
 }
 
 // UpdateGroupAccessInSpace updates a group's role in a space
 // NOTE: Should only be called for root spaces
 func (s *SpaceService) UpdateGroupAccessInSpace(ctx context.Context, projectUuid, spaceUuid, groupUuid string, role models.SpaceMemberRole) error {
-	return s.client.AddSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid, role)
+	return apiv1.AddSpaceGroupAccessV1(s.client, projectUuid, spaceUuid, groupUuid, role)
 }
 
 // RemoveGroupFromSpace revokes a group's access to a space
 // NOTE: Should only be called for root spaces
 func (s *SpaceService) RemoveGroupFromSpace(ctx context.Context, projectUuid, spaceUuid, groupUuid string) error {
-	return s.client.RevokeSpaceGroupAccessV1(projectUuid, spaceUuid, groupUuid)
+	return apiv1.RevokeSpaceGroupAccessV1(s.client, projectUuid, spaceUuid, groupUuid)
 }
 
 // GetChildSpaces returns all child spaces of a space
-func (s *SpaceService) GetChildSpaces(ctx context.Context, projectUuid, spaceUuid string) ([]api.ChildSpace, error) {
+func (s *SpaceService) GetChildSpaces(ctx context.Context, projectUuid, spaceUuid string) ([]apiv1.ChildSpace, error) {
 	space, err := s.GetSpace(ctx, projectUuid, spaceUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get space details: %w", err)

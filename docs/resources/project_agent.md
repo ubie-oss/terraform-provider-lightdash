@@ -19,15 +19,18 @@ resource "lightdash_project_agent" "test" {
 
   version     = 2
   name        = "Test Agent"
+  description = "A helpful AI assistant for data analysis."
   instruction = "You are a helpful AI assistant for data analysis."
 
   tags = ["test", "terraform"]
 
   enable_data_access      = true
   enable_self_improvement = true
+  enable_reasoning        = true
 
   group_access = ["xxxx-xxxx-xxxx"]
   user_access  = ["xxxx-xxxx-xxxx"]
+  space_access = ["xxxx-xxxx-xxxx"]
 
   deletion_protection = true
 
@@ -54,10 +57,13 @@ resource "lightdash_project_agent" "test" {
 ### Required
 
 - `deletion_protection` (Boolean) When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.
+- `description` (String) The description of the Lightdash agent.
+- `enable_reasoning` (Boolean) Whether to enable reasoning for the agent.
 - `instruction` (String) Custom instruction (system prompt) for the agent (max 8192 chars).
 - `name` (String) The name of the Lightdash agent.
 - `organization_uuid` (String) The UUID of the Lightdash organization.
 - `project_uuid` (String) The UUID of the Lightdash project.
+- `space_access` (List of String) UUIDs of spaces the agent has access to.
 
 ### Optional
 

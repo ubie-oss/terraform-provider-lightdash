@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -155,15 +157,15 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Prepare members for API call
-	members := make([]api.CreateGroupInOrganizationV1Member, 0, len(membersSlice))
+	members := make([]apiv1.CreateGroupInOrganizationV1Member, 0, len(membersSlice))
 	for _, member := range membersSlice {
-		members = append(members, api.CreateGroupInOrganizationV1Member{
+		members = append(members, apiv1.CreateGroupInOrganizationV1Member{
 			UserUUID: member.UserUUID.ValueString(),
 		})
 	}
 
 	// Create new group
-	createdGroup, err := r.client.CreateGroupInOrganizationV1(organization_uuid, group_name, members)
+	createdGroup, err := apiv1.CreateGroupInOrganizationV1(r.client, organization_uuid, group_name, members)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating group",
@@ -207,7 +209,7 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get group
-	group, err := r.client.GetGroupV1(groupUuid)
+	group, err := apiv1.GetGroupV1(r.client, groupUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
@@ -217,7 +219,7 @@ func (r *groupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Get group members
-	fetchedGroupMembers, getGroupMembersError := r.client.GetGroupMembersV1(group.GroupUUID)
+	fetchedGroupMembers, getGroupMembersError := apiv1.GetGroupMembersV1(r.client, group.GroupUUID)
 	if getGroupMembersError != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting group members",
@@ -369,7 +371,7 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Revoke access to removed members
 	for _, member := range removedMembers {
 		tflog.Info(ctx, fmt.Sprintf("Revoking access to group %s for user %s", groupUuid, member.UserUUID.ValueString()))
-		err := r.client.RemoveUserFromGroupV1(groupUuid, member.UserUUID.ValueString())
+		err := apiv1.RemoveUserFromGroupV1(r.client, groupUuid, member.UserUUID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Revoking access to group",
@@ -380,13 +382,13 @@ func (r *groupResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Update the group with the updated list of members
 	tflog.Info(ctx, fmt.Sprintf("Updating group %s", groupUuid))
-	updateMembersUUIDs := make([]api.UpdateGroupV1Member, len(updatedMembers))
+	updateMembersUUIDs := make([]apiv1.UpdateGroupV1Member, len(updatedMembers))
 	for i, member := range updatedMembers {
-		updateMembersUUIDs[i] = api.UpdateGroupV1Member{
+		updateMembersUUIDs[i] = apiv1.UpdateGroupV1Member{
 			UserUUID: member.UserUUID.ValueString(),
 		}
 	}
-	updatedGroup, err := r.client.UpdateGroupV1(groupUuid, groupName, updateMembersUUIDs)
+	updatedGroup, err := apiv1.UpdateGroupV1(r.client, groupUuid, groupName, updateMembersUUIDs)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating group",
@@ -430,7 +432,7 @@ func (r *groupResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// Delete existing group
 	groupUuid := state.GroupUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Deleting group %s", groupUuid))
-	err := r.client.DeleteGroupV1(groupUuid)
+	err := apiv1.DeleteGroupV1(r.client, groupUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting group",
@@ -454,7 +456,7 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 	groupUuid := extracted_strings[1]
 
 	// Get the imported group
-	importedGroup, err := r.client.GetGroupV1(groupUuid)
+	importedGroup, err := apiv1.GetGroupV1(r.client, groupUuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting group",
@@ -464,7 +466,7 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// Get the members of the group
-	importedMembers, err := r.client.GetGroupMembersV1(importedGroup.GroupUUID)
+	importedMembers, err := apiv1.GetGroupMembersV1(r.client, importedGroup.GroupUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Getting group members",
