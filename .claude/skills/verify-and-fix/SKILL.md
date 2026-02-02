@@ -73,11 +73,11 @@ If issues remain after automated attempts, proceed with manual intervention.
 
 ### Scenario: Fixing a Bug Found by Unit Tests
 
-1.  **Format**: `trunk fmt --all` (Success).
-2.  **Lint**: `make lint` (Success).
-3.  **Unit Testing**: `make test` (Fails in `internal/lightdash/api/utils_test.go`).
-4.  **Manual Fix**:
-    - Analyze the test failure.
-    - Edit `internal/lightdash/api/utils.go` to fix the logic.
-5.  **Verify**: Re-run `make test`. (Success).
-6.  **Build**: `make build`. (Success).
+1. **Format**: `trunk fmt --all` (Success).
+2. **Lint**: `make lint` (Success).
+3. **Unit Testing**: `make test` (Fails in `internal/lightdash/api/utils_test.go`).
+4. **Manual Fix**:
+   - Analyze the test failure.
+   - Edit `internal/lightdash/api/utils.go` to fix the logic.
+5. **Verify**: Re-run `make test`. (Success).
+6. **Build**: `make build`. (Success).

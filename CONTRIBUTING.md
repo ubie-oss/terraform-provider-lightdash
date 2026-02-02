@@ -224,7 +224,15 @@ These secrets are used by the GitHub Actions workflow to sign the provider binar
 
 To generate the GPG keys and configure these secrets, follow the "Generate GPG Signing Key" and "Add GitHub secrets for GitHub Action" sections in the [HashiCorp tutorial](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-release-publish#generate-gpg-signing-key).
 
-### Publish a New Release
+## AI Agentic Workflow
 
-All we have to do is to create a new release on GitHub.
-The GitHub Actions will automatically publish the provider to the Terraform Registry.
+This project leverages AI Agentic Workflows to assist with development and maintenance tasks. We provide several specialized subagents and skills that can be used within AI-powered coding environments like Cursor or Claude.
+
+### Specialized Subagents
+
+- **[Terraform Lightdash Orchestrator](.claude/agents/terraform-lightdash-orchestrator.md)**: A specialized agent designed to implement new resources and data sources. It coordinates research, API client implementation, and provider resource creation.
+
+### Agent Skills
+
+- **[verify-and-fix](.claude/skills/verify-and-fix/SKILL.md)**: Automates the local verification loop, including code formatting (`trunk fmt`), linting (`make lint`), unit testing (`make test`), and build verification (`make build`).
+- **[run-acceptance-tests](.claude/skills/run-acceptance-tests/SKILL.md)**: Guides the execution of acceptance tests against a live Lightdash API. It ensures mandatory environment validation (e.g., `.env` file checks) and supports targeted test execution via `TESTARGS`.
