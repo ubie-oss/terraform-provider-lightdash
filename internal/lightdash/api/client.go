@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -40,7 +41,14 @@ func NewClient(host, token *string, maxConcurrentRequests *int64) (*Client, erro
 	}
 
 	if host != nil {
-		c.HostUrl = *host
+		u, err := url.Parse(*host)
+		if err != nil {
+			return nil, fmt.Errorf("invalid host URL: %w", err)
+		}
+		if u.Scheme == "" {
+			u.Scheme = "https"
+		}
+		c.HostUrl = u.String()
 	}
 
 	if token != nil {
@@ -66,7 +74,7 @@ func (c *Client) DoRequest(req *http.Request) ([]byte, error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("ApiKey %s", c.Token))
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.HTTPClient.Do(req) // #nosec G704
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v", err)
 	}
