@@ -21,6 +21,7 @@ import (
 func TestNewClient(t *testing.T) {
 	// Test case 1: Both host and token provided
 	host := "example.com"
+	expectedHost := "https://example.com"
 	token := "abc123"
 	maxRequests := int64(15)
 	client, err := NewClient(&host, &token, &maxRequests)
@@ -32,8 +33,8 @@ func TestNewClient(t *testing.T) {
 	if client.HTTPClient == nil {
 		t.Error("Expected non-nil HTTPClient")
 	}
-	if client.HostUrl != host {
-		t.Errorf("Expected HostUrl: %s, got: %s", host, client.HostUrl)
+	if client.HostUrl != expectedHost {
+		t.Errorf("Expected HostUrl: %s, got: %s", expectedHost, client.HostUrl)
 	}
 	if client.Token != token {
 		t.Errorf("Expected Token: %s, got: %s", token, client.Token)
@@ -44,6 +45,7 @@ func TestNewClient(t *testing.T) {
 
 	// Test case 2: Only host provided
 	host = "example.com"
+	expectedHost = "https://example.com"
 	token = ""
 	client, err = NewClient(&host, nil, nil)
 	if err != nil {
@@ -54,8 +56,8 @@ func TestNewClient(t *testing.T) {
 	if client.HTTPClient == nil {
 		t.Error("Expected non-nil HTTPClient")
 	}
-	if client.HostUrl != host {
-		t.Errorf("Expected HostUrl: %s, got: %s", host, client.HostUrl)
+	if client.HostUrl != expectedHost {
+		t.Errorf("Expected HostUrl: %s, got: %s", expectedHost, client.HostUrl)
 	}
 	if client.Token != "" {
 		t.Errorf("Expected empty Token, got: %s", client.Token)
