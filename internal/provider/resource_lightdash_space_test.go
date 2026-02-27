@@ -232,6 +232,96 @@ func TestAccSpaceResource_nested(t *testing.T) {
 	})
 }
 
+func TestAccSpaceResource_nestedRestricted(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_space - nested restricted")
+	}
+
+	// Get the provider config
+	providerConfig, err := getProviderConfig()
+	if err != nil {
+		t.Fatalf("Failed to get providerConfig: %v", err)
+	}
+
+	// Test of nested restricted spaces
+	nestedRestrictedConfig030, err := ReadAccTestResource([]string{"resources", "lightdash_space", "nested_space", "030_nested_restricted_space.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get nestedRestrictedConfig: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig + nestedRestrictedConfig030,
+				Check: resource.ComposeTestCheckFunc(
+					// lightdash_space.nested_restricted_root
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_restricted_root", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_restricted_root", "is_private", "true"),
+					// lightdash_space.nested_restricted_child
+					resource.TestCheckResourceAttrSet("lightdash_space.nested_restricted_child", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.nested_restricted_child", "is_private", "true"),
+					resource.TestCheckResourceAttrPair(
+						"lightdash_space.nested_restricted_child",
+						"parent_space_uuid",
+						"lightdash_space.nested_restricted_root",
+						"space_uuid",
+					),
+					resource.TestCheckResourceAttr("lightdash_space.nested_restricted_child", "group_access.#", "1"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccSpaceResource_nestedRestrictedComplex(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_space - nested restricted complex")
+	}
+
+	// Get the provider config
+	providerConfig, err := getProviderConfig()
+	if err != nil {
+		t.Fatalf("Failed to get providerConfig: %v", err)
+	}
+
+	// Test of nested restricted spaces complex scenarios
+	nestedRestrictedConfig040, err := ReadAccTestResource([]string{"resources", "lightdash_space", "nested_space", "040_nested_restricted_complex.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get nestedRestrictedConfig040: %v", err)
+	}
+	nestedRestrictedConfig050, err := ReadAccTestResource([]string{"resources", "lightdash_space", "nested_space", "050_nested_restricted_complex_update.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get nestedRestrictedConfig050: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig + nestedRestrictedConfig040,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("lightdash_space.test_space", "name", "Test Space (Acceptance Test)"),
+					resource.TestCheckResourceAttr("lightdash_space.test_space", "is_private", "true"),
+					resource.TestCheckResourceAttrPair("lightdash_space.test_space", "parent_space_uuid", "lightdash_space.parent1", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.test_space", "group_access.#", "1"),
+				),
+			},
+			{
+				Config: providerConfig + nestedRestrictedConfig050,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("lightdash_space.test_space", "name", "Test Space Updated (Acceptance Test)"),
+					resource.TestCheckResourceAttr("lightdash_space.test_space", "is_private", "true"),
+					resource.TestCheckResourceAttrPair("lightdash_space.test_space", "parent_space_uuid", "lightdash_space.parent2", "space_uuid"),
+					resource.TestCheckResourceAttr("lightdash_space.test_space", "group_access.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccSpaceResource_access(t *testing.T) {
 	if !isIntegrationTestMode() {
 		t.Skip("Skipping acceptance test for resource_lightdash_space - access")
