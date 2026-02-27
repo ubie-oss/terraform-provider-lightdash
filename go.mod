@@ -14,7 +14,7 @@
 
 module github.com/ubie-oss/terraform-provider-lightdash
 
-go 1.25.3
+go 1.25.4
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.23.0
@@ -38,7 +38,7 @@ require (
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
