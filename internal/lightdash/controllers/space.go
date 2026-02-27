@@ -121,7 +121,7 @@ func (c *SpaceController) CreateSpace(
 }
 
 // GetSpace retrieves the details of a space by its project and space UUIDs.
-// For root spaces, it populates MemberAccess and GroupAccess with all members/groups returned by API.
+// It populates MemberAccess and GroupAccess with all members/groups returned by API.
 // Filtering for direct access (for the 'access' attribute in Terraform) is handled in the resource layer.
 func (c *SpaceController) GetSpace(ctx context.Context, projectUUID, spaceUUID string) (*models.SpaceDetails, error) {
 	tflog.Debug(ctx, "(SpaceController.GetSpace) Getting space", map[string]interface{}{
@@ -232,37 +232,22 @@ func (c *SpaceController) UpdateSpace(
 			currentSpaceDetails,
 		)
 	} else if isCurrentlyRootSpace && !isBecomingRootSpace {
-		// Scenario 2: Root space becoming a nested space - Update name and move.
-		// Access controls will be inherited from the new parent and any direct access will be ignored by the API.
+		// Scenario 2: Root space becoming a nested space - Update properties, move and manage access.
 		errors = c.moveRootToNestedSpace(
 			ctx,
-			options.ProjectUUID,
-			options.SpaceUUID,
-			options.SpaceName,
-			options.ParentSpaceUUID,
+			options,
 		)
 	} else if !isCurrentlyRootSpace && isBecomingRootSpace {
-		// Scenario 3: Nested space becoming a root space - Move to root and then apply access controls.
-		// The space will initially inherit project access, and then direct access can be set.
+		// Scenario 3: Nested space becoming a root space - Move to root and then apply properties and access controls.
 		errors = c.moveNestedToRootSpace(
 			ctx,
-			options.ProjectUUID,
-			options.SpaceUUID,
-			options.SpaceName,
-			options.IsPrivate,
-			options.MemberAccess,
-			options.GroupAccess,
+			options,
 		)
 	} else {
 		// Scenario 4: Nested space staying nested (either same parent or different parent).
-		// Only name and parent space can be updated via the API for nested spaces.
-		// Access controls and privacy are inherited and cannot be managed.
 		errors = c.updateNestedSpace(
 			ctx,
-			options.ProjectUUID,
-			options.SpaceUUID,
-			options.SpaceName,
-			options.ParentSpaceUUID,
+			options,
 			currentSpaceDetails,
 		)
 	}
@@ -360,7 +345,7 @@ func (c *SpaceController) createRootSpace(
 	// Use the specific helper functions, passing empty current access lists.
 	var accessErrors []error
 
-	memberErrors := c.manageRootSpaceMemberAccess(
+	memberErrors := c.manageSpaceMemberAccess(
 		ctx,
 		options.ProjectUUID,
 		createdSpace.SpaceUUID,
@@ -369,7 +354,7 @@ func (c *SpaceController) createRootSpace(
 	)
 	accessErrors = append(accessErrors, memberErrors...)
 
-	groupErrors := c.manageRootSpaceGroupAccess(
+	groupErrors := c.manageSpaceGroupAccess(
 		ctx,
 		options.ProjectUUID,
 		createdSpace.SpaceUUID,
@@ -390,9 +375,7 @@ func (c *SpaceController) createRootSpace(
 	return createdSpace, nil
 }
 
-// createNestedSpace creates a new nested space. Access controls are inherited from the parent.
-// isPrivate will be ignored by Lightdash for nested spaces as privacy is inherited.
-// memberAccess and groupAccess will be ignored by Lightdash for nested spaces as access is inherited.
+// createNestedSpace creates a new nested space.
 func (c *SpaceController) createNestedSpace(
 	ctx context.Context,
 	options CreateSpaceOptions,
@@ -401,23 +384,46 @@ func (c *SpaceController) createNestedSpace(
 		"options": options,
 	})
 
-	// 1. Validate inputs - ensure no space access is specified for nested spaces
-	var errors []error
-	if len(options.MemberAccess) > 0 {
-		errors = append(errors, fmt.Errorf("cannot manage member access for nested space %s: access is inherited from parent", options.SpaceName))
-	}
-	if len(options.GroupAccess) > 0 {
-		errors = append(errors, fmt.Errorf("cannot manage group access for nested space %s: access is inherited from parent", options.SpaceName))
-	}
-	if len(errors) > 0 {
-		return nil, errors
+	// 1. Validate inputs
+	validationErrors := c.validateSpaceCreation(ctx, options)
+	if len(validationErrors) > 0 {
+		return nil, validationErrors
 	}
 
-	// 2. Create the space via the service layer. Note that isPrivate, memberAccess, and groupAccess
-	// are effectively ignored by Lightdash for nested spaces as they inherit these from the parent.
-	createdSpace, err := c.spaceService.CreateSpace(ctx, options.ProjectUUID, options.SpaceName, nil, options.ParentSpaceUUID)
+	// 2. Create the space via the service layer.
+	createdSpace, err := c.spaceService.CreateSpace(ctx, options.ProjectUUID, options.SpaceName, options.IsPrivate, options.ParentSpaceUUID)
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to create nested space: %w", err)}
+	}
+
+	// 3. Manage access for the nested space after creation.
+	var accessErrors []error
+
+	memberErrors := c.manageSpaceMemberAccess(
+		ctx,
+		options.ProjectUUID,
+		createdSpace.SpaceUUID,
+		options.MemberAccess,
+		[]models.SpaceMemberAccess{}, // No existing direct member access on creation
+	)
+	accessErrors = append(accessErrors, memberErrors...)
+
+	groupErrors := c.manageSpaceGroupAccess(
+		ctx,
+		options.ProjectUUID,
+		createdSpace.SpaceUUID,
+		options.GroupAccess,
+		[]models.SpaceAccessGroup{}, // No existing group access on creation
+	)
+	accessErrors = append(accessErrors, groupErrors...)
+
+	if len(accessErrors) > 0 {
+		// If access management fails, try to clean up by deleting the space
+		errDel := c.spaceService.DeleteSpace(ctx, options.ProjectUUID, createdSpace.SpaceUUID)
+		if errDel != nil {
+			accessErrors = append(accessErrors, fmt.Errorf("failed to delete space after access management failure: %w", errDel))
+		}
+		return nil, accessErrors
 	}
 
 	return createdSpace, nil
@@ -460,8 +466,8 @@ func (c *SpaceController) validateSpaceCreation(ctx context.Context, options Cre
 	return errors
 }
 
-// manageRootSpaceMemberAccess handles adding, updating, and removing direct member access for a root space.
-func (c *SpaceController) manageRootSpaceMemberAccess(
+// manageSpaceMemberAccess handles adding, updating, and removing direct member access for a space.
+func (c *SpaceController) manageSpaceMemberAccess(
 	ctx context.Context,
 	projectUUID string,
 	spaceUUID string,
@@ -470,7 +476,7 @@ func (c *SpaceController) manageRootSpaceMemberAccess(
 ) []error {
 	var errors []error
 
-	tflog.Debug(ctx, "(SpaceController.manageRootSpaceMemberAccess) Managing root space member access", map[string]interface{}{
+	tflog.Debug(ctx, "(SpaceController.manageSpaceMemberAccess) Managing space member access", map[string]interface{}{
 		"projectUUID":         projectUUID,
 		"spaceUUID":           spaceUUID,
 		"newMemberAccess":     newMemberAccess,
@@ -521,8 +527,8 @@ func (c *SpaceController) manageRootSpaceMemberAccess(
 	return errors
 }
 
-// manageRootSpaceGroupAccess handles adding, updating, and removing group access for a root space.
-func (c *SpaceController) manageRootSpaceGroupAccess(
+// manageSpaceGroupAccess handles adding, updating, and removing group access for a space.
+func (c *SpaceController) manageSpaceGroupAccess(
 	ctx context.Context,
 	projectUUID string,
 	spaceUUID string,
@@ -531,7 +537,7 @@ func (c *SpaceController) manageRootSpaceGroupAccess(
 ) []error {
 	var errors []error
 
-	tflog.Debug(ctx, "(SpaceController.manageRootSpaceGroupAccess) Managing root space group access", map[string]interface{}{
+	tflog.Debug(ctx, "(SpaceController.manageSpaceGroupAccess) Managing space group access", map[string]interface{}{
 		"projectUUID":        projectUUID,
 		"spaceUUID":          spaceUUID,
 		"newGroupAccess":     newGroupAccess,
@@ -638,7 +644,7 @@ func (c *SpaceController) updateRootSpace(
 	}
 
 	// 2. Manage member access (add/update/remove direct access)
-	memberErrors := c.manageRootSpaceMemberAccess(
+	memberErrors := c.manageSpaceMemberAccess(
 		ctx,
 		projectUUID,
 		spaceUUID,
@@ -648,7 +654,7 @@ func (c *SpaceController) updateRootSpace(
 	errors = append(errors, memberErrors...)
 
 	// 3. Handle group access updates (add/update/remove groups)
-	groupErrors := c.manageRootSpaceGroupAccess(
+	groupErrors := c.manageSpaceGroupAccess(
 		ctx,
 		projectUUID,
 		spaceUUID,
@@ -661,127 +667,166 @@ func (c *SpaceController) updateRootSpace(
 }
 
 // updateNestedSpace updates the properties for a nested space.
-// Only the name and parent space UUID can be changed for nested spaces via the API.
-// Access controls and privacy are inherited and cannot be managed by this function.
 func (c *SpaceController) updateNestedSpace(
 	ctx context.Context,
-	projectUUID string,
-	spaceUUID string,
-	spaceName string,
-	parentSpaceUUID *string,
+	options UpdateSpaceOptions,
 	currentSpaceDetails *models.SpaceDetails,
 ) []error {
+	var errors []error
+
 	tflog.Debug(ctx, "(SpaceController.updateNestedSpace) Updating nested space", map[string]interface{}{
-		"projectUUID":     projectUUID,
-		"spaceUUID":       spaceUUID,
-		"spaceName":       spaceName,
-		"parentSpaceUUID": parentSpaceUUID,
+		"options":             options,
+		"currentSpaceDetails": currentSpaceDetails,
 	})
 
-	// If the new parent Space UUID isn't the same as the current one, then move the space to the new parent
-	if !services.CompareParentSpaceUUID(currentSpaceDetails.ParentSpaceUUID, parentSpaceUUID) {
-		err := c.spaceService.MoveSpace(ctx, projectUUID, spaceUUID, parentSpaceUUID)
+	// 1. Move the space if the parent has changed
+	if !services.CompareParentSpaceUUID(currentSpaceDetails.ParentSpaceUUID, options.ParentSpaceUUID) {
+		err := c.spaceService.MoveSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.ParentSpaceUUID)
 		if err != nil {
 			return []error{fmt.Errorf("failed to move space to new parent: %w", err)}
 		}
 	}
 
-	// Update only the name and parent space UUID for nested spaces via the service layer
-	// isPrivate is passed as nil because it cannot be updated for nested spaces.
-	// Pass the parentSpaceUUID to the service layer to handle moves between nested spaces
-	_, err := c.spaceService.UpdateNestedSpace(ctx, projectUUID, spaceUUID, spaceName, nil)
-	if err != nil {
-		return []error{fmt.Errorf("failed to update nested space %s: %w", spaceUUID, err)}
+	// 2. Update the space properties via the service layer if they have changed
+	// If isPrivate isn't changed, then it is nil to avoid unnecessary API calls or potential errors.
+	var isPrivateForUpdate *bool
+	if options.IsPrivate != nil && *options.IsPrivate != currentSpaceDetails.IsPrivate {
+		isPrivateForUpdate = options.IsPrivate
 	}
 
-	return nil
+	if options.SpaceName != currentSpaceDetails.SpaceName || isPrivateForUpdate != nil {
+		_, err := c.spaceService.UpdateNestedSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, isPrivateForUpdate)
+		if err != nil {
+			return []error{fmt.Errorf("failed to update nested space properties: %w", err)}
+		}
+	}
+
+	// 3. Manage member access
+	memberErrors := c.manageSpaceMemberAccess(
+		ctx,
+		options.ProjectUUID,
+		options.SpaceUUID,
+		options.MemberAccess,
+		currentSpaceDetails.SpaceAccessMembers,
+	)
+	errors = append(errors, memberErrors...)
+
+	// 4. Handle group access updates
+	groupErrors := c.manageSpaceGroupAccess(
+		ctx,
+		options.ProjectUUID,
+		options.SpaceUUID,
+		options.GroupAccess,
+		currentSpaceDetails.SpaceAccessGroups,
+	)
+	errors = append(errors, groupErrors...)
+
+	return errors
 }
 
 // moveRootToNestedSpace handles moving a root space to become a nested space.
 // This involves updating the parent space UUID.
-// Access controls will be inherited from the new parent.
 func (c *SpaceController) moveRootToNestedSpace(
 	ctx context.Context,
-	projectUUID string,
-	spaceUUID string,
-	spaceName string,
-	parentSpaceUUID *string,
+	options UpdateSpaceOptions,
 ) []error {
 	tflog.Debug(ctx, "(SpaceController.moveRootToNestedSpace) Moving root space to nested space", map[string]interface{}{
-		"projectUUID":     projectUUID,
-		"spaceUUID":       spaceUUID,
-		"spaceName":       spaceName,
-		"parentSpaceUUID": parentSpaceUUID,
+		"options": options,
 	})
 
 	// 1. Move the space to the new parent via the service layer
-	err := c.spaceService.MoveSpace(ctx, projectUUID, spaceUUID, parentSpaceUUID)
+	err := c.spaceService.MoveSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.ParentSpaceUUID)
 	if err != nil {
-		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
+		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", options.SpaceUUID, *options.ParentSpaceUUID, err)}
 	}
 
-	// 2. Get the space details to check if it is private
-	spaceDetails, err := c.spaceService.GetSpace(ctx, projectUUID, spaceUUID)
+	// 2. Get the current space details to check its properties
+	currentSpaceDetails, err := c.GetSpace(ctx, options.ProjectUUID, options.SpaceUUID)
 	if err != nil {
 		return []error{fmt.Errorf("failed to get space details: %w", err)}
 	}
 
-	// 3. Update the space to make it a nested space (no parent) via the service layer
-	_, err = c.spaceService.UpdateNestedSpace(ctx, projectUUID, spaceUUID, spaceName, &spaceDetails.IsPrivate)
-	if err != nil {
-		return []error{fmt.Errorf("failed to move root space %s to nested space under parent %s: %w", spaceUUID, *parentSpaceUUID, err)}
+	// 3. Update the space properties (name, isPrivate)
+	var isPrivateForUpdate *bool
+	if options.IsPrivate != nil && *options.IsPrivate != currentSpaceDetails.IsPrivate {
+		isPrivateForUpdate = options.IsPrivate
 	}
 
-	return nil
+	if options.SpaceName != currentSpaceDetails.SpaceName || isPrivateForUpdate != nil {
+		_, err = c.spaceService.UpdateNestedSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, isPrivateForUpdate)
+		if err != nil {
+			return []error{fmt.Errorf("failed to update space properties after moving to nested: %w", err)}
+		}
+	}
+
+	// 4. Manage member access
+	memberErrors := c.manageSpaceMemberAccess(
+		ctx,
+		options.ProjectUUID,
+		options.SpaceUUID,
+		options.MemberAccess,
+		currentSpaceDetails.SpaceAccessMembers,
+	)
+
+	// 5. Manage group access
+	groupErrors := c.manageSpaceGroupAccess(
+		ctx,
+		options.ProjectUUID,
+		options.SpaceUUID,
+		options.GroupAccess,
+		currentSpaceDetails.SpaceAccessGroups,
+	)
+
+	var errors []error
+	errors = append(errors, memberErrors...)
+	errors = append(errors, groupErrors...)
+
+	return errors
 }
 
 // moveNestedToRootSpace handles moving a nested space to become a root space.
 // This involves updating the parent space UUID to nil and then applying explicit access controls.
 func (c *SpaceController) moveNestedToRootSpace(
 	ctx context.Context,
-	projectUUID string,
-	spaceUUID string,
-	spaceName string,
-	isPrivate *bool,
-	memberAccess []models.SpaceAccessMember,
-	groupAccess []models.SpaceAccessGroup,
+	options UpdateSpaceOptions,
 ) []error {
 	tflog.Debug(ctx, "(SpaceController.moveNestedToRootSpace) Moving nested space to root space", map[string]interface{}{
-		"projectUUID":  projectUUID,
-		"spaceUUID":    spaceUUID,
-		"spaceName":    spaceName,
-		"isPrivate":    isPrivate,
-		"memberAccess": memberAccess,
-		"groupAccess":  groupAccess,
+		"options": options,
 	})
 
 	// 1. Move the space to the root space via the service layer
-	err1 := c.spaceService.MoveSpace(ctx, projectUUID, spaceUUID, nil)
+	err1 := c.spaceService.MoveSpace(ctx, options.ProjectUUID, options.SpaceUUID, nil)
 	if err1 != nil {
-		return []error{fmt.Errorf("failed to move nested space %s to root: %w", spaceUUID, err1)}
+		return []error{fmt.Errorf("failed to move nested space %s to root: %w", options.SpaceUUID, err1)}
 	}
 
-	// 2. Update the space to make it a root space (no parent) via the service layer
-	_, err2 := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivate)
+	// 2. Update the space properties (name, isPrivate)
+	_, err2 := c.spaceService.UpdateRootSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, options.IsPrivate)
 	if err2 != nil {
 		return []error{fmt.Errorf("failed to update space properties after moving to root: %w", err2)}
 	}
 
-	// 3. Manage access for the newly root-level space
-	accessErrors := c.manageRootSpaceMemberAccess(
+	// 3. Get the current space details to check its properties
+	currentSpaceDetails, err := c.GetSpace(ctx, options.ProjectUUID, options.SpaceUUID)
+	if err != nil {
+		return []error{fmt.Errorf("failed to get space details: %w", err)}
+	}
+
+	// 4. Manage access for the newly root-level space
+	accessErrors := c.manageSpaceMemberAccess(
 		ctx,
-		projectUUID,
-		spaceUUID,
-		memberAccess,
-		[]models.SpaceMemberAccess{}, // No existing direct member access when becoming root
+		options.ProjectUUID,
+		options.SpaceUUID,
+		options.MemberAccess,
+		currentSpaceDetails.SpaceAccessMembers,
 	)
 
-	groupErrors := c.manageRootSpaceGroupAccess(
+	groupErrors := c.manageSpaceGroupAccess(
 		ctx,
-		projectUUID,
-		spaceUUID,
-		groupAccess,
-		[]models.SpaceAccessGroup{}, // No existing group access when becoming root
+		options.ProjectUUID,
+		options.SpaceUUID,
+		options.GroupAccess,
+		currentSpaceDetails.SpaceAccessGroups,
 	)
 	accessErrors = append(accessErrors, groupErrors...)
 
