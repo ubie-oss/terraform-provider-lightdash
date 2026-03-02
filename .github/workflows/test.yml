@@ -131,7 +131,7 @@ jobs:
           cache: true
       - run: go mod download
       - name: Run gosec Security Scanner
-        uses: securego/gosec@v2.23.0
+        uses: securego/gosec@v2.24.7
         with:
           args: ./internal/...
 
