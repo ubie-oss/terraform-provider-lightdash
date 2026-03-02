@@ -96,16 +96,16 @@ func (d *projectSchedulerSettingsDataSource) Configure(ctx context.Context, req 
 		return
 	}
 
-	client, ok := req.ProviderData.(*api.Client)
+	providerData, ok := req.ProviderData.(*ProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *api.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
 	}
-	d.client = client
+	d.client = providerData.Client
 }
 
 // Read reads the data source.

@@ -27,7 +27,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
+
+// ProviderData is the data passed to resources and data sources.
+type ProviderData struct {
+	Client   *api.Client
+	Services *services.ServiceRegistry
+}
 
 // Ensure LightdashProvider satisfies various provider interfaces.
 var _ provider.Provider = &lightdashProvider{}
@@ -124,8 +131,13 @@ func (p *lightdashProvider) Configure(ctx context.Context, req provider.Configur
 		}
 	}
 
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	providerData := &ProviderData{
+		Client:   client,
+		Services: services.NewServiceRegistry(client),
+	}
+
+	resp.DataSourceData = providerData
+	resp.ResourceData = providerData
 }
 
 func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Resource {

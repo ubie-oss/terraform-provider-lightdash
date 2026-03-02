@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -31,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -45,7 +44,8 @@ func NewProjectRoleMemberResource() resource.Resource {
 
 // LightdashProjectResource defines the resource implementation.
 type projectRoleMemberResource struct {
-	client *api.Client
+	client   *api.Client
+	services *services.ServiceRegistry
 }
 
 // LightdashProjectResourceModel describes the resource data model.
@@ -124,16 +124,17 @@ func (r *projectRoleMemberResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*api.Client)
+	providerData, ok := req.ProviderData.(*ProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
 	}
-	r.client = client
+	r.client = providerData.Client
+	r.services = providerData.Services
 }
 
 func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -147,18 +148,11 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 
 	// Get the member
 	user_uuid := plan.UserUUID.ValueString()
-	projectMember, err := apiv1.GetOrganizationMemberByUuidV1(r.client, user_uuid)
+	projectMember, err := r.services.OrganizationMember.GetOrganizationMemberByUUID(ctx, user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading organization member",
 			"Could not find organization member ID "+user_uuid+": "+err.Error(),
-		)
-		return
-	}
-	if !projectMember.IsActive {
-		resp.Diagnostics.AddError(
-			"Error Reading organization member",
-			"Organization member ID "+user_uuid+" is not active",
 		)
 		return
 	}
@@ -168,7 +162,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 	project_role := plan.ProjectRole
 	email := projectMember.Email
 	send_email := plan.SendEmail.ValueBool()
-	err = apiv1.GrantProjectAccessToUserV1(r.client, project_uuid, email, project_role, send_email)
+	err = r.services.ProjectMember.GrantProjectAccess(ctx, project_uuid, email, project_role, send_email)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting project role",
@@ -212,7 +206,7 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 
 	// Get a member from the API
 	user_uuid = state.UserUUID.ValueString()
-	projectMember, err := apiv1.GetOrganizationMemberByUuidV1(r.client, user_uuid)
+	projectMember, err := r.services.OrganizationMember.GetOrganizationMemberByUUID(ctx, user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading organization member",
@@ -245,7 +239,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 	project_uuid := plan.ProjectUUID.ValueString()
 	user_uuid := plan.UserUUID.ValueString()
 	role := plan.ProjectRole
-	err := apiv1.UpdateProjectAccessToUserV1(r.client, project_uuid, user_uuid, role)
+	err := r.services.ProjectMember.UpdateProjectAccess(ctx, project_uuid, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project member's role",
@@ -278,7 +272,7 @@ func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.Del
 	project_uuid := state.ProjectUUID.ValueString()
 	user_uuid := state.UserUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Revoking project role of %s", user_uuid))
-	err := apiv1.RevokeProjectAccessV1(r.client, project_uuid, user_uuid)
+	err := r.services.ProjectMember.RevokeProjectAccess(ctx, project_uuid, user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Revoking project role",

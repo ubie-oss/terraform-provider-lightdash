@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -44,7 +43,8 @@ func NewOrganizationRoleMemberResource() resource.Resource {
 
 // organizationRoleMemberResource defines the resource implementation.
 type organizationRoleMemberResource struct {
-	client *api.Client
+	client   *api.Client
+	services *services.ServiceRegistry
 }
 
 // organizationRoleMemberResourceModel describes the resource data model.
@@ -113,16 +113,17 @@ func (r *organizationRoleMemberResource) Configure(ctx context.Context, req reso
 		return
 	}
 
-	client, ok := req.ProviderData.(*api.Client)
+	providerData, ok := req.ProviderData.(*ProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
 	}
-	r.client = client
+	r.client = providerData.Client
+	r.services = providerData.Services
 }
 
 func (r *organizationRoleMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -138,7 +139,7 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 	// Update existing organization member
 	user_uuid := plan.UserUUID.ValueString()
 	role := models.OrganizationMemberRole(plan.OrganizationRole.ValueString())
-	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
+	user, err := r.services.OrganizationMember.UpdateOrganizationMember(ctx, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -182,7 +183,7 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 
 	// Get space
 	user_uuid = state.UserUUID.ValueString()
-	user, err := apiv1.GetOrganizationMemberByUuidV1(r.client, user_uuid)
+	user, err := r.services.OrganizationMember.GetOrganizationMemberByUUID(ctx, user_uuid)
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading organization member",
@@ -217,7 +218,7 @@ func (r *organizationRoleMemberResource) Update(ctx context.Context, req resourc
 	// Update existing organization member
 	user_uuid := plan.UserUUID.ValueString()
 	role := models.OrganizationMemberRole(plan.OrganizationRole.ValueString())
-	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
+	user, err := r.services.OrganizationMember.UpdateOrganizationMember(ctx, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -252,7 +253,7 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 	// Update the role of the user to "member"
 	user_uuid := state.UserUUID.ValueString()
 	role := models.ORGANIZATION_MEMBER_ROLE
-	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
+	user, err := r.services.OrganizationMember.UpdateOrganizationMember(ctx, user_uuid, role)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",

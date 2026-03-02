@@ -116,7 +116,7 @@ func (d *organizationMembersByEmailsDataSource) Configure(ctx context.Context, r
 		return
 	}
 
-	client, ok := req.ProviderData.(*api.Client)
+	providerData, ok := req.ProviderData.(*ProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -125,7 +125,7 @@ func (d *organizationMembersByEmailsDataSource) Configure(ctx context.Context, r
 
 		return
 	}
-	d.client = client
+	d.client = providerData.Client
 }
 
 func (d *organizationMembersByEmailsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
