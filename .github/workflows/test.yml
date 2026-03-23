@@ -129,11 +129,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: go mod download
+      - run: |
+          go mod download
+      - run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
       - name: Run gosec Security Scanner
-        uses: securego/gosec@v2.23.0
-        with:
-          args: ./internal/...
+        run: |
+          gosec ./internal/...
 
   # Run deadcode scanner
   deadcode:
