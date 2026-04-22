@@ -66,7 +66,7 @@ func (c *Client) DoRequest(req *http.Request) ([]byte, error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("ApiKey %s", c.Token))
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.HTTPClient.Do(req) // #nosec G704 -- URLs are built from the configured Lightdash host and documented API paths.
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v", err)
 	}
