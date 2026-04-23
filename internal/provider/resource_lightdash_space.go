@@ -160,6 +160,9 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"last_updated": schema.StringAttribute{
 				MarkdownDescription: "The timestamp of the last Terraform update applied to the space.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					LastUpdatedOnChange(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{

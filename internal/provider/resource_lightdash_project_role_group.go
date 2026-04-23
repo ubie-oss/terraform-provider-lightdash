@@ -94,6 +94,9 @@ func (r *projectRoleGroupResource) Schema(ctx context.Context, req resource.Sche
 			"last_updated": schema.StringAttribute{
 				MarkdownDescription: "The timestamp of the last Terraform update applied to the project role group resource.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					LastUpdatedOnChange(),
+				},
 			},
 		},
 	}

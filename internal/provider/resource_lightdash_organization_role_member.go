@@ -102,6 +102,9 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 			"last_updated": schema.StringAttribute{
 				MarkdownDescription: "The timestamp of the last Terraform update applied to the organization role member.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					LastUpdatedOnChange(),
+				},
 			},
 		},
 	}

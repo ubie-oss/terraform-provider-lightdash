@@ -113,6 +113,9 @@ func (r *projectRoleMemberResource) Schema(ctx context.Context, req resource.Sch
 			"last_updated": schema.StringAttribute{
 				MarkdownDescription: "Last updated time.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					LastUpdatedOnChange(),
+				},
 			},
 		},
 	}
