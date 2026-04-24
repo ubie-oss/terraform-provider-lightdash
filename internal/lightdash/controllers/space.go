@@ -161,27 +161,37 @@ func (c *SpaceController) GetSpace(ctx context.Context, projectUUID, spaceUUID s
 		})
 	}
 
-	// Convert API ChildSpace to models.ChildSpace
+	selfIsPrivate, err := c.spaceService.ResolveTerraformIsPrivateFromGetResults(ctx, projectUUID, space, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve space visibility: %w", err)
+	}
+
+	// Convert API ChildSpace to models.ChildSpace (immediate parent for each child is this space).
 	childSpaces := []models.ChildSpace{}
 	for _, child := range space.ChildSpaces {
+		childInherit := models.EffectiveInheritFromOptional(child.InheritParentPermissions, child.IsPrivate)
 		childSpaces = append(childSpaces, models.ChildSpace{
-			SpaceUUID:  child.SpaceUUID,
-			SpaceName:  child.Name,
-			IsPrivate:  child.IsPrivate,
-			AccessList: []models.SpaceMemberAccess{}, // API doesn't provide access list for child spaces
+			SpaceUUID:                child.SpaceUUID,
+			SpaceName:                child.Name,
+			InheritParentPermissions: childInherit,
+			IsPrivate:                models.TerraformIsPrivateFromAPIForNestedSpace(childInherit, selfIsPrivate, false),
+			AccessList:               []models.SpaceMemberAccess{}, // API doesn't provide access list for child spaces
 		})
 	}
 
+	// InheritParentPermissions is the API effective inherit flag; IsPrivate is nested-aware from ResolveTerraformIsPrivateFromGetResults.
+	inherit := models.EffectiveInheritFromOptional(space.InheritParentPermissions, space.IsPrivate)
 	// Build result SpaceDetails object
 	spaceDetails := &models.SpaceDetails{
-		ProjectUUID:        space.ProjectUUID,
-		SpaceUUID:          space.SpaceUUID,
-		ParentSpaceUUID:    space.ParentSpaceUUID,
-		SpaceName:          space.SpaceName,
-		IsPrivate:          space.IsPrivate,
-		SpaceAccessMembers: spaceAccessMembers,
-		SpaceAccessGroups:  spaceAccessGroups,
-		ChildSpaces:        childSpaces,
+		ProjectUUID:              space.ProjectUUID,
+		SpaceUUID:                space.SpaceUUID,
+		ParentSpaceUUID:          space.ParentSpaceUUID,
+		SpaceName:                space.SpaceName,
+		IsPrivate:                selfIsPrivate,
+		InheritParentPermissions: inherit,
+		SpaceAccessMembers:       spaceAccessMembers,
+		SpaceAccessGroups:        spaceAccessGroups,
+		ChildSpaces:              childSpaces,
 	}
 
 	tflog.Debug(ctx, "(SpaceController.GetSpace) Space details", map[string]interface{}{
@@ -622,24 +632,22 @@ func (c *SpaceController) updateRootSpace(
 		"currentSpaceDetails": currentSpaceDetails,
 	})
 
-	// If isPrivate isn't changed, then it is nil.
-	// This is a workaround to avoid the API from returning an error.
-	var isPrivateForUpdate *bool
-	if isPrivate != nil && *isPrivate != currentSpaceDetails.IsPrivate {
-		isPrivateForUpdate = isPrivate
-	}
+	inheritForUpdate := models.InheritUpdatePointerIfChanged(isPrivate, currentSpaceDetails.InheritParentPermissions)
 
 	// 1. Update the space properties via the service layer if they have changed
-	if spaceName != currentSpaceDetails.SpaceName || isPrivateForUpdate != nil {
-		updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, isPrivateForUpdate)
+	if spaceName != currentSpaceDetails.SpaceName || inheritForUpdate != nil {
+		updatedSpaceDetails, err := c.spaceService.UpdateRootSpace(ctx, projectUUID, spaceUUID, spaceName, inheritForUpdate)
 		if err != nil {
 			return []error{fmt.Errorf("failed to update space properties: %w", err)}
 		}
+		eff := models.EffectiveInheritFromOptional(updatedSpaceDetails.InheritParentPermissions, updatedSpaceDetails.IsPrivate)
 		tflog.Debug(ctx, "(SpaceController.updateRootSpace) Updated space details", map[string]interface{}{
-			"projectUUID": updatedSpaceDetails.ProjectUUID,
-			"spaceUUID":   updatedSpaceDetails.SpaceUUID,
-			"spaceName":   updatedSpaceDetails.SpaceName,
-			"isPrivate":   updatedSpaceDetails.IsPrivate,
+			"projectUUID":              updatedSpaceDetails.ProjectUUID,
+			"spaceUUID":                updatedSpaceDetails.SpaceUUID,
+			"spaceName":                updatedSpaceDetails.SpaceName,
+			"inheritParentPermissions": eff,
+			"isPrivate": models.TerraformIsPrivateFromAPIFieldsRootSemantics(
+				updatedSpaceDetails.InheritParentPermissions, updatedSpaceDetails.IsPrivate),
 		})
 	}
 
@@ -688,14 +696,10 @@ func (c *SpaceController) updateNestedSpace(
 	}
 
 	// 2. Update the space properties via the service layer if they have changed
-	// If isPrivate isn't changed, then it is nil to avoid unnecessary API calls or potential errors.
-	var isPrivateForUpdate *bool
-	if options.IsPrivate != nil && *options.IsPrivate != currentSpaceDetails.IsPrivate {
-		isPrivateForUpdate = options.IsPrivate
-	}
+	inheritForUpdate := models.InheritUpdatePointerIfChanged(options.IsPrivate, currentSpaceDetails.InheritParentPermissions)
 
-	if options.SpaceName != currentSpaceDetails.SpaceName || isPrivateForUpdate != nil {
-		_, err := c.spaceService.UpdateNestedSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, isPrivateForUpdate)
+	if options.SpaceName != currentSpaceDetails.SpaceName || inheritForUpdate != nil {
+		_, err := c.spaceService.UpdateNestedSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, inheritForUpdate)
 		if err != nil {
 			return []error{fmt.Errorf("failed to update nested space properties: %w", err)}
 		}
@@ -746,14 +750,11 @@ func (c *SpaceController) moveRootToNestedSpace(
 		return []error{fmt.Errorf("failed to get space details: %w", err)}
 	}
 
-	// 3. Update the space properties (name, isPrivate)
-	var isPrivateForUpdate *bool
-	if options.IsPrivate != nil && *options.IsPrivate != currentSpaceDetails.IsPrivate {
-		isPrivateForUpdate = options.IsPrivate
-	}
+	// 3. Update the space properties (name, inheritParentPermissions / is_private)
+	inheritForUpdate := models.InheritUpdatePointerIfChanged(options.IsPrivate, currentSpaceDetails.InheritParentPermissions)
 
-	if options.SpaceName != currentSpaceDetails.SpaceName || isPrivateForUpdate != nil {
-		_, err = c.spaceService.UpdateNestedSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, isPrivateForUpdate)
+	if options.SpaceName != currentSpaceDetails.SpaceName || inheritForUpdate != nil {
+		_, err = c.spaceService.UpdateNestedSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, inheritForUpdate)
 		if err != nil {
 			return []error{fmt.Errorf("failed to update space properties after moving to nested: %w", err)}
 		}
@@ -800,14 +801,23 @@ func (c *SpaceController) moveNestedToRootSpace(
 		return []error{fmt.Errorf("failed to move nested space %s to root: %w", options.SpaceUUID, err1)}
 	}
 
-	// 2. Update the space properties (name, isPrivate)
-	_, err2 := c.spaceService.UpdateRootSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, options.IsPrivate)
-	if err2 != nil {
-		return []error{fmt.Errorf("failed to update space properties after moving to root: %w", err2)}
+	// 2. Get current space details after the move, then patch name / visibility only when needed
+	currentSpaceDetails, err := c.GetSpace(ctx, options.ProjectUUID, options.SpaceUUID)
+	if err != nil {
+		return []error{fmt.Errorf("failed to get space details: %w", err)}
 	}
 
-	// 3. Get the current space details to check its properties
-	currentSpaceDetails, err := c.GetSpace(ctx, options.ProjectUUID, options.SpaceUUID)
+	inheritForUpdate := models.InheritUpdatePointerIfChanged(options.IsPrivate, currentSpaceDetails.InheritParentPermissions)
+
+	if options.SpaceName != currentSpaceDetails.SpaceName || inheritForUpdate != nil {
+		_, err2 := c.spaceService.UpdateRootSpace(ctx, options.ProjectUUID, options.SpaceUUID, options.SpaceName, inheritForUpdate)
+		if err2 != nil {
+			return []error{fmt.Errorf("failed to update space properties after moving to root: %w", err2)}
+		}
+	}
+
+	// 3. Refresh space details for access management
+	currentSpaceDetails, err = c.GetSpace(ctx, options.ProjectUUID, options.SpaceUUID)
 	if err != nil {
 		return []error{fmt.Errorf("failed to get space details: %w", err)}
 	}

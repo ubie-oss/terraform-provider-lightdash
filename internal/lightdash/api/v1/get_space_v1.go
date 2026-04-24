@@ -42,24 +42,26 @@ type SpaceAccessGroup struct {
 }
 
 type ChildSpace struct {
-	OrganizationUuid string `json:"organizationUuid"`
-	ProjectUuid      string `json:"projectUuid"`
-	SpaceUUID        string `json:"uuid"`
-	Name             string `json:"name"`
-	IsPrivate        bool   `json:"isPrivate"`
+	OrganizationUuid         string `json:"organizationUuid"`
+	ProjectUuid              string `json:"projectUuid"`
+	SpaceUUID                string `json:"uuid"`
+	Name                     string `json:"name"`
+	InheritParentPermissions *bool  `json:"inheritParentPermissions,omitempty"`
+	IsPrivate                bool   `json:"isPrivate,omitempty"`
 }
 
 type GetSpaceV1Results struct {
 	// The response doesn't contain the OrganizationUUID right now
 	// OrganizationUUID string              `json:"organizationUuid"`
-	ProjectUUID        string              `json:"projectUuid"`
-	ParentSpaceUUID    *string             `json:"parentSpaceUuid,omitempty"`
-	SpaceUUID          string              `json:"uuid"`
-	SpaceName          string              `json:"name"`
-	IsPrivate          bool                `json:"isPrivate"`
-	ChildSpaces        []ChildSpace        `json:"childSpaces"`
-	SpaceAccessMembers []SpaceAccessMember `json:"access"`
-	SpaceAccessGroups  []SpaceAccessGroup  `json:"groupsAccess"`
+	ProjectUUID              string              `json:"projectUuid"`
+	ParentSpaceUUID          *string             `json:"parentSpaceUuid,omitempty"`
+	SpaceUUID                string              `json:"uuid"`
+	SpaceName                string              `json:"name"`
+	InheritParentPermissions *bool               `json:"inheritParentPermissions,omitempty"`
+	IsPrivate                bool                `json:"isPrivate,omitempty"`
+	ChildSpaces              []ChildSpace        `json:"childSpaces"`
+	SpaceAccessMembers       []SpaceAccessMember `json:"access"`
+	SpaceAccessGroups        []SpaceAccessGroup  `json:"groupsAccess"`
 }
 
 type GetSpaceV1Response struct {

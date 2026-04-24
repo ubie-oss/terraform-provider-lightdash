@@ -11,12 +11,12 @@ description: |-
   lightdash_project_agent (Data Source)
   Retrieves details for a specific Lightdash project agent by its project UUID and agent UUID. This data source provides information about the agent's configuration, including its name, instruction, access controls, and other attributes. It is useful for fetching agent details when the UUIDs are known, allowing you to reference agent attributes in your Terraform configuration.
   Example Usage
-  
+
   data "lightdash_project_agent" "example" {
     project_uuid = "xxx-xxx-xxx"
     agent_uuid   = "yyy-yyy-yyy"
   }
-  
+
   Schema
   Required
   agent_uuid (String) The UUID of the Lightdash agent.project_uuid (String) The UUID of the Lightdash project.

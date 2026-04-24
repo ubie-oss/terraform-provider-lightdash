@@ -67,6 +67,10 @@ type spaceResourceModel struct {
 	GroupAccessList  types.Set    `tfsdk:"group_access"`
 }
 
+func configuredSpaceIsPrivate(config spaceResourceModel) *bool {
+	return config.IsPrivate.ValueBoolPointer()
+}
+
 // spaceMemberAccessBlockModel maps the member access data for the user input schema (access block)
 type spaceMemberAccessBlockModel struct {
 	UserUUID  types.String `tfsdk:"user_uuid"`
@@ -138,7 +142,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				},
 			},
 			"is_private": schema.BoolAttribute{
-				MarkdownDescription: "Whether the space is private (`true`) or public (`false`). Public spaces inherit project permissions, while private spaces (Restricted Access) only allow invited users and admins.",
+				MarkdownDescription: "Whether the space is private (`true`) or public (`false`). This maps to Lightdash `inheritParentPermissions` on the API: public spaces inherit project permissions (`inheritParentPermissions=true`); private (restricted) spaces do not (`inheritParentPermissions=false`).",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -268,9 +272,10 @@ func (r *spaceResource) validateSpaceVisibilityConfig(_ context.Context, config 
 
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
-	var plan spaceResourceModel
+	var plan, config spaceResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -295,7 +300,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	createOptions := controllers.CreateSpaceOptions{
 		ProjectUUID:     plan.ProjectUUID.ValueString(),
 		SpaceName:       plan.SpaceName.ValueString(),
-		IsPrivate:       plan.IsPrivate.ValueBoolPointer(),
+		IsPrivate:       configuredSpaceIsPrivate(config),
 		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
 		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
 		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format
@@ -424,8 +429,9 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan and state
-	var plan, oldState spaceResourceModel
+	var plan, config, oldState spaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &oldState)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -454,7 +460,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		ProjectUUID:     plan.ProjectUUID.ValueString(),
 		SpaceUUID:       plan.SpaceUUID.ValueString(),
 		SpaceName:       plan.SpaceName.ValueString(),
-		IsPrivate:       plan.IsPrivate.ValueBoolPointer(),
+		IsPrivate:       configuredSpaceIsPrivate(config),
 		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
 		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
 		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format

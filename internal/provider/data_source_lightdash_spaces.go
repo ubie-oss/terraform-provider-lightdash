@@ -164,7 +164,7 @@ func (d *spacesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			ParentSpaceUUID: parentSpace,
 			SpaceUUID:       types.StringValue(space.SpaceUUID),
 			SpaceName:       types.StringValue(space.SpaceName),
-			IsPrivate:       types.BoolValue(space.IsPrivate),
+			IsPrivate:       types.BoolValue(space.TerraformIsPrivate()),
 		}
 		updatedSpaces = append(updatedSpaces, spaceState)
 	}

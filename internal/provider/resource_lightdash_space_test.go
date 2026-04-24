@@ -18,11 +18,58 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // Using the shared testAccPreCheck and testAccProtoV6ProviderFactories from provider_acc_test.go
+
+func TestConfiguredSpaceIsPrivate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		config spaceResourceModel
+		want   *bool
+	}{
+		{
+			name:   "omitted config",
+			config: spaceResourceModel{IsPrivate: types.BoolNull()},
+			want:   nil,
+		},
+		{
+			name:   "explicit private",
+			config: spaceResourceModel{IsPrivate: types.BoolValue(true)},
+			want:   boolPointer(true),
+		},
+		{
+			name:   "explicit public",
+			config: spaceResourceModel{IsPrivate: types.BoolValue(false)},
+			want:   boolPointer(false),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := configuredSpaceIsPrivate(tc.config)
+			if tc.want == nil {
+				if got != nil {
+					t.Fatalf("configuredSpaceIsPrivate() = %v, want nil", *got)
+				}
+				return
+			}
+			if got == nil || *got != *tc.want {
+				t.Fatalf("configuredSpaceIsPrivate() = %v, want %v", got, *tc.want)
+			}
+		})
+	}
+}
+
+func boolPointer(v bool) *bool {
+	return &v
+}
 
 func TestAccSpaceResource_simple(t *testing.T) {
 	if !isIntegrationTestMode() {
@@ -55,7 +102,7 @@ func TestAccSpaceResource_simple(t *testing.T) {
 					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_public", "space_uuid"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "name", "Public Space (Acceptance Test: create_space)"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "is_private", "false"),
-					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_public", "deletion_protection", "false"),
 					// data.lightdash_space.test_public
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_space.create_space__test_public",
@@ -74,7 +121,7 @@ func TestAccSpaceResource_simple(t *testing.T) {
 					resource.TestCheckResourceAttrSet("lightdash_space.create_space__test_private", "space_uuid"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "name", "Private Space (Acceptance Test: create_space)"),
 					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "is_private", "true"),
-					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "deletion_protection", "true"),
+					resource.TestCheckResourceAttr("lightdash_space.create_space__test_private", "deletion_protection", "false"),
 					// data.lightdash_space.test_private
 					resource.TestCheckResourceAttrPair(
 						"data.lightdash_space.create_space__test_private",
