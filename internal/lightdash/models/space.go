@@ -68,23 +68,30 @@ func (s *SpaceMemberAccess) HasDirectSpaceMemberAccess() bool {
 
 // ChildSpace represents a nested space within a parent space
 type ChildSpace struct {
-	SpaceUUID  string
-	SpaceName  string
-	IsPrivate  bool
-	AccessList []SpaceMemberAccess
+	SpaceUUID                string
+	SpaceName                string
+	IsPrivate                bool
+	InheritParentPermissions bool
+	AccessList               []SpaceMemberAccess
 }
 
 // SpaceDetails contains all the details of a space returned by the GetSpace API.
 // Note: For nested spaces, MemberAccess and GroupAccess lists will be empty as access is inherited.
 type SpaceDetails struct {
-	ProjectUUID        string
-	SpaceUUID          string
-	ParentSpaceUUID    *string
-	SpaceName          string
-	IsPrivate          bool
-	SpaceAccessMembers []SpaceMemberAccess // Full list from API for access_all
-	SpaceAccessGroups  []SpaceAccessGroup  // Full list from API for group_access_all
-	ChildSpaces        []ChildSpace        // Child spaces, if any
+	ProjectUUID     string
+	SpaceUUID       string
+	ParentSpaceUUID *string
+	SpaceName       string
+	IsPrivate       bool
+	// InheritParentPermissions mirrors Lightdash OpenAPI.
+	// For root spaces, IsPrivate corresponds to !InheritParentPermissions.
+	// For nested spaces, this field indicates whether permissions are inherited from the parent;
+	// IsPrivate reflects the effective privacy resolved through the parent chain and is not simply
+	// derived as !InheritParentPermissions.
+	InheritParentPermissions bool
+	SpaceAccessMembers       []SpaceMemberAccess // Full list from API for access_all
+	SpaceAccessGroups        []SpaceAccessGroup  // Full list from API for group_access_all
+	ChildSpaces              []ChildSpace        // Child spaces, if any
 }
 
 // IsNestedSpace returns true if the space is nested (has a parent)

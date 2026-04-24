@@ -13,25 +13,17 @@
 # limitations under the License.
 
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-json
-      - id: check-yaml
-      - id: detect-private-key
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.7
+    rev: v1.7.12
     hooks:
       - id: actionlint-docker
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
         args: [--strict, -c=.yamllint.yaml]
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         exclude: ^examples/
@@ -49,7 +41,7 @@ repos:
       # - id: go-critic
       - id: go-mod-tidy
   - repo: https://github.com/golangci/golangci-lint
-    rev: v2.1.6
+    rev: v2.11.4
     hooks:
       - id: golangci-lint
   # Run `go generate ./...` local
@@ -62,6 +54,14 @@ repos:
         language: system
         types: [go]
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.99.0
+    rev: v1.105.0
     hooks:
       - id: terraform_fmt
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-json
+      - id: check-yaml
+      - id: detect-private-key

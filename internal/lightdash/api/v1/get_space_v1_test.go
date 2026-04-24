@@ -62,14 +62,16 @@ func TestGetSpaceV1ResultsInstantiation(t *testing.T) {
 	groups := []SpaceAccessGroup{
 		{GroupUUID: "group1", GroupName: "Group One", SpaceRole: models.SpaceMemberRole("viewer")},
 	}
+	inheritFalse := false
 	results := GetSpaceV1Results{
-		ProjectUUID:        "proj-uuid",
-		ParentSpaceUUID:    &parentUUID,
-		SpaceUUID:          "space-uuid",
-		SpaceName:          "Space Name",
-		IsPrivate:          true,
-		SpaceAccessMembers: members,
-		SpaceAccessGroups:  groups,
+		ProjectUUID:              "proj-uuid",
+		ParentSpaceUUID:          &parentUUID,
+		SpaceUUID:                "space-uuid",
+		SpaceName:                "Space Name",
+		InheritParentPermissions: &inheritFalse,
+		IsPrivate:                true,
+		SpaceAccessMembers:       members,
+		SpaceAccessGroups:        groups,
 	}
 
 	if results.ProjectUUID != "proj-uuid" {
@@ -87,6 +89,13 @@ func TestGetSpaceV1ResultsInstantiation(t *testing.T) {
 	if !results.IsPrivate {
 		t.Errorf("expected IsPrivate to be true")
 	}
+	effInherit := models.EffectiveInheritFromOptional(results.InheritParentPermissions, results.IsPrivate)
+	if effInherit {
+		t.Errorf("expected inheritParentPermissions false for a private space fixture")
+	}
+	if !models.TerraformIsPrivateFromAPIFieldsRootSemantics(results.InheritParentPermissions, results.IsPrivate) {
+		t.Errorf("expected terraform is_private true for this fixture")
+	}
 	if !reflect.DeepEqual(results.SpaceAccessMembers, members) {
 		t.Errorf("expected SpaceAccessMembers to be '%v', got '%v'", members, results.SpaceAccessMembers)
 	}
@@ -101,6 +110,7 @@ func TestGetSpaceV1ResultsJSONUnmarshal(t *testing.T) {
 		"parentSpaceUuid": "parent-uuid",
 		"uuid": "space-uuid",
 		"name": "Space Name",
+		"inheritParentPermissions": true,
 		"isPrivate": false,
 		"access": [
 			{"userUuid": "user1", "role": "editor"}
@@ -131,6 +141,9 @@ func TestGetSpaceV1ResultsJSONUnmarshal(t *testing.T) {
 	if results.IsPrivate {
 		t.Errorf("expected IsPrivate to be false")
 	}
+	if !models.EffectiveInheritFromOptional(results.InheritParentPermissions, results.IsPrivate) {
+		t.Errorf("expected inheritParentPermissions true from JSON")
+	}
 	if len(results.SpaceAccessMembers) != 1 || results.SpaceAccessMembers[0].UserUUID != "user1" {
 		t.Errorf("expected SpaceAccessMembers[0].UserUUID to be 'user1', got '%v'", results.SpaceAccessMembers)
 	}
@@ -140,11 +153,13 @@ func TestGetSpaceV1ResultsJSONUnmarshal(t *testing.T) {
 }
 
 func TestGetSpaceV1ResponseInstantiation(t *testing.T) {
+	inheritTrue := true
 	results := GetSpaceV1Results{
-		ProjectUUID: "proj-uuid",
-		SpaceUUID:   "space-uuid",
-		SpaceName:   "Space Name",
-		IsPrivate:   false,
+		ProjectUUID:              "proj-uuid",
+		SpaceUUID:                "space-uuid",
+		SpaceName:                "Space Name",
+		InheritParentPermissions: &inheritTrue,
+		IsPrivate:                false,
 	}
 	resp := GetSpaceV1Response{
 		Results: results,

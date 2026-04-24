@@ -21,12 +21,16 @@ import (
 	"net/http"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
+// CreateSpaceV1Request matches Lightdash OpenAPI `CreateSpace` (POST .../spaces):
+// name, optional parentSpaceUuid, optional access, optional inheritParentPermissions.
+// Do not send legacy `isPrivate` here; visibility is controlled via inheritParentPermissions.
 type CreateSpaceV1Request struct {
-	Name            string  `json:"name"`
-	IsPrivate       *bool   `json:"isPrivate"`
-	ParentSpaceUUID *string `json:"parentSpaceUuid,omitempty"`
+	Name                     string  `json:"name"`
+	ParentSpaceUUID          *string `json:"parentSpaceUuid,omitempty"`
+	InheritParentPermissions *bool   `json:"inheritParentPermissions,omitempty"`
 }
 
 type CreateSpaceV1Results struct {
@@ -35,7 +39,10 @@ type CreateSpaceV1Results struct {
 	ParentSpaceUUID  *string `json:"parentSpaceUuid,omitempty"`
 	SpaceUUID        string  `json:"uuid"`
 	SpaceName        string  `json:"name"`
-	IsPrivate        bool    `json:"isPrivate"`
+	// InheritParentPermissions is the authoritative visibility flag in current Lightdash OpenAPI.
+	InheritParentPermissions *bool `json:"inheritParentPermissions,omitempty"`
+	// isPrivate may still appear in some server responses (legacy / undocumented).
+	IsPrivate bool `json:"isPrivate,omitempty"`
 }
 
 type CreateSpaceV1Response struct {
@@ -47,11 +54,9 @@ type CreateSpaceV1Response struct {
 func CreateSpaceV1(c *api.Client, projectUUID, spaceName string, isPrivate *bool, parentSpaceUUID *string) (*CreateSpaceV1Results, error) {
 
 	data := CreateSpaceV1Request{
-		Name:            spaceName,
-		ParentSpaceUUID: parentSpaceUUID,
-	}
-	if isPrivate != nil {
-		data.IsPrivate = isPrivate
+		Name:                     spaceName,
+		ParentSpaceUUID:          parentSpaceUUID,
+		InheritParentPermissions: models.InheritParentPermissionsFromTerraformIsPrivate(isPrivate),
 	}
 
 	marshalled, err := json.Marshal(data)

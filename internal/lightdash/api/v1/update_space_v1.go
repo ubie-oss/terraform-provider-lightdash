@@ -24,18 +24,20 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
+// UpdateSpaceV1Request matches Lightdash OpenAPI `UpdateSpace` (PATCH .../spaces/{spaceUuid}).
 type UpdateSpaceV1Request struct {
-	Name      string `json:"name"`
-	IsPrivate *bool  `json:"isPrivate,omitempty"`
+	Name                     string `json:"name"`
+	InheritParentPermissions *bool  `json:"inheritParentPermissions,omitempty"`
 }
 
 type UpdateSpaceV1Results struct {
-	OrganizationUUID string  `json:"organizationUuid"`
-	ProjectUUID      string  `json:"projectUuid"`
-	ParentSpaceUUID  *string `json:"parentSpaceUuid,omitempty"`
-	SpaceUUID        string  `json:"uuid"`
-	SpaceName        string  `json:"name"`
-	IsPrivate        bool    `json:"isPrivate"`
+	OrganizationUUID         string  `json:"organizationUuid"`
+	ProjectUUID              string  `json:"projectUuid"`
+	ParentSpaceUUID          *string `json:"parentSpaceUuid,omitempty"`
+	SpaceUUID                string  `json:"uuid"`
+	SpaceName                string  `json:"name"`
+	InheritParentPermissions *bool   `json:"inheritParentPermissions,omitempty"`
+	IsPrivate                bool    `json:"isPrivate,omitempty"`
 }
 
 type UpdateSpaceV1Response struct {
@@ -43,13 +45,11 @@ type UpdateSpaceV1Response struct {
 	Status  string               `json:"status"`
 }
 
-func UpdateSpaceV1(c *api.Client, _ context.Context, projectUuid string, spaceUuid string, spaceName string, isPrivate *bool) (*UpdateSpaceV1Results, error) {
-	// Create the request body, including parentSpaceUuid if provided
+// UpdateSpaceV1 updates a space. When inheritParentPermissions is nil, that field is omitted from the JSON body.
+func UpdateSpaceV1(c *api.Client, _ context.Context, projectUuid string, spaceUuid string, spaceName string, inheritParentPermissions *bool) (*UpdateSpaceV1Results, error) {
 	data := UpdateSpaceV1Request{
-		Name: spaceName,
-	}
-	if isPrivate != nil {
-		data.IsPrivate = isPrivate
+		Name:                     spaceName,
+		InheritParentPermissions: inheritParentPermissions,
 	}
 	marshalled, err := json.Marshal(data)
 	if err != nil {

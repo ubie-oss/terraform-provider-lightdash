@@ -91,7 +91,7 @@ resource "lightdash_space" "test_child_space_restricted" {
 
 - `access` (Block Set) Manages direct user access to the space. Specify user UUIDs and their assigned roles. Note: Organization administrators have implicit access. (see [below for nested schema](#nestedblock--access))
 - `group_access` (Block Set) Manages access to the space for groups. Specify group UUIDs and their assigned roles within the space. (see [below for nested schema](#nestedblock--group_access))
-- `is_private` (Boolean) Whether the space is private (`true`) or public (`false`). Public spaces inherit project permissions, while private spaces (Restricted Access) only allow invited users and admins.
+- `is_private` (Boolean) Whether the space is private (`true`) or public (`false`). This maps to Lightdash `inheritParentPermissions` on the API: public spaces inherit project permissions (`inheritParentPermissions=true`); private (restricted) spaces do not (`inheritParentPermissions=false`).
 - `parent_space_uuid` (String) The UUID of the parent space. Setting this creates a nested space. Leave empty for a root space.
 
 ### Read-Only

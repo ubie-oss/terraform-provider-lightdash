@@ -20,15 +20,17 @@ import (
 	"net/http"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
 type ListSpacesInProjectV1Results struct {
-	OrganizationUUID string  `json:"organizationUuid"`
-	ProjectUUID      string  `json:"projectUuid"`
-	ParentSpaceUUID  *string `json:"parentSpaceUuid,omitempty"`
-	SpaceUUID        string  `json:"uuid"`
-	SpaceName        string  `json:"name"`
-	IsPrivate        bool    `json:"isPrivate"` // nolint: govet
+	OrganizationUUID         string  `json:"organizationUuid"`
+	ProjectUUID              string  `json:"projectUuid"`
+	ParentSpaceUUID          *string `json:"parentSpaceUuid,omitempty"`
+	SpaceUUID                string  `json:"uuid"`
+	SpaceName                string  `json:"name"`
+	InheritParentPermissions *bool   `json:"inheritParentPermissions,omitempty"`
+	IsPrivate                bool    `json:"isPrivate,omitempty"` // nolint: govet
 }
 
 type ListSpacesInProjectV1Response struct {
@@ -55,4 +57,9 @@ func ListSpacesInProjectV1(c *api.Client, projectUuid string) ([]ListSpacesInPro
 	}
 
 	return response.Results, nil
+}
+
+// TerraformIsPrivate returns the provider's is_private value for a space summary row.
+func (s ListSpacesInProjectV1Results) TerraformIsPrivate() bool {
+	return models.TerraformIsPrivateFromAPIFieldsRootSemantics(s.InheritParentPermissions, s.IsPrivate)
 }
