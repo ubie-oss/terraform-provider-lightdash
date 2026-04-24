@@ -429,3 +429,41 @@ func TestAccProjectAgentResource_import(t *testing.T) {
 		},
 	})
 }
+
+func TestAccProjectAgentResource_minimalDefaults(t *testing.T) {
+	if !isIntegrationTestMode() {
+		t.Skip("Skipping acceptance test for resource_lightdash_project_agent")
+	}
+
+	providerConfig, err := getProviderConfig()
+	if err != nil {
+		t.Fatalf("Failed to get providerConfig: %v", err)
+	}
+
+	minimalConfig, err := ReadAccTestResource([]string{"resources", "lightdash_project_agent", "create_agent", "040_minimal_defaults.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get minimal defaults config: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig + minimalConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckOutput("is_minimal_agent_uuid_set", "true"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.minimal", "organization_uuid"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.minimal", "project_uuid"),
+					resource.TestCheckResourceAttrSet("lightdash_project_agent.minimal", "agent_uuid"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.minimal", "name", "Acc Test Minimal Defaults Agent"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.minimal", "instruction", "You are an acceptance test agent for minimal Terraform configuration."),
+					resource.TestCheckResourceAttr("lightdash_project_agent.minimal", "description", ""),
+					resource.TestCheckResourceAttr("lightdash_project_agent.minimal", "enable_reasoning", "true"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.minimal", "space_access.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_project_agent.minimal", "deletion_protection", "false"),
+				),
+			},
+		},
+	})
+}

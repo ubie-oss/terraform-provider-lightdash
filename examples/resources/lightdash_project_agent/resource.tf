@@ -1,3 +1,15 @@
+# Minimal configuration: only organization_uuid, project_uuid, name, instruction,
+# and deletion_protection are required. description, enable_reasoning, and space_access
+# default to empty description, reasoning enabled, and access to all spaces.
+#
+# resource "lightdash_project_agent" "minimal" {
+#   organization_uuid   = "xxxx-xxxx-xxxx"
+#   project_uuid        = "xxxx-xxxx-xxxx"
+#   name                = "My Agent"
+#   instruction         = "You are a helpful assistant."
+#   deletion_protection = false
+# }
+
 resource "lightdash_project_agent" "test" {
   organization_uuid = "xxxx-xxxx-xxxx"
   project_uuid      = "xxxx-xxxx-xxxx"

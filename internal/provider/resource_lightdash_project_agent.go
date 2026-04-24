@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -183,17 +184,23 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "The description of the Lightdash agent.",
-				Required:            true,
+				MarkdownDescription: "Agent description. Omit for empty (matches Lightdash default).",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(""),
 			},
 			"space_access": schema.ListAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "UUIDs of spaces the agent has access to.",
-				Required:            true,
+				MarkdownDescription: "UUIDs of spaces the agent may access. An empty list means unrestricted access to all spaces (Lightdash default).",
+				Optional:            true,
+				Computed:            true,
+				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
 			"enable_reasoning": schema.BoolAttribute{
-				MarkdownDescription: "Whether to enable reasoning for the agent.",
-				Required:            true,
+				MarkdownDescription: "Whether reasoning is enabled for the agent. Defaults to `true` (Lightdash default).",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
 			},
 			"deletion_protection": schema.BoolAttribute{
 				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
@@ -340,17 +347,20 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
-	// Get enable data access (defaults to false if not set)
+	// Get enable data access (schema default true when omitted)
 	enableDataAccess := plan.EnableDataAccess.ValueBool()
 
-	// Get enable self improvement (defaults to false if not set)
+	// Get enable self improvement (schema default true when omitted)
 	enableSelfImprovement := plan.EnableSelfImprovement.ValueBool()
 
-	// Get enable reasoning
+	// Get enable reasoning (schema default true when omitted)
 	enableReasoning := plan.EnableReasoning.ValueBool()
 
-	// Get description
-	description := plan.Description.ValueString()
+	// Get description (schema default empty string when omitted)
+	description := ""
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() {
+		description = plan.Description.ValueString()
+	}
 
 	// Get version (defaults to 2 if not set)
 	version := plan.Version.ValueInt64()
@@ -678,8 +688,11 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	instructionVal := plan.Instruction.ValueString()
 	instruction := &instructionVal
 
-	// Always send description
-	descriptionVal := plan.Description.ValueString()
+	// Description from plan (schema default empty string when omitted)
+	descriptionVal := ""
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() {
+		descriptionVal = plan.Description.ValueString()
+	}
 	description := &descriptionVal
 
 	// Handle optional imageUrl
@@ -742,9 +755,9 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		userAccess = []string{}
 	}
 
-	// Always send spaceAccess
+	// Space access from plan (empty list means unrestricted access to all spaces)
 	var spaceAccess []string
-	if !plan.SpaceAccess.IsNull() {
+	if !plan.SpaceAccess.IsUnknown() && !plan.SpaceAccess.IsNull() {
 		diags := plan.SpaceAccess.ElementsAs(ctx, &spaceAccess, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -754,15 +767,13 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		spaceAccess = []string{}
 	}
 
-	// Always include enableDataAccess in updates since it's a required field
+	// Enable flags from plan (schema supplies defaults when omitted)
 	enableDataAccessVal := plan.EnableDataAccess.ValueBool()
 	enableDataAccess := &enableDataAccessVal
 
-	// Always include enableSelfImprovement in updates since it's a required field
 	enableSelfImprovementVal := plan.EnableSelfImprovement.ValueBool()
 	enableSelfImprovement := &enableSelfImprovementVal
 
-	// Always include enableReasoning in updates
 	enableReasoningVal := plan.EnableReasoning.ValueBool()
 	enableReasoning := &enableReasoningVal
 
