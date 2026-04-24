@@ -83,7 +83,11 @@ type SpaceDetails struct {
 	ParentSpaceUUID *string
 	SpaceName       string
 	IsPrivate       bool
-	// InheritParentPermissions mirrors Lightdash OpenAPI; IsPrivate is derived as !InheritParentPermissions.
+	// InheritParentPermissions mirrors Lightdash OpenAPI.
+	// For root spaces, IsPrivate corresponds to !InheritParentPermissions.
+	// For nested spaces, this field indicates whether permissions are inherited from the parent;
+	// IsPrivate reflects the effective privacy resolved through the parent chain and is not simply
+	// derived as !InheritParentPermissions.
 	InheritParentPermissions bool
 	SpaceAccessMembers       []SpaceMemberAccess // Full list from API for access_all
 	SpaceAccessGroups        []SpaceAccessGroup  // Full list from API for group_access_all
