@@ -1,0 +1,4 @@
+# Grype scans the full tree; gitignored Go test binaries (go test -c) embed an
+# older stdlib and duplicate CVE rows. They are not release artifacts.
+exclude:
+  - "**/*.test"

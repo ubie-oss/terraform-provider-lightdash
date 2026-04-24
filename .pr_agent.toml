@@ -4,9 +4,8 @@
 [config]
 ignore_pr_labels = ['renovate']
 # models
-model = "vertex_ai/gemini-2.5-flash"
-model_turbo = "vertex_ai/gemini-2.5-flash"
-fallback_models = ["vertex_ai/gemini-2.5-flash"]
+model = "vertex_ai/gemini-3-flash-preview"
+fallback_models = ["vertex_ai/gemini-3-flash-preview"]
 
 [ignore]
 glob = ['*.json', '*.md']

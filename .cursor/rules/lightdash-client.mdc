@@ -23,9 +23,11 @@ This directory contains the Go code responsible for communicating with the Light
 ## `models/` – Data Structures
 
 - **Purpose:** Contains Go structs representing the data models used in Lightdash API requests and responses.
+- **Projection helpers:** The package may also include small **pure, I/O-free** functions that map between Terraform-oriented fields and Lightdash API semantics when those rules are tightly tied to API fields (for example, space visibility: Terraform `is_private` versus `inheritParentPermissions` and legacy `isPrivate` in `space_visibility.go`). Keep such helpers next to related types (e.g. `space.go`), covered by unit tests in the same package, and avoid turning `models` into a general-purpose `util` dump.
 - **Key files:**
   - `organization_member_role.go`, `project_member_role.go`, `space_member_role.go`, `project_type.go`: Define enums and validation helpers for roles and types.
   - `organization_group.go`, `warehouse_credentials.go`, `project_scheduler_settings.go`, `user_core.go`: Define core data structures for organization groups, credentials, scheduler settings, and users.
+  - `space_visibility.go`: Pure helpers for space visibility / permission flags between Terraform and the Lightdash API.
 - **Usage:** These models are used throughout the API and service layers to marshal/unmarshal JSON and enforce type safety.
 
 ---
@@ -61,7 +63,7 @@ This directory contains the Go code responsible for communicating with the Light
 The `internal/lightdash` directory implements a layered Lightdash API client:
 
 - The `api/` package handles low-level HTTP and endpoint logic.
-- The `models/` package defines all data structures and enums.
+- The `models/` package defines data structures, enums, and narrowly scoped pure projection helpers (see `models/` section above).
 - The `services/` package provides business logic and resource-oriented operations.
 - The `controllers/` package is reserved for future use.
 
