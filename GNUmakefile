@@ -50,7 +50,7 @@ upgrade-go-mod:
 	# Upgrade go.sum
 	go mod vendor
 
-lint: run-trunk-check run-pre-commit
+lint: run-trunk-check run-pre-commit deadcode gosec
 
 run-trunk-check:
 	trunk check --all
