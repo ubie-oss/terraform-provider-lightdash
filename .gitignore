@@ -63,3 +63,6 @@ vendor/
 
 # .env
 .env
+
+# CodeQL
+*.sarif

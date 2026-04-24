@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_lightdash-org-admin_lightdash__lightdash_tools__list_group_members",
+      "mcp__plugin_lightdash-org-admin_lightdash__lightdash_tools__list_projects",
+      "mcp__plugin_lightdash-org-admin_lightdash__lightdash_tools__list_explores",
+      "mcp__plugin_lightdash-org-admin_lightdash__lightdash_tools__get_explore",
+      "WebSearch",
+      "WebFetch(domain:docs.lightdash.com)",
+      "mcp__plugin_lightdash-org-admin_lightdash__lightdash_tools__list_metrics",
+      "Bash(source .env)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(curl:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "lightdash-org-admin@dbt-heros": true,
+    "lightdash-analysis@dbt-heros": true
+  }
+}
