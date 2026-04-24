@@ -35,7 +35,7 @@ type UpdateAgentV1Request struct {
 	EnableDataAccess      *bool              `json:"enableDataAccess,omitempty"`
 	EnableSelfImprovement *bool              `json:"enableSelfImprovement,omitempty"`
 	Description           *string            `json:"description,omitempty"`
-	SpaceAccess           []string           `json:"spaceAccess,omitempty"`
+	SpaceAccess           []string           `json:"spaceAccess"`
 	EnableReasoning       *bool              `json:"enableReasoning,omitempty"`
 	Version               int64              `json:"version"`
 }
