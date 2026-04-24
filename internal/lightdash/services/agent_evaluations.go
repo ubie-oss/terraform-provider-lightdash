@@ -104,26 +104,6 @@ func (s *AgentEvaluationsService) UpdateEvaluations(ctx context.Context, project
 	return s.GetEvaluations(ctx, projectUUID, agentUUID, evalUUID)
 }
 
-func (s *AgentEvaluationsService) AppendEvaluations(ctx context.Context, projectUUID string, agentUUID string, evalUUID string, prompts []models.EvaluationsPrompt) (*models.AgentEvaluations, error) {
-	tflog.Debug(ctx, "Appending to evaluation", map[string]interface{}{
-		"projectUUID": projectUUID,
-		"agentUUID":   agentUUID,
-		"evalUUID":    evalUUID,
-	})
-
-	request := apiv1.AppendEvaluationsV1Request{
-		Prompts: prompts,
-	}
-
-	_, err := apiv1.AppendEvaluationsV1(s.client, projectUUID, agentUUID, evalUUID, request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to append to evaluations: %w", err)
-	}
-
-	// Get the updated evaluation details
-	return s.GetEvaluations(ctx, projectUUID, agentUUID, evalUUID)
-}
-
 func (s *AgentEvaluationsService) DeleteEvaluations(ctx context.Context, projectUUID string, agentUUID string, evalUUID string) error {
 	tflog.Debug(ctx, "Deleting evaluation", map[string]interface{}{
 		"projectUUID": projectUUID,

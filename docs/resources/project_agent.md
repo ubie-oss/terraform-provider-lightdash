@@ -3,16 +3,28 @@
 page_title: "lightdash_project_agent Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Manages a Lightdash project agent. This resource represents an AI agent configured within a Lightdash project. Currently, this resource only supports reading existing agents and does not support creating, updating, or deleting agents.
+  Manages a Lightdash project AI agent (lightdash_project_agent): create, read, update, and delete agents via the Lightdash API. Optional description defaults to empty; optional enable_reasoning defaults to true; optional space_access defaults to an empty list meaning unrestricted access to all project spaces (set explicit space UUIDs to restrict).
 ---
 
 # lightdash_project_agent (Resource)
 
-Manages a Lightdash project agent. This resource represents an AI agent configured within a Lightdash project. Currently, this resource only supports reading existing agents and does not support creating, updating, or deleting agents.
+Manages a Lightdash project AI agent (`lightdash_project_agent`): create, read, update, and delete agents via the Lightdash API. Optional `description` defaults to empty; optional `enable_reasoning` defaults to `true`; optional `space_access` defaults to an empty list meaning unrestricted access to all project spaces (set explicit space UUIDs to restrict).
 
 ## Example Usage
 
 ```terraform
+# Minimal configuration: only organization_uuid, project_uuid, name, instruction,
+# and deletion_protection are required. description, enable_reasoning, and space_access
+# default to empty description, reasoning enabled, and access to all spaces.
+#
+# resource "lightdash_project_agent" "minimal" {
+#   organization_uuid   = "xxxx-xxxx-xxxx"
+#   project_uuid        = "xxxx-xxxx-xxxx"
+#   name                = "My Agent"
+#   instruction         = "You are a helpful assistant."
+#   deletion_protection = false
+# }
+
 resource "lightdash_project_agent" "test" {
   organization_uuid = "xxxx-xxxx-xxxx"
   project_uuid      = "xxxx-xxxx-xxxx"
@@ -57,22 +69,22 @@ resource "lightdash_project_agent" "test" {
 ### Required
 
 - `deletion_protection` (Boolean) When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.
-- `description` (String) The description of the Lightdash agent.
-- `enable_reasoning` (Boolean) Whether to enable reasoning for the agent.
 - `instruction` (String) Custom instruction (system prompt) for the agent (max 8192 chars).
 - `name` (String) The name of the Lightdash agent.
 - `organization_uuid` (String) The UUID of the Lightdash organization.
 - `project_uuid` (String) The UUID of the Lightdash project.
-- `space_access` (List of String) UUIDs of spaces the agent has access to.
 
 ### Optional
 
 - `agent_uuid` (String) The UUID of the Lightdash agent.
+- `description` (String) Agent description. Omit for empty (matches Lightdash default).
 - `enable_data_access` (Boolean) Whether the agent can access underlying project data.
+- `enable_reasoning` (Boolean) Whether reasoning is enabled for the agent. Defaults to `true` (Lightdash default).
 - `enable_self_improvement` (Boolean) Whether the agent can improve itself based on user interactions.
 - `group_access` (List of String) UUIDs of user groups with access.
 - `image_url` (String) URL for the agent's icon/image.
 - `integrations` (Attributes List) List of integrations for the agent. (see [below for nested schema](#nestedatt--integrations))
+- `space_access` (List of String) UUIDs of spaces the agent may access. An empty list means unrestricted access to all spaces (Lightdash default).
 - `tags` (List of String) Tags associated with the agent.
 - `user_access` (List of String) UUIDs of individual users with access.
 - `version` (Number) The version of the agent.
