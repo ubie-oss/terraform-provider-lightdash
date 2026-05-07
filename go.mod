@@ -24,11 +24,13 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90
 	golang.org/x/tools v0.43.0
 )
 
-require github.com/stretchr/testify v1.11.1 // indirect
+require (
+	github.com/stretchr/testify v1.11.1 // indirect
+	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
+)
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

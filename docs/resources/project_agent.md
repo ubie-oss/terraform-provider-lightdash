@@ -3,19 +3,19 @@
 page_title: "lightdash_project_agent Resource - terraform-provider-lightdash"
 subcategory: ""
 description: |-
-  Manages a Lightdash project AI agent (lightdash_project_agent): create, read, update, and delete agents via the Lightdash API. Optional description defaults to empty; optional enable_reasoning defaults to true; optional space_access defaults to an empty list meaning unrestricted access to all project spaces (set explicit space UUIDs to restrict).
+  Manages a Lightdash project AI agent (lightdash_project_agent): create, read, update, and delete agents via the Lightdash API. Optional description defaults to empty; optional space_access defaults to an empty list meaning unrestricted access to all project spaces (set explicit space UUIDs to restrict).
 ---
 
 # lightdash_project_agent (Resource)
 
-Manages a Lightdash project AI agent (`lightdash_project_agent`): create, read, update, and delete agents via the Lightdash API. Optional `description` defaults to empty; optional `enable_reasoning` defaults to `true`; optional `space_access` defaults to an empty list meaning unrestricted access to all project spaces (set explicit space UUIDs to restrict).
+Manages a Lightdash project AI agent (`lightdash_project_agent`): create, read, update, and delete agents via the Lightdash API. Optional `description` defaults to empty; optional `space_access` defaults to an empty list meaning unrestricted access to all project spaces (set explicit space UUIDs to restrict).
 
 ## Example Usage
 
 ```terraform
 # Minimal configuration: only organization_uuid, project_uuid, name, instruction,
-# and deletion_protection are required. description, enable_reasoning, and space_access
-# default to empty description, reasoning enabled, and access to all spaces.
+# and deletion_protection are required. description and space_access default to
+# empty description and access to all spaces.
 #
 # resource "lightdash_project_agent" "minimal" {
 #   organization_uuid   = "xxxx-xxxx-xxxx"
@@ -38,7 +38,6 @@ resource "lightdash_project_agent" "test" {
 
   enable_data_access      = true
   enable_self_improvement = true
-  enable_reasoning        = true
 
   group_access = ["xxxx-xxxx-xxxx"]
   user_access  = ["xxxx-xxxx-xxxx"]
@@ -79,7 +78,6 @@ resource "lightdash_project_agent" "test" {
 - `agent_uuid` (String) The UUID of the Lightdash agent.
 - `description` (String) Agent description. Omit for empty (matches Lightdash default).
 - `enable_data_access` (Boolean) Whether the agent can access underlying project data.
-- `enable_reasoning` (Boolean) Whether reasoning is enabled for the agent. Defaults to `true` (Lightdash default).
 - `enable_self_improvement` (Boolean) Whether the agent can improve itself based on user interactions.
 - `group_access` (List of String) UUIDs of user groups with access.
 - `image_url` (String) URL for the agent's icon/image.

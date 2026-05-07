@@ -10,7 +10,6 @@ resource "lightdash_project_agent" "test_agent" {
   deletion_protection = false
   tags                = ["evaluation", "test"]
   enable_data_access  = true
-  enable_reasoning    = false
   space_access        = []
 }
 
