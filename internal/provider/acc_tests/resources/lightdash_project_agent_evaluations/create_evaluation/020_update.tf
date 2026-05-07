@@ -9,7 +9,6 @@ resource "lightdash_project_agent" "test_agent" {
   instruction         = "You are a helpful AI assistant for data analysis and evaluations."
   tags                = ["evaluation", "test"]
   enable_data_access  = true
-  enable_reasoning    = false
   space_access        = []
   deletion_protection = false
 }

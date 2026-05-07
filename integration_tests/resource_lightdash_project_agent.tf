@@ -6,7 +6,6 @@ resource "lightdash_project_agent" "test_agent" {
   instruction        = "test You are a helpful AI assistant for data analysis."
   tags               = ["test", "terraform"]
   enable_data_access = true
-  enable_reasoning   = true
   space_access = [
     lightdash_space.test_public.space_uuid,
   ]

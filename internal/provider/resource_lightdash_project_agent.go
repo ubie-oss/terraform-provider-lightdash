@@ -71,7 +71,6 @@ type projectAgentResourceModel struct {
 	UserAccess            types.List   `tfsdk:"user_access"`
 	Description           types.String `tfsdk:"description"`
 	SpaceAccess           types.List   `tfsdk:"space_access"`
-	EnableReasoning       types.Bool   `tfsdk:"enable_reasoning"`
 	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
 	Integrations          types.List   `tfsdk:"integrations"`
 	Version               types.Int64  `tfsdk:"version"`
@@ -195,12 +194,6 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
-			},
-			"enable_reasoning": schema.BoolAttribute{
-				MarkdownDescription: "Whether reasoning is enabled for the agent. Defaults to `true` (Lightdash default).",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(true),
 			},
 			"deletion_protection": schema.BoolAttribute{
 				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
@@ -353,9 +346,6 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	// Get enable self improvement (schema default true when omitted)
 	enableSelfImprovement := plan.EnableSelfImprovement.ValueBool()
 
-	// Get enable reasoning (schema default true when omitted)
-	enableReasoning := plan.EnableReasoning.ValueBool()
-
 	// Get description (schema default empty string when omitted)
 	description := ""
 	if !plan.Description.IsUnknown() && !plan.Description.IsNull() {
@@ -382,7 +372,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		spaceAccess = []string{}
 	}
 
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, enableReasoning, version)
+	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -392,8 +382,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Map response to state model
-	plan.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
+	plan.ID = types.StringValue(getProjectAgentResourceId(agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
 	plan.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
 	plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
@@ -464,7 +453,6 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
-	plan.EnableReasoning = types.BoolValue(agent.EnableReasoning)
 	plan.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
@@ -544,8 +532,7 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Map response to state model
-	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
+	state.ID = types.StringValue(getProjectAgentResourceId(agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
 	state.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
 	state.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	state.AgentUUID = types.StringValue(agent.AgentUUID)
@@ -616,7 +603,6 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 
 	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	state.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
-	state.EnableReasoning = types.BoolValue(agent.EnableReasoning)
 	state.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
@@ -774,16 +760,13 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	enableSelfImprovementVal := plan.EnableSelfImprovement.ValueBool()
 	enableSelfImprovement := &enableSelfImprovementVal
 
-	enableReasoningVal := plan.EnableReasoning.ValueBool()
-	enableReasoning := &enableReasoningVal
-
 	// Always include version in updates
 	versionVal := plan.Version.ValueInt64()
 	version := versionVal
 
 	// Update agent via service
 	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, enableReasoning, version)
+	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Lightdash project agent",
@@ -793,8 +776,7 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Update the plan with the response data
-	plan.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
+	plan.ID = types.StringValue(getProjectAgentResourceId(agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
 	plan.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
 	plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
@@ -865,7 +847,6 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
-	plan.EnableReasoning = types.BoolValue(agent.EnableReasoning)
 	plan.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
@@ -1044,7 +1025,6 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_data_access"), agent.EnableDataAccess)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), agent.EnableSelfImprovement)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_reasoning"), agent.EnableReasoning)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("description"), agent.Description)...)
 
 	// Convert group access slice to Terraform List (ensure never null)

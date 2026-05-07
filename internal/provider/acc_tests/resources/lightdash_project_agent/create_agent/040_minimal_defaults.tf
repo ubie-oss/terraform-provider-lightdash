@@ -10,7 +10,7 @@ resource "lightdash_project_agent" "minimal" {
 
   deletion_protection = false
 
-  # description, enable_reasoning, and space_access intentionally omitted — provider defaults apply.
+  # description and space_access intentionally omitted — provider defaults apply.
 }
 
 output "is_minimal_agent_uuid_set" {

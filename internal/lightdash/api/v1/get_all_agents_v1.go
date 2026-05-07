@@ -44,7 +44,6 @@ type GetAllAgentsV1Result struct {
 	UserAccess            []string           `json:"userAccess,omitempty"`
 	Description           string             `json:"description"`
 	SpaceAccess           []string           `json:"spaceAccess"`
-	EnableReasoning       bool               `json:"enableReasoning"`
 }
 
 type GetAllAgentsV1Response struct {

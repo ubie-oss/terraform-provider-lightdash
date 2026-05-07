@@ -71,7 +71,6 @@ func (s *AgentService) GetAllAgents(ctx context.Context) ([]models.Agent, error)
 			UserAccess:            agent.UserAccess,
 			Description:           agent.Description,
 			SpaceAccess:           agent.SpaceAccess,
-			EnableReasoning:       agent.EnableReasoning,
 		})
 	}
 
@@ -115,19 +114,17 @@ func (s *AgentService) GetAgent(ctx context.Context, projectUuid string, agentUu
 		UserAccess:            agent.UserAccess,
 		Description:           agent.Description,
 		SpaceAccess:           agent.SpaceAccess,
-		EnableReasoning:       agent.EnableReasoning,
 	}
 
 	return result, nil
 }
 
-func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, description string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, spaceAccess []string, enableDataAccess bool, enableSelfImprovement bool, enableReasoning bool, version int64) (*models.Agent, error) {
+func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name string, description string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, spaceAccess []string, enableDataAccess bool, enableSelfImprovement bool, version int64) (*models.Agent, error) {
 	tflog.Debug(ctx, "Creating agent", map[string]interface{}{
 		"projectUuid":           projectUuid,
 		"name":                  name,
 		"enableDataAccess":      enableDataAccess,
 		"enableSelfImprovement": enableSelfImprovement,
-		"enableReasoning":       enableReasoning,
 	})
 
 	// Convert model integrations to API integrations
@@ -151,7 +148,6 @@ func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name
 		SpaceAccess:           spaceAccess,
 		EnableDataAccess:      enableDataAccess,
 		EnableSelfImprovement: enableSelfImprovement,
-		EnableReasoning:       enableReasoning,
 		Version:               version,
 	}
 
@@ -186,7 +182,6 @@ func (s *AgentService) CreateAgent(ctx context.Context, projectUuid string, name
 		UserAccess:            agent.UserAccess,
 		Description:           agent.Description,
 		SpaceAccess:           agent.SpaceAccess,
-		EnableReasoning:       agent.EnableReasoning,
 	}
 
 	return result, nil
@@ -206,7 +201,7 @@ func (s *AgentService) DeleteAgent(ctx context.Context, projectUuid string, agen
 	return nil
 }
 
-func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, description *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, spaceAccess []string, enableDataAccess *bool, enableSelfImprovement *bool, enableReasoning *bool, version int64) (*models.Agent, error) {
+func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agentUuid string, name *string, description *string, instruction *string, imageUrl *string, tags []string, integrations []models.AgentIntegration, groupAccess []string, userAccess []string, spaceAccess []string, enableDataAccess *bool, enableSelfImprovement *bool, version int64) (*models.Agent, error) {
 	tflog.Debug(ctx, "Updating agent", map[string]interface{}{
 		"projectUuid": projectUuid,
 		"agentUuid":   agentUuid,
@@ -234,7 +229,6 @@ func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agen
 		SpaceAccess:           spaceAccess,
 		EnableDataAccess:      enableDataAccess,
 		EnableSelfImprovement: enableSelfImprovement,
-		EnableReasoning:       enableReasoning,
 		Version:               version,
 	}
 
@@ -269,7 +263,6 @@ func (s *AgentService) UpdateAgent(ctx context.Context, projectUuid string, agen
 		UserAccess:            agent.UserAccess,
 		Description:           agent.Description,
 		SpaceAccess:           agent.SpaceAccess,
-		EnableReasoning:       agent.EnableReasoning,
 	}
 
 	return result, nil

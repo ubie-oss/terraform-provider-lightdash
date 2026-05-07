@@ -12,7 +12,6 @@ resource "lightdash_project_agent" "test" {
   tags                    = ["terraform", "updated"]
   enable_data_access      = true
   enable_self_improvement = true
-  enable_reasoning        = true
   space_access            = []
   group_access            = []
   user_access             = []
