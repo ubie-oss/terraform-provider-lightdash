@@ -21,8 +21,6 @@ import (
 
 	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
 
-	slices "golang.org/x/exp/slices"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -171,7 +169,14 @@ func (d *organizationMembersByEmailsDataSource) Read(ctx context.Context, req da
 	newMembers := []organizationMemberModel{}
 	for _, member := range members {
 		// Check if the email is in the list of emails
-		if !slices.Contains(emailList, member.Email) {
+		emailFound := false
+		for _, e := range emailList {
+			if e == member.Email {
+				emailFound = true
+				break
+			}
+		}
+		if !emailFound {
 			tflog.Debug(ctx, fmt.Sprintf("(organization_members_by_emails) Skipping member %s because it is not in the list of emails", member.Email))
 			continue
 		}
