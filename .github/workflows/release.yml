@@ -30,6 +30,9 @@ permissions:
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    environment:
+      name: release
+      deployment: true
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
