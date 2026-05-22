@@ -23,17 +23,17 @@ jobs:
     timeout-minutes: 5
     name: Run pr agent on every pull request, respond to user comments
     steps:
-      - uses: actions/checkout@v6.0.2
-      - uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6.0.2
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # ratchet:step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
-      - uses: google-github-actions/auth@v3
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # ratchet:google-github-actions/auth@v3
         with:
           workload_identity_provider: projects/131500153501/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-oidc-provider
           service_account: ai-code-review@ubie-oss-data-engineering.iam.gserviceaccount.com
           access_token_lifetime: 300
       - name: PR Agent action step
         id: pragent
-        uses: Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@e6ef3c0adfbe1c5ffc6818f8dd420c74c8dc6ea8 # ratchet:Codium-ai/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
