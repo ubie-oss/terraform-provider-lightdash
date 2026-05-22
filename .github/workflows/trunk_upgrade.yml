@@ -17,13 +17,13 @@ jobs:
       pull-requests: write # For trunk to create PRs
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6.0.2
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # ratchet:step-security/harden-runner@v2.19.4
         with:
           egress-policy: audit
       # >>> Install your own deps here (npm install, etc) <<<
       # SEE https://github.com/trunk-io/trunk-action
       - name: Trunk Upgrade
-        uses: trunk-io/trunk-action/upgrade@v1
+        uses: trunk-io/trunk-action/upgrade@75699af9e26881e564e9d832ef7dc3af25ec031b # ratchet:trunk-io/trunk-action/upgrade@v1
         with:
           signoff: true
