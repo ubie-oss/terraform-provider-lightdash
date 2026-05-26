@@ -34,6 +34,6 @@ jobs:
           access_token_lifetime: 300
       - name: PR Agent action step
         id: pragent
-        uses: Codium-ai/pr-agent@e6ef3c0adfbe1c5ffc6818f8dd420c74c8dc6ea8 # ratchet:Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@751af2422bef9be99fa605734c058c1c9bc1b3fa # ratchet:Codium-ai/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
