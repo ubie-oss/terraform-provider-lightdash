@@ -50,3 +50,14 @@ All standard dev commands are defined in `GNUmakefile`:
 3. Run `terraform plan` in a directory with a Lightdash provider config. The provider will load from the local binary. A real Lightdash API token is needed for plans/applies to succeed.
 
 More setup and acceptance-test detail: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Learned User Preferences
+
+- When implementing an attached plan, do not edit the plan file; use existing todos instead of recreating them.
+- For high-impact credentials (e.g. OAuth clients), prefer `deletion_protection` matching `lightdash_space`: Terraform-only delete guard with import default `true`.
+
+## Learned Workspace Facts
+
+- In git worktrees, `tfplugindocs` may infer the provider name from the directory basename (e.g. `gv41`); keep `--provider-name lightdash` on the `main.go` `go:generate` line or `make gen-docs` fails template rendering.
+- Embedded markdown under `internal/provider/docs/` should be plain descriptive prose only—do not paste generated schema bullet lists; schema-like embedded content corrupts registry docs (nested frontmatter, trailing-whitespace `make lint` failures).
+- Shared Terraform string Set/List conversion helpers belong in `internal/provider/utils.go`, not in individual resource or data-source files.

@@ -26,6 +26,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -232,4 +235,34 @@ func readMarkdownDescription(ctx context.Context, filename string) (string, erro
 	}
 
 	return string(content), nil
+}
+
+func stringSetToStringSlice(ctx context.Context, set types.Set) ([]string, diag.Diagnostics) {
+	var values []types.String
+	diags := set.ElementsAs(ctx, &values, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	result := make([]string, len(values))
+	for i, value := range values {
+		result[i] = value.ValueString()
+	}
+	return result, diags
+}
+
+func stringSliceToStringSet(ctx context.Context, values []string) (types.Set, diag.Diagnostics) {
+	elems := make([]attr.Value, len(values))
+	for i, value := range values {
+		elems[i] = types.StringValue(value)
+	}
+	return types.SetValueFrom(ctx, types.StringType, elems)
+}
+
+func stringSliceToStringList(ctx context.Context, values []string) (types.List, diag.Diagnostics) {
+	elems := make([]attr.Value, len(values))
+	for i, value := range values {
+		elems[i] = types.StringValue(value)
+	}
+	return types.ListValueFrom(ctx, types.StringType, elems)
 }
