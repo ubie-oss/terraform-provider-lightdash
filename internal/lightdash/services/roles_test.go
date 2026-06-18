@@ -86,23 +86,6 @@ func TestResolveRoleIDFromRoles_duplicateName(t *testing.T) {
 	}
 }
 
-func TestResolveRoleNameFromRoles(t *testing.T) {
-	roles := testSystemRoles()
-
-	got, err := resolveRoleNameFromRoles(roles, "developer")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got != "developer" {
-		t.Errorf("got %q, want developer", got)
-	}
-
-	_, err = resolveRoleNameFromRoles(roles, "missing")
-	if err == nil {
-		t.Fatal("expected not found error")
-	}
-}
-
 func TestNormalizeRoleName(t *testing.T) {
 	if got := normalizeRoleName("Interactive Viewer"); got != "interactive_viewer" {
 		t.Errorf("got %q, want interactive_viewer", got)
@@ -135,15 +118,15 @@ func TestTerraformOrganizationRoleFromAssignment(t *testing.T) {
 	}
 }
 
-func TestFilterGroupAssignments(t *testing.T) {
+func TestFilterAssignmentsByType(t *testing.T) {
 	assignments := []models.RoleAssignment{
-		{AssigneeType: "user", AssigneeID: "user-1", RoleID: "viewer"},
-		{AssigneeType: "group", AssigneeID: "group-1", RoleID: "editor"},
-		{AssigneeType: "group", AssigneeID: "group-2", RoleID: "admin"},
+		{AssigneeType: models.AssigneeTypeUser, AssigneeID: "user-1", RoleID: "viewer"},
+		{AssigneeType: models.AssigneeTypeGroup, AssigneeID: "group-1", RoleID: "editor"},
+		{AssigneeType: models.AssigneeTypeGroup, AssigneeID: "group-2", RoleID: "admin"},
 		{AssigneeType: "other", AssigneeID: "other-1", RoleID: "viewer"},
 	}
 
-	got := filterGroupAssignments(assignments)
+	got := filterAssignmentsByType(assignments, models.AssigneeTypeGroup)
 	if len(got) != 2 {
 		t.Fatalf("len = %d, want 2", len(got))
 	}

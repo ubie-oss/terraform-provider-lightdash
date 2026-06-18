@@ -18,15 +18,22 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	apiv2 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v2"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
+var (
+	roleServiceInstance *RoleService
+	roleServiceOnce     sync.Once
+)
+
 type RoleService struct {
 	client     *api.Client
 	rolesByOrg map[string][]models.Role
+	orgUUID    string
 }
 
 func NewRoleService(client *api.Client) *RoleService {
@@ -34,6 +41,14 @@ func NewRoleService(client *api.Client) *RoleService {
 		client:     client,
 		rolesByOrg: make(map[string][]models.Role),
 	}
+}
+
+// GetRoleService returns a shared RoleService instance with a cached org role catalog.
+func GetRoleService(client *api.Client) *RoleService {
+	roleServiceOnce.Do(func() {
+		roleServiceInstance = NewRoleService(client)
+	})
+	return roleServiceInstance
 }
 
 func (s *RoleService) GetRoles(ctx context.Context, orgUUID string) ([]models.Role, error) {
@@ -59,13 +74,16 @@ func (s *RoleService) ResolveRoleID(ctx context.Context, orgUUID string, roleNam
 	return resolveRoleIDFromRoles(roles, roleName)
 }
 
-func (s *RoleService) ResolveRoleName(ctx context.Context, orgUUID string, roleID string) (string, error) {
-	roles, err := s.GetRoles(ctx, orgUUID)
+func (s *RoleService) OrganizationUUID(ctx context.Context) (string, error) {
+	if s.orgUUID != "" {
+		return s.orgUUID, nil
+	}
+	orgUUID, err := GetOrganizationUUID(ctx, s.client)
 	if err != nil {
 		return "", err
 	}
-
-	return resolveRoleNameFromRoles(roles, roleID)
+	s.orgUUID = orgUUID
+	return orgUUID, nil
 }
 
 func (s *RoleService) GetOrgUserAssignment(ctx context.Context, orgUUID string, userUUID string) (*models.RoleAssignment, error) {
@@ -74,14 +92,7 @@ func (s *RoleService) GetOrgUserAssignment(ctx context.Context, orgUUID string, 
 		return nil, fmt.Errorf("failed to list organization role assignments: %w", err)
 	}
 
-	for i := range assignments {
-		assignment := &assignments[i]
-		if assignment.AssigneeType == "user" && assignment.AssigneeID == userUUID {
-			return assignment, nil
-		}
-	}
-
-	return nil, fmt.Errorf("organization role assignment not found for user %s", userUUID)
+	return findAssignment(assignments, models.AssigneeTypeUser, userUUID, fmt.Sprintf("organization role assignment not found for user %s", userUUID))
 }
 
 func (s *RoleService) GetProjectUserAssignment(ctx context.Context, projectUUID string, userUUID string) (*models.RoleAssignment, error) {
@@ -90,14 +101,7 @@ func (s *RoleService) GetProjectUserAssignment(ctx context.Context, projectUUID 
 		return nil, fmt.Errorf("failed to list project role assignments: %w", err)
 	}
 
-	for i := range assignments {
-		assignment := &assignments[i]
-		if assignment.AssigneeType == "user" && assignment.AssigneeID == userUUID {
-			return assignment, nil
-		}
-	}
-
-	return nil, fmt.Errorf("project role assignment not found for user %s", userUUID)
+	return findAssignment(assignments, models.AssigneeTypeUser, userUUID, fmt.Sprintf("project role assignment not found for user %s", userUUID))
 }
 
 func (s *RoleService) ListProjectGroupAssignments(ctx context.Context, projectUUID string) ([]models.RoleAssignment, error) {
@@ -106,7 +110,7 @@ func (s *RoleService) ListProjectGroupAssignments(ctx context.Context, projectUU
 		return nil, fmt.Errorf("failed to list project role assignments: %w", err)
 	}
 
-	return filterGroupAssignments(assignments), nil
+	return filterAssignmentsByType(assignments, models.AssigneeTypeGroup), nil
 }
 
 func (s *RoleService) GetProjectGroupAssignment(ctx context.Context, projectUUID string, groupUUID string) (*models.RoleAssignment, error) {
@@ -115,24 +119,27 @@ func (s *RoleService) GetProjectGroupAssignment(ctx context.Context, projectUUID
 		return nil, err
 	}
 
+	return findAssignment(assignments, models.AssigneeTypeGroup, groupUUID, fmt.Sprintf("project role assignment not found for group %s", groupUUID))
+}
+
+func findAssignment(assignments []models.RoleAssignment, assigneeType string, assigneeID string, notFoundMsg string) (*models.RoleAssignment, error) {
 	for i := range assignments {
 		assignment := &assignments[i]
-		if assignment.AssigneeID == groupUUID {
+		if assignment.AssigneeType == assigneeType && assignment.AssigneeID == assigneeID {
 			return assignment, nil
 		}
 	}
-
-	return nil, fmt.Errorf("project role assignment not found for group %s", groupUUID)
+	return nil, fmt.Errorf("%s", notFoundMsg)
 }
 
-func filterGroupAssignments(assignments []models.RoleAssignment) []models.RoleAssignment {
-	var groups []models.RoleAssignment
+func filterAssignmentsByType(assignments []models.RoleAssignment, assigneeType string) []models.RoleAssignment {
+	var filtered []models.RoleAssignment
 	for _, assignment := range assignments {
-		if assignment.AssigneeType == "group" {
-			groups = append(groups, assignment)
+		if assignment.AssigneeType == assigneeType {
+			filtered = append(filtered, assignment)
 		}
 	}
-	return groups
+	return filtered
 }
 
 func (s *RoleService) AssignOrgUserRole(ctx context.Context, orgUUID string, userUUID string, roleName string) (*models.RoleAssignment, error) {
@@ -289,19 +296,4 @@ func resolveRoleIDFromRoles(roles []models.Role, roleName string) (string, error
 	default:
 		return "", fmt.Errorf("ambiguous role name %q: %d roles matched", roleName, len(matches))
 	}
-}
-
-func resolveRoleNameFromRoles(roles []models.Role, roleID string) (string, error) {
-	if strings.TrimSpace(roleID) == "" {
-		return "", fmt.Errorf("role ID is empty")
-	}
-
-	target := strings.ToLower(strings.TrimSpace(roleID))
-	for _, role := range roles {
-		if strings.ToLower(role.RoleUUID) == target {
-			return role.RoleUUID, nil
-		}
-	}
-
-	return "", fmt.Errorf("role ID %q not found", roleID)
 }

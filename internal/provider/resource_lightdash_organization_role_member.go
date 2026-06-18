@@ -122,7 +122,7 @@ func (r *organizationRoleMemberResource) Configure(ctx context.Context, req reso
 		return
 	}
 	r.client = client
-	r.roleService = services.NewRoleService(client)
+	r.roleService = services.GetRoleService(client)
 }
 
 func (r *organizationRoleMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

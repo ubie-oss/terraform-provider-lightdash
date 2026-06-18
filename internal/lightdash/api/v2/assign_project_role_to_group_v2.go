@@ -23,13 +23,13 @@ import (
 
 // AssignProjectRoleToGroupV2 upserts a project role assignment for a group.
 func AssignProjectRoleToGroupV2(c *api.Client, projectUUID string, groupUUID string, roleID string, sendEmail bool) (*models.RoleAssignment, error) {
-	if err := validateUUID(projectUUID, "project UUID"); err != nil {
+	if err := requireNonEmpty(projectUUID, "project UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(groupUUID, "group UUID"); err != nil {
+	if err := requireNonEmpty(groupUUID, "group UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(roleID, "role ID"); err != nil {
+	if err := requireNonEmpty(roleID, "role ID"); err != nil {
 		return nil, err
 	}
 

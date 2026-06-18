@@ -23,7 +23,7 @@ import (
 
 // ListProjectRoleAssignmentsV2 returns project-level role assignments.
 func ListProjectRoleAssignmentsV2(c *api.Client, projectUUID string) ([]models.RoleAssignment, error) {
-	if err := validateUUID(projectUUID, "project UUID"); err != nil {
+	if err := requireNonEmpty(projectUUID, "project UUID"); err != nil {
 		return nil, err
 	}
 

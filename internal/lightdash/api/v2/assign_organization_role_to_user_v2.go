@@ -23,13 +23,13 @@ import (
 
 // AssignOrganizationRoleToUserV2 upserts an organization role assignment for a user.
 func AssignOrganizationRoleToUserV2(c *api.Client, orgUUID string, userUUID string, roleID string) (*models.RoleAssignment, error) {
-	if err := validateUUID(orgUUID, "organization UUID"); err != nil {
+	if err := requireNonEmpty(orgUUID, "organization UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(userUUID, "user UUID"); err != nil {
+	if err := requireNonEmpty(userUUID, "user UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(roleID, "role ID"); err != nil {
+	if err := requireNonEmpty(roleID, "role ID"); err != nil {
 		return nil, err
 	}
 

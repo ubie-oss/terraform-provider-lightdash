@@ -16,8 +16,8 @@ package v2
 
 import "testing"
 
-func TestRemoveProjectRoleFromGroupV2_validateUUID(t *testing.T) {
-	if err := validateUUID("", "group UUID"); err == nil {
+func TestRemoveProjectRoleFromGroupV2_requireNonEmpty(t *testing.T) {
+	if err := requireNonEmpty("", "group UUID"); err == nil {
 		t.Fatal("expected error for empty group UUID")
 	}
 }

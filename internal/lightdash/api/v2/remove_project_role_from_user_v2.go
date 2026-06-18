@@ -22,10 +22,10 @@ import (
 
 // RemoveProjectRoleFromUserV2 removes a user's project role assignment.
 func RemoveProjectRoleFromUserV2(c *api.Client, projectUUID string, userUUID string) error {
-	if err := validateUUID(projectUUID, "project UUID"); err != nil {
+	if err := requireNonEmpty(projectUUID, "project UUID"); err != nil {
 		return err
 	}
-	if err := validateUUID(userUUID, "user UUID"); err != nil {
+	if err := requireNonEmpty(userUUID, "user UUID"); err != nil {
 		return err
 	}
 

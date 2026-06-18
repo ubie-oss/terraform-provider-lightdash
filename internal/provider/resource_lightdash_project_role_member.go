@@ -133,7 +133,7 @@ func (r *projectRoleMemberResource) Configure(ctx context.Context, req resource.
 		return
 	}
 	r.client = client
-	r.roleService = services.NewRoleService(client)
+	r.roleService = services.GetRoleService(client)
 }
 
 func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -236,7 +236,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	orgUUID, err := services.GetOrganizationUUID(ctx, r.client)
+	orgUUID, err := r.roleService.OrganizationUUID(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Error resolving organization", err.Error())
 		return
@@ -244,8 +244,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 
 	projectUUID := plan.ProjectUUID.ValueString()
 	userUUID := plan.UserUUID.ValueString()
-	sendEmail := plan.SendEmail.ValueBool()
-	assignment, err := r.roleService.AssignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.String(), sendEmail)
+	assignment, err := r.roleService.AssignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.String(), false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project member's role",

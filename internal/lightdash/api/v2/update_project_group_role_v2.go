@@ -23,13 +23,13 @@ import (
 
 // UpdateProjectGroupRoleV2 updates a group's project role assignment.
 func UpdateProjectGroupRoleV2(c *api.Client, projectUUID string, groupUUID string, roleID string) (*models.RoleAssignment, error) {
-	if err := validateUUID(projectUUID, "project UUID"); err != nil {
+	if err := requireNonEmpty(projectUUID, "project UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(groupUUID, "group UUID"); err != nil {
+	if err := requireNonEmpty(groupUUID, "group UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(roleID, "role ID"); err != nil {
+	if err := requireNonEmpty(roleID, "role ID"); err != nil {
 		return nil, err
 	}
 

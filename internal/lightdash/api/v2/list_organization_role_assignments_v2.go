@@ -23,7 +23,7 @@ import (
 
 // ListOrganizationRoleAssignmentsV2 returns organization-level role assignments.
 func ListOrganizationRoleAssignmentsV2(c *api.Client, orgUUID string) ([]models.RoleAssignment, error) {
-	if err := validateUUID(orgUUID, "organization UUID"); err != nil {
+	if err := requireNonEmpty(orgUUID, "organization UUID"); err != nil {
 		return nil, err
 	}
 

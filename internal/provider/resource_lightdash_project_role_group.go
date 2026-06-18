@@ -117,7 +117,7 @@ func (r *projectRoleGroupResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 	r.client = client
-	r.roleService = services.NewRoleService(client)
+	r.roleService = services.GetRoleService(client)
 }
 
 func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -140,7 +140,7 @@ func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	orgUUID, err := services.GetOrganizationUUID(ctx, r.client)
+	orgUUID, err := r.roleService.OrganizationUUID(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Error resolving organization", err.Error())
 		return
@@ -215,7 +215,7 @@ func (r *projectRoleGroupResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	orgUUID, err := services.GetOrganizationUUID(ctx, r.client)
+	orgUUID, err := r.roleService.OrganizationUUID(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Error resolving organization", err.Error())
 		return

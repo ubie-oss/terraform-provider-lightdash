@@ -16,11 +16,11 @@ package v2
 
 import "testing"
 
-func TestRemoveProjectRoleFromUserV2_validateUUID(t *testing.T) {
-	if err := validateUUID("", "project UUID"); err == nil {
+func TestRemoveProjectRoleFromUserV2_requireNonEmpty(t *testing.T) {
+	if err := requireNonEmpty("", "project UUID"); err == nil {
 		t.Fatal("expected error for empty project UUID")
 	}
-	if err := validateUUID("", "user UUID"); err == nil {
+	if err := requireNonEmpty("", "user UUID"); err == nil {
 		t.Fatal("expected error for empty user UUID")
 	}
 }

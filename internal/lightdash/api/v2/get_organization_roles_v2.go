@@ -29,7 +29,7 @@ type getOrganizationRolesV2Response struct {
 
 // GetOrganizationRolesV2 returns all roles for an organization.
 func GetOrganizationRolesV2(c *api.Client, orgUUID string) ([]models.Role, error) {
-	if err := validateUUID(orgUUID, "organization UUID"); err != nil {
+	if err := requireNonEmpty(orgUUID, "organization UUID"); err != nil {
 		return nil, err
 	}
 

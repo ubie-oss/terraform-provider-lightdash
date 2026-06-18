@@ -60,7 +60,7 @@ func unmarshalRoleAssignmentListResponse(body []byte) ([]models.RoleAssignment, 
 	return response.Results, nil
 }
 
-func validateUUID(value string, fieldName string) error {
+func requireNonEmpty(value string, fieldName string) error {
 	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("%s is empty", fieldName)
 	}

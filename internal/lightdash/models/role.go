@@ -16,6 +16,11 @@ package models
 
 import "time"
 
+const (
+	AssigneeTypeUser  = "user"
+	AssigneeTypeGroup = "group"
+)
+
 // Role is an organization role from GET /api/v2/orgs/{orgUuid}/roles.
 // System roles may include a scopes list (RoleWithScopes shape).
 type Role struct {

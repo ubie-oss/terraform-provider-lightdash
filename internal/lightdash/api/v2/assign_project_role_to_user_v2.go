@@ -23,13 +23,13 @@ import (
 
 // AssignProjectRoleToUserV2 upserts a project role assignment for a user.
 func AssignProjectRoleToUserV2(c *api.Client, projectUUID string, userUUID string, roleID string, sendEmail bool) (*models.RoleAssignment, error) {
-	if err := validateUUID(projectUUID, "project UUID"); err != nil {
+	if err := requireNonEmpty(projectUUID, "project UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(userUUID, "user UUID"); err != nil {
+	if err := requireNonEmpty(userUUID, "user UUID"); err != nil {
 		return nil, err
 	}
-	if err := validateUUID(roleID, "role ID"); err != nil {
+	if err := requireNonEmpty(roleID, "role ID"); err != nil {
 		return nil, err
 	}
 

@@ -127,7 +127,7 @@ func (d *projectGroupAccessesDataSource) Configure(ctx context.Context, req data
 		return
 	}
 	d.client = client
-	d.roleService = services.NewRoleService(client)
+	d.roleService = services.GetRoleService(client)
 }
 
 func (d *projectGroupAccessesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

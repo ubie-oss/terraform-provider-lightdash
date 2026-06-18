@@ -22,10 +22,10 @@ import (
 
 // RemoveProjectRoleFromGroupV2 removes a group's project role assignment.
 func RemoveProjectRoleFromGroupV2(c *api.Client, projectUUID string, groupUUID string) error {
-	if err := validateUUID(projectUUID, "project UUID"); err != nil {
+	if err := requireNonEmpty(projectUUID, "project UUID"); err != nil {
 		return err
 	}
-	if err := validateUUID(groupUUID, "group UUID"); err != nil {
+	if err := requireNonEmpty(groupUUID, "group UUID"); err != nil {
 		return err
 	}
 
