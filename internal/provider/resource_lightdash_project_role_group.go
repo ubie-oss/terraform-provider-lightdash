@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -42,7 +43,8 @@ func NewProjectRoleGroupResource() resource.Resource {
 
 // projectRoleGroupResource defines the resource implementation.
 type projectRoleGroupResource struct {
-	client *api.Client
+	client      *api.Client
+	roleService *services.RoleService
 }
 
 // projectGroupResourceModel describes the resource data model.
@@ -115,6 +117,7 @@ func (r *projectRoleGroupResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 	r.client = client
+	r.roleService = services.NewRoleService(client)
 }
 
 func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -127,20 +130,24 @@ func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Get the group
-	group_uuid := plan.GroupUUID.ValueString()
-	_, err := apiv1.GetGroupV1(r.client, group_uuid)
+	groupUUID := plan.GroupUUID.ValueString()
+	_, err := apiv1.GetGroupV1(r.client, groupUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
-			"Could not find group ID "+group_uuid+": "+err.Error(),
+			"Could not find group ID "+groupUUID+": "+err.Error(),
 		)
 		return
 	}
 
-	// Grant the project role to the group
-	project_uuid := plan.ProjectUUID.ValueString()
-	project_role := plan.ProjectRole
-	grantedGroup, err := apiv1.AddProjectAccessToGroupV1(r.client, project_uuid, group_uuid, project_role)
+	orgUUID, err := services.GetOrganizationUUID(ctx, r.client)
+	if err != nil {
+		resp.Diagnostics.AddError("Error resolving organization", err.Error())
+		return
+	}
+
+	projectUUID := plan.ProjectUUID.ValueString()
+	assignment, err := r.roleService.AssignProjectGroupRole(ctx, orgUUID, projectUUID, groupUUID, plan.ProjectRole.String(), false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting project role to group",
@@ -149,30 +156,27 @@ func (r *projectRoleGroupResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	// Set resources
-	state_id := getProjectRoleGroupResourceId(plan.ProjectUUID.ValueString(), plan.GroupUUID.ValueString())
-	plan.ID = types.StringValue(state_id)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
-	plan.ProjectUUID = types.StringValue(grantedGroup.ProjectUUID)
-	plan.GroupUUID = types.StringValue(grantedGroup.GroupUUID)
-	plan.ProjectRole = models.ProjectMemberRole(grantedGroup.Role)
-
-	// Set state to fully populated data
-	diags = resp.State.Set(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	projectRole, err := services.TerraformProjectRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping project role", err.Error())
 		return
 	}
+
+	stateID := getProjectRoleGroupResourceId(projectUUID, groupUUID)
+	plan.ID = types.StringValue(stateID)
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
+	plan.ProjectUUID = types.StringValue(projectUUID)
+	plan.GroupUUID = types.StringValue(groupUUID)
+	plan.ProjectRole = projectRole
+
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *projectRoleGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// Declare variables to import from state
-	var projectUuid string
-	var groupUuid string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUuid)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("group_uuid"), &groupUuid)...)
+	var projectUUID string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUUID)...)
 
-	// Get current state
 	var state projectGroupResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -180,49 +184,30 @@ func (r *projectRoleGroupResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	// Retrieve group details using the API
-	groupUuid = state.GroupUUID.ValueString()
-	groupsInProject, err := apiv1.GetProjectGroupAccessesV1(r.client, projectUuid)
+	groupUUID := state.GroupUUID.ValueString()
+	assignment, err := r.roleService.GetProjectGroupAssignment(ctx, projectUUID, groupUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
-			"Could not read group with UUID "+groupUuid+": "+err.Error(),
+			"Could not read group with UUID "+groupUUID+": "+err.Error(),
 		)
 		return
 	}
 
-	// Find the group in the groups of the project
-	var group *apiv1.GetProjectGroupAccessesV1Results
-	found := false
-	for i := range groupsInProject {
-		if groupsInProject[i].GroupUUID == groupUuid {
-			group = &groupsInProject[i]
-			found = true
-			break
-		}
-	}
-	if !found {
-		resp.Diagnostics.AddError(
-			"Error Reading group",
-			"Group with UUID "+groupUuid+" not found in project",
-		)
+	projectRole, err := services.TerraformProjectRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping project role", err.Error())
 		return
 	}
 
-	// Set the state values
-	state.GroupUUID = types.StringValue(group.GroupUUID)
-	state.ProjectRole = group.ProjectRole
+	state.GroupUUID = types.StringValue(groupUUID)
+	state.ProjectRole = projectRole
 
-	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *projectRoleGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Retrieve values from plan
 	var plan projectGroupResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -230,11 +215,15 @@ func (r *projectRoleGroupResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	// Update existing project group role
-	project_uuid := plan.ProjectUUID.ValueString()
-	group_uuid := plan.GroupUUID.ValueString()
-	role := plan.ProjectRole
-	updatedGroupAccess, err := apiv1.UpdateProjectAccessForGroupV1(r.client, project_uuid, group_uuid, role)
+	orgUUID, err := services.GetOrganizationUUID(ctx, r.client)
+	if err != nil {
+		resp.Diagnostics.AddError("Error resolving organization", err.Error())
+		return
+	}
+
+	projectUUID := plan.ProjectUUID.ValueString()
+	groupUUID := plan.GroupUUID.ValueString()
+	assignment, err := r.roleService.UpdateProjectGroupRole(ctx, orgUUID, projectUUID, groupUUID, plan.ProjectRole.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project group's role",
@@ -243,21 +232,21 @@ func (r *projectRoleGroupResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	// Update the state
-	plan.GroupUUID = types.StringValue(updatedGroupAccess.GroupUUID)
-	plan.ProjectRole = models.ProjectMemberRole(updatedGroupAccess.Role)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
-
-	// Set state
-	diags = resp.State.Set(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	projectRole, err := services.TerraformProjectRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping project role", err.Error())
 		return
 	}
+
+	plan.GroupUUID = types.StringValue(groupUUID)
+	plan.ProjectRole = projectRole
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
+
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *projectRoleGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// Retrieve values from state
 	var state projectGroupResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -265,14 +254,13 @@ func (r *projectRoleGroupResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	// Delete existing project group role
-	project_uuid := state.ProjectUUID.ValueString()
-	group_uuid := state.GroupUUID.ValueString()
-	tflog.Info(ctx, fmt.Sprintf("Revoking project role for group %s", group_uuid))
-	err := apiv1.RemoveProjectAccessFromGroupV1(r.client, project_uuid, group_uuid)
+	projectUUID := state.ProjectUUID.ValueString()
+	groupUUID := state.GroupUUID.ValueString()
+	tflog.Info(ctx, fmt.Sprintf("Revoking project role for group %s", groupUUID))
+	err := r.roleService.RemoveProjectGroupRole(ctx, projectUUID, groupUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Revoking project group role: "+group_uuid+", project: "+project_uuid,
+			"Error Revoking project group role: "+groupUUID+", project: "+projectUUID,
 			"Could not revoke project group role, unexpected error: "+err.Error(),
 		)
 		return
@@ -280,8 +268,7 @@ func (r *projectRoleGroupResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r *projectRoleGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Extract the resource ID
-	extracted_strings, err := extractProjectRoleGroupResourceId(req.ID)
+	extractedStrings, err := extractProjectRoleGroupResourceId(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error extracting resource ID",
@@ -289,60 +276,40 @@ func (r *projectRoleGroupResource) ImportState(ctx context.Context, req resource
 		)
 		return
 	}
-	project_uuid := extracted_strings[0]
-	group_uuid := extracted_strings[1]
+	projectUUID := extractedStrings[0]
+	groupUUID := extractedStrings[1]
 
-	// Retrieve group details using the API
-	groupUuid := group_uuid
-	groupsInProject, err := apiv1.GetProjectGroupAccessesV1(r.client, project_uuid)
+	assignment, err := r.roleService.GetProjectGroupAssignment(ctx, projectUUID, groupUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",
-			"Could not read group with UUID "+groupUuid+": "+err.Error(),
+			"Could not read group with UUID "+groupUUID+": "+err.Error(),
 		)
 		return
 	}
 
-	// Find the group in the groups of the project
-	var group *apiv1.GetProjectGroupAccessesV1Results
-	found := false
-	for i := range groupsInProject {
-		if groupsInProject[i].GroupUUID == groupUuid {
-			group = &groupsInProject[i]
-			found = true
-			break
-		}
-	}
-	if !found {
-		resp.Diagnostics.AddError(
-			"Error Reading group",
-			"Group with UUID "+groupUuid+" not found in project",
-		)
+	projectRole, err := services.TerraformProjectRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping project role", err.Error())
 		return
 	}
 
-	// Set the resource attributes
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), project_uuid)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_uuid"), group_uuid)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role"), group.ProjectRole)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("group_uuid"), groupUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role"), projectRole)...)
 }
 
 func getProjectRoleGroupResourceId(project_uuid string, group_uuid string) string {
-	// Return the resource ID
 	return fmt.Sprintf("projects/%s/access-groups/%s", project_uuid, group_uuid)
 }
 
 func extractProjectRoleGroupResourceId(input string) ([]string, error) {
-	// Extract the captured groups
 	pattern := `^projects/([^/]+)/access-groups/([^/]+)$`
 	groups, err := extractStrings(input, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract resource ID: %w", err)
 	}
 
-	// Return the captured strings
-	project_uuid := groups[0]
-	group_uuid := groups[1]
-	return []string{project_uuid, group_uuid}, nil
+	return []string{groups[0], groups[1]}, nil
 }

@@ -55,9 +55,13 @@ More setup and acceptance-test detail: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - When implementing an attached plan, do not edit the plan file; use existing todos instead of recreating them.
 - For high-impact credentials (e.g. OAuth clients), prefer `deletion_protection` matching `lightdash_space`: Terraform-only delete guard with import default `true`.
+- Do not add acceptance tests for `lightdash_project_role_member` or `lightdash_organization_role_member`; they mutate real user org/project access and are unsafe on production-like instances.
+- Avoid unit or integration tests that call live APIs in ways that mutate existing org/project access; prefer offline JSON fixtures and pure service logic tests.
 
 ## Learned Workspace Facts
 
 - In git worktrees, `tfplugindocs` may infer the provider name from the directory basename (e.g. `gv41`); keep `--provider-name lightdash` on the `main.go` `go:generate` line or `make gen-docs` fails template rendering.
 - Embedded markdown under `internal/provider/docs/` should be plain descriptive prose only—do not paste generated schema bullet lists; schema-like embedded content corrupts registry docs (nested frontmatter, trailing-whitespace `make lint` failures).
 - Shared Terraform string Set/List conversion helpers belong in `internal/provider/utils.go`, not in individual resource or data-source files.
+- v2 `RoleAssignment` is the shared schema for org and project `.../roles/assignments` list endpoints; it is IAM-assignment-centric and not a drop-in replacement for v1 member-directory APIs (`GET /api/v1/org/users`, `GET /api/v1/projects/{id}/access`).
+- Before implementing v2 API models/clients, verify GET response shapes with live calls against `.env`; swagger alone is insufficient.

@@ -17,14 +17,14 @@ package provider
 import (
 	"context"
 	"fmt"
-
-	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -39,7 +39,8 @@ func NewProjectGroupAccessesDataSource() datasource.DataSource {
 
 // projectGroupAccessesDataSource defines the data source implementation.
 type projectGroupAccessesDataSource struct {
-	client *api.Client
+	client      *api.Client
+	roleService *services.RoleService
 }
 
 type nestedProjectGroupAccessesModel struct {
@@ -126,6 +127,7 @@ func (d *projectGroupAccessesDataSource) Configure(ctx context.Context, req data
 		return
 	}
 	d.client = client
+	d.roleService = services.NewRoleService(client)
 }
 
 func (d *projectGroupAccessesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -135,8 +137,8 @@ func (d *projectGroupAccessesDataSource) Read(ctx context.Context, req datasourc
 		return
 	}
 
-	project_uuid := state.ProjectUUID.ValueString()
-	groupAccesses, err := apiv1.GetProjectGroupAccessesV1(d.client, project_uuid)
+	projectUUID := state.ProjectUUID.ValueString()
+	assignments, err := d.roleService.ListProjectGroupAssignments(ctx, projectUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Lightdash project group accesses",
@@ -145,16 +147,26 @@ func (d *projectGroupAccessesDataSource) Read(ctx context.Context, req datasourc
 		return
 	}
 
-	// Map response body to model
-	var groupAccessesList = []nestedProjectGroupAccessesModel{}
-	for _, groupAccess := range groupAccesses {
-		accessState := nestedProjectGroupAccessesModel{
-			ProjectUUID: types.StringValue(groupAccess.ProjectUUID),
-			GroupUUID:   types.StringValue(groupAccess.GroupUUID),
-			Role:        groupAccess.ProjectRole,
+	groupAccessesList := make([]nestedProjectGroupAccessesModel, 0, len(assignments))
+	for i := range assignments {
+		assignment := &assignments[i]
+		projectRole, err := services.TerraformProjectRoleFromAssignment(assignment)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to map project group role",
+				fmt.Sprintf("group %s: %s", assignment.AssigneeID, err.Error()),
+			)
+			return
 		}
-		groupAccessesList = append(groupAccessesList, accessState)
+		groupAccessesList = append(groupAccessesList, nestedProjectGroupAccessesModel{
+			ProjectUUID: types.StringValue(projectUUID),
+			GroupUUID:   types.StringValue(assignment.AssigneeID),
+			Role:        projectRole,
+		})
 	}
+	sort.Slice(groupAccessesList, func(i, j int) bool {
+		return groupAccessesList[i].GroupUUID.ValueString() < groupAccessesList[j].GroupUUID.ValueString()
+	})
 	state.Groups = groupAccessesList
 
 	// Set resource ID

@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -44,7 +45,8 @@ func NewOrganizationRoleMemberResource() resource.Resource {
 
 // organizationRoleMemberResource defines the resource implementation.
 type organizationRoleMemberResource struct {
-	client *api.Client
+	client      *api.Client
+	roleService *services.RoleService
 }
 
 // organizationRoleMemberResourceModel describes the resource data model.
@@ -72,7 +74,6 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 	}
 
 	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: markdownDescription,
 		Description:         "Lightash the role of a member at organization level",
 		Attributes: map[string]schema.Attribute{
@@ -108,7 +109,6 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 }
 
 func (r *organizationRoleMemberResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
@@ -119,15 +119,13 @@ func (r *organizationRoleMemberResource) Configure(ctx context.Context, req reso
 			"Unexpected Resource Configure Type",
 			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
-
 		return
 	}
 	r.client = client
+	r.roleService = services.NewRoleService(client)
 }
 
 func (r *organizationRoleMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	// We assume the an user already has any role in the organization.
-	// So, we change the role of the user.
 	var plan organizationRoleMemberResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -135,10 +133,11 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	// Update existing organization member
-	user_uuid := plan.UserUUID.ValueString()
+	userUUID := plan.UserUUID.ValueString()
+	orgUUID := plan.OrganizationUUID.ValueString()
 	role := models.OrganizationMemberRole(plan.OrganizationRole.ValueString())
-	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
+
+	assignment, err := r.roleService.AssignOrgUserRole(ctx, orgUUID, userUUID, role.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -146,33 +145,39 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 		)
 		return
 	}
-	// Update the state
-	plan.OrganizationUUID = types.StringValue(user.OrganizationUUID)
-	plan.UserUUID = types.StringValue(user.UserUUID)
-	plan.Email = types.StringValue(user.Email)
-	plan.OrganizationRole = types.StringValue(user.OrganizationRole.String())
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Set resource ID
-	state_id := getOrganizationRoleMemberResourceId(user.OrganizationUUID, user.UserUUID)
-	plan.ID = types.StringValue(state_id)
-
-	// Set state
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	orgRole, err := services.TerraformOrganizationRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping organization role", err.Error())
 		return
 	}
+
+	user, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading organization member",
+			"Could not read organization member ID "+userUUID+": "+err.Error(),
+		)
+		return
+	}
+
+	plan.OrganizationUUID = types.StringValue(orgUUID)
+	plan.UserUUID = types.StringValue(userUUID)
+	plan.Email = types.StringValue(user.Email)
+	plan.OrganizationRole = types.StringValue(orgRole.String())
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	plan.ID = types.StringValue(getOrganizationRoleMemberResourceId(orgUUID, userUUID))
+
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// Declare variables to import from state
-	var organization_uuid string
-	var user_uuid string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organization_uuid)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &user_uuid)...)
+	var organizationUUID string
+	var userUUID string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organizationUUID)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &userUUID)...)
 
-	// Get current state
 	var state organizationRoleMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -180,9 +185,22 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	// Get space
-	user_uuid = state.UserUUID.ValueString()
-	user, err := apiv1.GetOrganizationMemberByUuidV1(r.client, user_uuid)
+	assignment, err := r.roleService.GetOrgUserAssignment(ctx, organizationUUID, userUUID)
+	if err != nil {
+		resp.Diagnostics.AddWarning(
+			"Warning Reading organization member",
+			"Could not read organization role assignment for user "+userUUID+": "+err.Error(),
+		)
+		return
+	}
+
+	orgRole, err := services.TerraformOrganizationRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping organization role", err.Error())
+		return
+	}
+
+	user, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading organization member",
@@ -191,22 +209,16 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	// Set the state values
 	state.OrganizationUUID = types.StringValue(user.OrganizationUUID)
 	state.UserUUID = types.StringValue(user.UserUUID)
 	state.Email = types.StringValue(user.Email)
-	state.OrganizationRole = types.StringValue(user.OrganizationRole.String())
+	state.OrganizationRole = types.StringValue(orgRole.String())
 
-	// Set refreshed state
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *organizationRoleMemberResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Retrieve values from plan
 	var plan organizationRoleMemberResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -214,10 +226,11 @@ func (r *organizationRoleMemberResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	// Update existing organization member
-	user_uuid := plan.UserUUID.ValueString()
+	userUUID := plan.UserUUID.ValueString()
+	orgUUID := plan.OrganizationUUID.ValueString()
 	role := models.OrganizationMemberRole(plan.OrganizationRole.ValueString())
-	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
+
+	assignment, err := r.roleService.AssignOrgUserRole(ctx, orgUUID, userUUID, role.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -225,23 +238,33 @@ func (r *organizationRoleMemberResource) Update(ctx context.Context, req resourc
 		)
 		return
 	}
-	// Update the state
+
+	orgRole, err := services.TerraformOrganizationRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping organization role", err.Error())
+		return
+	}
+
+	user, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading organization member",
+			"Could not read organization member ID "+userUUID+": "+err.Error(),
+		)
+		return
+	}
+
 	plan.OrganizationUUID = types.StringValue(user.OrganizationUUID)
 	plan.UserUUID = types.StringValue(user.UserUUID)
 	plan.Email = types.StringValue(user.Email)
-	plan.OrganizationRole = types.StringValue(user.OrganizationRole.String())
+	plan.OrganizationRole = types.StringValue(orgRole.String())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Set state
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// Retrieve values from state
 	var state organizationRoleMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -249,10 +272,9 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 		return
 	}
 
-	// Update the role of the user to "member"
-	user_uuid := state.UserUUID.ValueString()
-	role := models.ORGANIZATION_MEMBER_ROLE
-	user, err := apiv1.UpdateOrganizationMemberV1(r.client, user_uuid, role)
+	userUUID := state.UserUUID.ValueString()
+	orgUUID := state.OrganizationUUID.ValueString()
+	assignment, err := r.roleService.AssignOrgUserRole(ctx, orgUUID, userUUID, models.ORGANIZATION_MEMBER_ROLE.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
@@ -260,19 +282,23 @@ func (r *organizationRoleMemberResource) Delete(ctx context.Context, req resourc
 		)
 		return
 	}
-	// Check if the updated role is "member"
-	if user.OrganizationRole != models.ORGANIZATION_MEMBER_ROLE {
+
+	orgRole, err := services.TerraformOrganizationRoleFromAssignment(assignment)
+	if err != nil {
+		resp.Diagnostics.AddError("Error mapping organization role", err.Error())
+		return
+	}
+	if orgRole != models.ORGANIZATION_MEMBER_ROLE {
 		resp.Diagnostics.AddError(
 			"Error Updating organization member",
-			"Could not update organization member, unexpected error: "+err.Error(),
+			fmt.Sprintf("expected role %q after delete, got %q", models.ORGANIZATION_MEMBER_ROLE, orgRole),
 		)
 		return
 	}
 }
 
 func (r *organizationRoleMemberResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Extract the resource ID
-	extracted_strings, err := extractOrganizationRoleMemberResourceId(req.ID)
+	extractedStrings, err := extractOrganizationRoleMemberResourceId(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error extracting resource ID",
@@ -280,29 +306,23 @@ func (r *organizationRoleMemberResource) ImportState(ctx context.Context, req re
 		)
 		return
 	}
-	project_uuid := extracted_strings[0]
-	user_uuid := extracted_strings[1]
+	organizationUUID := extractedStrings[0]
+	userUUID := extractedStrings[1]
 
-	// Set the resource attributes
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), project_uuid)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), user_uuid)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), organizationUUID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), userUUID)...)
 }
 
 func getOrganizationRoleMemberResourceId(organization_uuid string, user_uuid string) string {
-	// Return the resource ID
 	return fmt.Sprintf("organizations/%s/users/%s", organization_uuid, user_uuid)
 }
 
 func extractOrganizationRoleMemberResourceId(input string) ([]string, error) {
-	// Extract the captured groups
 	pattern := `^organizations/([^/]+)/users/([^/]+)$`
 	groups, err := extractStrings(input, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract resource ID: %w", err)
 	}
 
-	// Return the captured strings
-	organization_uuid := groups[0]
-	user_uuid := groups[1]
-	return []string{organization_uuid, user_uuid}, nil
+	return []string{groups[0], groups[1]}, nil
 }
