@@ -37,6 +37,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
 	_ resource.Resource                = &projectRoleMemberResource{}
+	_ resource.ResourceWithConfigure   = &projectRoleMemberResource{}
 	_ resource.ResourceWithImportState = &projectRoleMemberResource{}
 )
 
@@ -44,13 +45,13 @@ func NewProjectRoleMemberResource() resource.Resource {
 	return &projectRoleMemberResource{}
 }
 
-// LightdashProjectResource defines the resource implementation.
+// projectRoleMemberResource defines the resource implementation.
 type projectRoleMemberResource struct {
 	client      *api.Client
 	roleService *services.RoleService
 }
 
-// LightdashProjectResourceModel describes the resource data model.
+// projectMemberResourceModel describes the resource data model.
 type projectMemberResourceModel struct {
 	ID          types.String             `tfsdk:"id"`
 	ProjectUUID types.String             `tfsdk:"project_uuid"`
@@ -145,7 +146,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	userUUID := plan.UserUUID.ValueString()
-	projectMember, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
+	orgMember, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading organization member",
@@ -153,7 +154,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
-	if !projectMember.IsActive {
+	if !orgMember.IsActive {
 		resp.Diagnostics.AddError(
 			"Error Reading organization member",
 			"Organization member ID "+userUUID+" is not active",
@@ -162,10 +163,11 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	projectUUID := plan.ProjectUUID.ValueString()
-	projectRole := plan.ProjectRole
-	email := projectMember.Email
-	sendEmail := plan.SendEmail.ValueBool()
-	err = apiv1.GrantProjectAccessToUserV1(r.client, projectUUID, email, projectRole, sendEmail)
+	projectRole, err := r.assignProjectUserRole(
+		ctx, orgMember.OrganizationUUID, projectUUID, userUUID,
+		plan.ProjectRole.String(),
+		plan.SendEmail.ValueBool(),
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting project role",
@@ -174,27 +176,26 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	plan.UserUUID = types.StringValue(projectMember.UserUUID)
-	plan.Email = types.StringValue(email)
+	plan.ProjectRole = projectRole
+	plan.UserUUID = types.StringValue(orgMember.UserUUID)
+	plan.Email = types.StringValue(orgMember.Email)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-	plan.ID = types.StringValue(getProjectRoleMemberResourceId(projectUUID, plan.UserUUID.ValueString()))
+	plan.ID = types.StringValue(getProjectRoleMemberResourceId(projectUUID, userUUID))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var projectUUID string
-	var userUUID string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("project_uuid"), &projectUUID)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &userUUID)...)
-
 	var state projectMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	projectUUID := state.ProjectUUID.ValueString()
+	userUUID := state.UserUUID.ValueString()
 
 	assignment, err := r.roleService.GetProjectUserAssignment(ctx, projectUUID, userUUID)
 	if err != nil {
@@ -211,17 +212,17 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	projectMember, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
+	orgMember, err := apiv1.GetOrganizationMemberByUuidV1(r.client, userUUID)
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading organization member",
-			"Could not read organization member ID "+state.ID.ValueString()+": "+err.Error(),
+			"Could not read organization member ID "+userUUID+": "+err.Error(),
 		)
 		return
 	}
 
-	state.UserUUID = types.StringValue(projectMember.UserUUID)
-	state.Email = types.StringValue(projectMember.Email)
+	state.UserUUID = types.StringValue(orgMember.UserUUID)
+	state.Email = types.StringValue(orgMember.Email)
 	state.ProjectRole = projectRole
 
 	diags = resp.State.Set(ctx, &state)
@@ -244,18 +245,13 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 
 	projectUUID := plan.ProjectUUID.ValueString()
 	userUUID := plan.UserUUID.ValueString()
-	assignment, err := r.roleService.AssignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.String(), false)
+	// Update must not send notification emails; only Create honors send_email (AGENTS.md).
+	projectRole, err := r.assignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.String(), false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project member's role",
 			"Could not update project member's role, unexpected error: "+err.Error(),
 		)
-		return
-	}
-
-	projectRole, err := services.TerraformProjectRoleFromAssignment(assignment)
-	if err != nil {
-		resp.Diagnostics.AddError("Error mapping project role", err.Error())
 		return
 	}
 
@@ -305,6 +301,18 @@ func (r *projectRoleMemberResource) ImportState(ctx context.Context, req resourc
 
 func getProjectRoleMemberResourceId(project_uuid string, user_uuid string) string {
 	return fmt.Sprintf("projects/%s/access/%s", project_uuid, user_uuid)
+}
+
+func (r *projectRoleMemberResource) assignProjectUserRole(
+	ctx context.Context,
+	orgUUID, projectUUID, userUUID, role string,
+	sendEmail bool,
+) (models.ProjectMemberRole, error) {
+	assignment, err := r.roleService.AssignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, role, sendEmail)
+	if err != nil {
+		return "", err
+	}
+	return services.TerraformProjectRoleFromAssignment(assignment)
 }
 
 func extractProjectRoleMemberResourceId(input string) ([]string, error) {

@@ -16,7 +16,7 @@ This directory contains the Go code responsible for communicating with the Light
   - `client.go`: Defines the `Client` struct, which manages HTTP communication, authentication, and request/response handling.
   - `*_v1.go`: Each file implements a function for a specific Lightdash API endpoint, using the `Client` to make requests and parse responses.
   - `utils.go`: Utility functions for API operations.
-- **Usage:** The `Client` is instantiated with host and token, and endpoint methods (e.g., `AddProjectAccessToGroupV1`, `GetOrganizationGroupsV1`) are called to interact with the Lightdash API.
+- **Usage:** The `Client` is instantiated with host and token, and endpoint methods (e.g., `GetOrganizationGroupsV1`, `GetOrganizationMemberByUuidV1`) are called to interact with the Lightdash API.
 
 ---
 

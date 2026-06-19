@@ -13,11 +13,11 @@ Deprecation is indicated by `deprecated: true` on the operation in the spec.
 
 ## Project access (user)
 
-| v1 (deprecated)                                           | v2 replacement                                                        | Provider status                                                                                                        |
-| --------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `PATCH /api/v1/projects/{projectUuid}/access/{userUuid}`  | `POST /api/v2/projects/{projectId}/roles/assignments/user/{userId}`   | **Migrated** — `lightdash_project_role_member` Update/Delete/Read via `RoleService`; Create still uses v1 invite path. |
-| `DELETE /api/v1/projects/{projectUuid}/access/{userUuid}` | `DELETE /api/v2/projects/{projectId}/roles/assignments/user/{userId}` | **Migrated** (see above)                                                                                               |
-| `POST /api/v1/projects/{projectUuid}/access`              | `POST /api/v2/projects/{projectId}/roles/assignments/user/{userId}`   | **Partial** — Create uses v1 `GrantProjectAccessToUserV1` (email invite); Update uses v2.                              |
+| v1 (deprecated)                                           | v2 replacement                                                        | Provider status                                                             |
+| --------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `PATCH /api/v1/projects/{projectUuid}/access/{userUuid}`  | `POST /api/v2/projects/{projectId}/roles/assignments/user/{userId}`   | **Fully migrated** — `lightdash_project_role_member` via `RoleService`.     |
+| `DELETE /api/v1/projects/{projectUuid}/access/{userUuid}` | `DELETE /api/v2/projects/{projectId}/roles/assignments/user/{userId}` | **Fully migrated** (see above)                                              |
+| `POST /api/v1/projects/{projectUuid}/access`              | `POST /api/v2/projects/{projectId}/roles/assignments/user/{userId}`   | **Fully migrated** — Create/Update via `RoleService.AssignProjectUserRole`. |
 
 **Migration note**: Resolve role name (e.g. `viewer`, `admin`) to the organization’s `roleId` via `GET /api/v2/orgs/{orgUuid}/roles` (or equivalent) before calling the v2 assignment API. **Note**: v2 assignments use UUIDs for roles, whereas v1 often used strings.
 

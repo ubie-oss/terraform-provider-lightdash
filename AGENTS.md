@@ -67,7 +67,7 @@ More setup and acceptance-test detail: [CONTRIBUTING.md](CONTRIBUTING.md).
 - v2 `RoleAssignment` is the shared schema for org and project `.../roles/assignments` list endpoints; it is IAM-assignment-centric and not a drop-in replacement for v1 member-directory APIs (`GET /api/v1/org/users`, `GET /api/v1/projects/{id}/access`).
 - Before implementing v2 API models/clients, verify GET response shapes with live calls against `.env`; swagger alone is insufficient.
 - Wire v2 role IAM through dedicated `RoleService`; do not replace v1 HTTP clients inside member-directory services (`OrganizationMembersService`, `ProjectService`).
-- `lightdash_project_role_member` is intentionally hybrid: Create uses v1 email-based grant; Read, Update, and Delete use v2 assignments via `RoleService`.
+- `lightdash_project_role_member` Create, Read, Update, and Delete use v2 assignments via `RoleService`; v1 is used only for org member email lookup on Create/Read.
 - `GetRoleService` in the provider must be a singleton (same pattern as `OrganizationMembersService`) so org role-catalog caching is shared across resources.
 - `lightdash_project_group_accesses` reads via v2 project role assignments (group filter); org and project member list data sources stay on v1 directory APIs.
 - Live v2 payloads use slug role IDs (e.g. `"editor"`) for system roles, not UUIDs—role resolution must match catalog `roleUuid` slugs and normalized display names.
