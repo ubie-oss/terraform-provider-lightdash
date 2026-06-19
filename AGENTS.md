@@ -55,9 +55,19 @@ More setup and acceptance-test detail: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - When implementing an attached plan, do not edit the plan file; use existing todos instead of recreating them.
 - For high-impact credentials (e.g. OAuth clients), prefer `deletion_protection` matching `lightdash_space`: Terraform-only delete guard with import default `true`.
+- Do not add acceptance tests for `lightdash_project_role_member` or `lightdash_organization_role_member`; they mutate real user org/project access and are unsafe on production-like instances.
+- Avoid unit or integration tests that call live APIs in ways that mutate existing org/project access; prefer offline JSON fixtures and pure service logic tests.
+- On `lightdash_project_role_member` Update, pass `send_email=false` to the v2 assign call; v1 update never sent notification emails, so only Create should honor Terraform `send_email`.
 
 ## Learned Workspace Facts
 
 - In git worktrees, `tfplugindocs` may infer the provider name from the directory basename (e.g. `gv41`); keep `--provider-name lightdash` on the `main.go` `go:generate` line or `make gen-docs` fails template rendering.
 - Embedded markdown under `internal/provider/docs/` should be plain descriptive prose only—do not paste generated schema bullet lists; schema-like embedded content corrupts registry docs (nested frontmatter, trailing-whitespace `make lint` failures).
 - Shared Terraform string Set/List conversion helpers belong in `internal/provider/utils.go`, not in individual resource or data-source files.
+- v2 `RoleAssignment` is the shared schema for org and project `.../roles/assignments` list endpoints; it is IAM-assignment-centric and not a drop-in replacement for v1 member-directory APIs (`GET /api/v1/org/users`, `GET /api/v1/projects/{id}/access`).
+- Before implementing v2 API models/clients, verify GET response shapes with live calls against `.env`; swagger alone is insufficient.
+- Wire v2 role IAM through dedicated `RoleService`; do not replace v1 HTTP clients inside member-directory services (`OrganizationMembersService`, `ProjectService`).
+- `lightdash_project_role_member` is intentionally hybrid: Create uses v1 email-based grant; Read, Update, and Delete use v2 assignments via `RoleService`.
+- `GetRoleService` in the provider must be a singleton (same pattern as `OrganizationMembersService`) so org role-catalog caching is shared across resources.
+- `lightdash_project_group_accesses` reads via v2 project role assignments (group filter); org and project member list data sources stay on v1 directory APIs.
+- Live v2 payloads use slug role IDs (e.g. `"editor"`) for system roles, not UUIDs—role resolution must match catalog `roleUuid` slugs and normalized display names.
