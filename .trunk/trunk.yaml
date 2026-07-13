@@ -35,12 +35,12 @@ lint:
         - internal/provider/docs/**
   enabled:
     - osv-scanner@2.4.0
-    - ruff@0.15.20
+    - ruff@0.15.21
     - golangci-lint2@2.12.2
-    - renovate@43.249.4
+    - renovate@43.260.2
     - taplo@0.10.0
     - terraform@1.14.0
-    - semgrep@1.168.0
+    - semgrep@1.169.0
     - gitleaks@8.30.1
     - goimports@0.9.1
     - bandit@1.9.4
@@ -48,7 +48,7 @@ lint:
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.49.0
-    - prettier@3.9.4
+    - prettier@3.9.5
     - shellcheck@0.11.0
     - shfmt@3.6.0
     - tflint@0.63.1
