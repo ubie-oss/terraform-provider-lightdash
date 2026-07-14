@@ -1,0 +1,1 @@
+Manages the upstream project relationship for a Lightdash project (Data Ops). Content promotion copies charts and dashboards from a source project (for example development or preview) into the configured upstream project. This resource sets that upstream link; it does not promote content itself. Destroying the resource clears the upstream project UUID on the source project.

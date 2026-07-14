@@ -28,6 +28,12 @@ variable "test_lightdash_project_uuid" {
   type        = string
 }
 
+variable "test_lightdash_upstream_project_uuid" {
+  description = "Optional UUID of an upstream Lightdash project for testing lightdash_project_upstream. Leave null to skip that resource."
+  type        = string
+  default     = null
+}
+
 variable "test_organization_admin_user_email" {
   description = "The email of the Lightdash organization admin user to test."
   type        = string

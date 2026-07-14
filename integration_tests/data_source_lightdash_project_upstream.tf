@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-lightdash_url                      = ""
-personal_access_token              = ""
-test_lightdash_project_uuid        = ""
-# Optional: set to another project UUID to exercise lightdash_project_upstream.
-# Leave unset/null (or omit) to skip that write fixture. Empty string also skips.
-# Destroy clears upstream on the source project when the fixture runs.
-# test_lightdash_upstream_project_uuid = null
-test_organization_admin_user_email = ""
-test_organization_member_user_emails = []
+data "lightdash_project_upstream" "test" {
+  organization_uuid = data.lightdash_organization.test.organization_uuid
+  project_uuid      = var.test_lightdash_project_uuid
+}
+
+output "lightdash_project_upstream_test" {
+  value = data.lightdash_project_upstream.test
+}
