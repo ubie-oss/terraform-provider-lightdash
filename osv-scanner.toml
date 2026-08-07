@@ -1,0 +1,6 @@
+# OSV-Scanner config (picked up next to go.mod).
+# https://google.github.io/osv-scanner/configuration/
+
+[[IgnoredVulns]]
+id = "GO-2026-5932"
+reason = "Advisory targets golang.org/x/crypto/openpgp (unmaintained, no fixed release). This module does not import openpgp; x/crypto is pulled transitively for bcrypt/other packages via terraform-plugin-docs tooling. govulncheck confirms openpgp is not reachable."
