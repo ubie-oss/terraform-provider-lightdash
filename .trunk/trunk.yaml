@@ -10,7 +10,7 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
-    - go@1.25.11
+    - go@1.25.12
     - node@24.14.0
     - python@3.14.4
 lint:
@@ -33,6 +33,10 @@ lint:
     - linters: [markdownlint]
       paths:
         - internal/provider/docs/**
+    # Keep intentional Trivy pin in mise.toml; renovate would rewrite it to latest.
+    - linters: [renovate]
+      paths:
+        - mise.toml
   enabled:
     - osv-scanner@2.4.0
     - ruff@0.15.21

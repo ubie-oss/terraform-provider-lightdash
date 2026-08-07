@@ -1,0 +1,64 @@
+# Copyright 2026 Ubie, inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Scheduled Go Dependency Upgrade
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Runs on the 1st day of every month at 00:00 UTC
+    - cron: 0 0 1 * *
+
+jobs:
+  upgrade:
+    name: Upgrade Go Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Upgrade Go dependencies
+        run: |
+          make upgrade-go-mod
+      - name: Verify build
+        run: |
+          go build ./...
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          commit-message: "chore(deps): upgrade go dependencies"
+          title: "chore(deps): scheduled go dependency upgrade"
+          body: |
+            Scheduled monthly upgrade of Go dependencies.
+            This PR was automatically created by the `go_dependency_upgrade.yml` workflow.
+            The following commands were run:
+            ```bash
+            make upgrade-go-mod
+            ```
+          branch: chore/go-dependency-upgrade
+          base: main
+          delete-branch: true
+          labels: |
+            dependencies
+            golang
