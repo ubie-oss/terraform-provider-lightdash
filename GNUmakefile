@@ -39,6 +39,10 @@ build: gen-docs go-tidy gosec deadcode
 gosec:
 	go tool gosec ./internal/...
 
+.PHONY: sbom
+sbom:
+	mise run sbom
+
 deadcode:
 	go run golang.org/x/tools/cmd/deadcode -test ./...
 

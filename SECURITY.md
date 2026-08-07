@@ -9,6 +9,17 @@ We actively provide security updates for the following versions of the Terraform
 | 0.5.x   | :white_check_mark: |
 | < 0.5.0 | :x:                |
 
+## CI dependency checks
+
+Pull requests and pushes to `main` run:
+
+- [govulncheck](https://go.dev/doc/security/vuln/) against the Go module (`./...`)
+- [Trivy](https://trivy.dev/docs/latest/guide/supply-chain/sbom/) CycloneDX SBOM generation from the repository, then `trivy sbom` scanning for `HIGH`/`CRITICAL` vulnerabilities (fail-closed)
+
+Locally, run the same SBOM gate with `make sbom` or `mise run sbom`. The Trivy version is resolved from [`mise.lock`](mise.lock) (fuzzy `latest` in `mise.toml`); bump with `mise lock --bump` then reinstall—do not hardcode the version in GitHub Actions.
+
+Tagged releases regenerate and scan the same SBOM before GoReleaser runs, then attach `provider.cdx.json` to the GitHub Release.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in this project, please report it to us as follows:

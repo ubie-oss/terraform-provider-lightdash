@@ -2,6 +2,7 @@
 
 [![Release](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/release.yml/badge.svg)](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/release.yml)
 [![Tests](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/test.yml/badge.svg)](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/test.yml)
+[![SBOM](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/sbom.yml/badge.svg)](https://github.com/ubie-oss/terraform-provider-lightdash/actions/workflows/sbom.yml)
 
 The Terraform provider for Lightdash enables you to manage your Lightdash resources with ease.
 
