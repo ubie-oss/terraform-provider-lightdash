@@ -66,7 +66,7 @@ jobs:
         with:
           install: true
           cache: false
-          install_args: aqua:aquasecurity/trivy
+          install_args: trivy
       - name: Generate and scan SBOM
         run: mise run sbom
       - name: Import GPG key
