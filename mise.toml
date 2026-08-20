@@ -1,0 +1,32 @@
+[settings]
+lockfile = true
+install_before = "7d"
+
+[tools]
+trunk = "latest"
+zizmor = "latest"
+trivy = "latest"
+pinact = "latest"
+
+[tasks.format]
+description = "Format the code"
+run = "trunk fmt --all"
+
+[tasks.lint]
+depends = ["format"]
+description = "Lint the code"
+run = "trunk check --all"
+
+[tasks.pin-actions]
+description = "Pin GitHub Actions to commit SHAs (min-age 7d)"
+run = """
+export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}"
+pinact run --branch-to-tag '^(main|master)$' --min-age 7 --verify-min-age --update
+"""
+
+[tasks.sbom]
+description = "Generate CycloneDX SBOM and fail on HIGH/CRITICAL"
+run = [
+  "trivy fs --format cyclonedx --output provider.cdx.json .",
+  "trivy sbom --severity HIGH,CRITICAL --exit-code 1 provider.cdx.json",
+]
