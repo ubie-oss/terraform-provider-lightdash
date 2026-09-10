@@ -17,6 +17,11 @@ name: SBOM
 
 on:
   pull_request:
+    paths:
+      - "**/*.go"
+      - "**/go.mod"
+      - "**/go.sum"
+      - ".github/workflows/sbom.yml"
   push:
     branches:
       - main
