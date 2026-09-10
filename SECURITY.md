@@ -11,10 +11,16 @@ We actively provide security updates for the following versions of the Terraform
 
 ## CI dependency checks
 
-Pull requests and pushes to `main` run:
+The SBOM workflow runs:
 
 - [govulncheck](https://go.dev/doc/security/vuln/) against the Go module (`./...`)
 - [Trivy](https://trivy.dev/docs/latest/guide/supply-chain/sbom/) CycloneDX SBOM generation from the repository, then `trivy sbom` scanning for `HIGH`/`CRITICAL` vulnerabilities (fail-closed)
+
+It triggers on:
+
+1. Pull requests that change Go-related files (`**/*.go`, `**/go.mod`, `**/go.sum`) or the SBOM workflow itself
+2. Pushes to `main` (including merges)
+3. A weekly schedule (Monday 03:17 UTC)
 
 Locally, run the same SBOM gate with `make sbom` or `mise run sbom`. The Trivy version is resolved from [`mise.lock`](mise.lock) (fuzzy `latest` in `mise.toml`); bump with `mise lock --bump` then reinstall—do not hardcode the version in GitHub Actions.
 
