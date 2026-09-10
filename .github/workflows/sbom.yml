@@ -21,7 +21,7 @@ on:
       - "**/*.go"
       - "**/go.mod"
       - "**/go.sum"
-      - ".github/workflows/sbom.yml"
+      - .github/workflows/sbom.yml
   push:
     branches:
       - main
