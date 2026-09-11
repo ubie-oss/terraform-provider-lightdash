@@ -24,12 +24,14 @@ import (
 )
 
 type UpdateAgentV1Request struct {
-	UUID                  string             `json:"uuid"`
-	Name                  *string            `json:"name,omitempty"`
-	Instruction           *string            `json:"instruction,omitempty"`
-	ImageURL              *string            `json:"imageUrl,omitempty"`
-	Tags                  []string           `json:"tags"`
-	Integrations          []AgentIntegration `json:"integrations,omitempty"`
+	UUID        string   `json:"uuid"`
+	Name        *string  `json:"name,omitempty"`
+	Instruction *string  `json:"instruction,omitempty"`
+	ImageURL    *string  `json:"imageUrl,omitempty"`
+	Tags        []string `json:"tags"`
+	// Always serialize integrations (including []) so PATCH can clear Slack/etc.
+	// omitempty drops empty slices and Lightdash keeps the previous integrations.
+	Integrations          []AgentIntegration `json:"integrations"`
 	GroupAccess           []string           `json:"groupAccess"`
 	UserAccess            []string           `json:"userAccess"`
 	EnableDataAccess      *bool              `json:"enableDataAccess,omitempty"`
