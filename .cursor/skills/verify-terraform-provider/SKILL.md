@@ -108,14 +108,14 @@ test -d "/opt/cursor/artifacts/verify-terraform-provider/${VERIFY_RUN_ID}" && ls
 
 All scripts live in `.cursor/skills/verify-terraform-provider/scripts/` (executable).
 
-| Script | Purpose |
-|--------|---------|
-| `common.sh` | `VERIFY_RUN_ID`, evidence/scratch paths, `PATH`, `.env` helper |
-| `launch.sh` | `go install .`, write dev_overrides `terraformrc` |
-| `doctor.sh` | Read-only preflight |
-| `drive.sh` | Run one feature id, write evidence |
-| `cleanup.sh` | Tear down scratch/state; keep evidence |
-| `prove.sh` | `launch → doctor → drive <feature> → cleanup` and assert evidence remains |
+| Script       | Purpose                                                                   |
+| ------------ | ------------------------------------------------------------------------- |
+| `common.sh`  | `VERIFY_RUN_ID`, evidence/scratch paths, `PATH`, `.env` helper            |
+| `launch.sh`  | `go install .`, write dev_overrides `terraformrc`                         |
+| `doctor.sh`  | Read-only preflight                                                       |
+| `drive.sh`   | Run one feature id, write evidence                                        |
+| `cleanup.sh` | Tear down scratch/state; keep evidence                                    |
+| `prove.sh`   | `launch → doctor → drive <feature> → cleanup` and assert evidence remains |
 
 **One-shot proof (default feature: organization data source validate):**
 

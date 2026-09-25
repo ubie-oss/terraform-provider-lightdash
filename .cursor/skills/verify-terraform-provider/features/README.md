@@ -32,10 +32,10 @@ Each feature file uses exactly four H2 sections: **Sub-features**, **How to get 
 
 ## Features
 
-| ID | Doc | What it proves |
-|----|-----|----------------|
-| `unit-tests` | [unit-tests.md](./unit-tests.md) | Go unit tests (`make test`) without acceptance tests |
-| `provider-local-install` | [provider-local-install.md](./provider-local-install.md) | Local plugin binary installed for Terraform |
+| ID                                   | Doc                                                                              | What it proves                                             |
+| ------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `unit-tests`                         | [unit-tests.md](./unit-tests.md)                                                 | Go unit tests (`make test`) without acceptance tests       |
+| `provider-local-install`             | [provider-local-install.md](./provider-local-install.md)                         | Local plugin binary installed for Terraform                |
 | `terraform-validate-organization-ds` | [terraform-validate-organization-ds.md](./terraform-validate-organization-ds.md) | Example read-only org data source config validates offline |
-| `provider-schema-json` | [provider-schema-json.md](./provider-schema-json.md) | Provider plugin schema export via Terraform CLI |
-| `resource-space-schema` | [resource-space-schema.md](./resource-space-schema.md) | `lightdash_space` resource block shape in schema |
+| `provider-schema-json`               | [provider-schema-json.md](./provider-schema-json.md)                             | Provider plugin schema export via Terraform CLI            |
+| `resource-space-schema`              | [resource-space-schema.md](./resource-space-schema.md)                           | `lightdash_space` resource block shape in schema           |

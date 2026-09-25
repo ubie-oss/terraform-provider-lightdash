@@ -13,9 +13,10 @@ source "${SCRIPT_DIR}/common.sh"
 "${SCRIPT_DIR}/drive.sh" "${FEATURE}"
 "${SCRIPT_DIR}/cleanup.sh"
 
-if [[ ! -d "${VERIFY_EVIDENCE_DIR}" ]] || [[ -z "$(ls -A "${VERIFY_EVIDENCE_DIR}" 2>/dev/null)" ]]; then
-  echo "FAIL: evidence missing after cleanup" >&2
-  exit 1
+evidence_entries="$(ls -A "${VERIFY_EVIDENCE_DIR}" 2>/dev/null || true)"
+if [[ ! -d ${VERIFY_EVIDENCE_DIR} ]] || [[ -z ${evidence_entries} ]]; then
+	echo "FAIL: evidence missing after cleanup" >&2
+	exit 1
 fi
 echo "Proof complete: evidence survived cleanup at ${VERIFY_EVIDENCE_DIR}"
 ls -la "${VERIFY_EVIDENCE_DIR}"
