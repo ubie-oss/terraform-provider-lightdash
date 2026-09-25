@@ -1,5 +1,0 @@
-run_id=verify-proof-20260924T235959Z-5234
-gobin=/home/ubuntu/go/bin
-terraformrc=/workspace/.cursor/skills/verify-terraform-provider/.run-state/verify-proof-20260924T235959Z-5234/terraformrc
-provider_binary=/home/ubuntu/go/bin/terraform-provider-lightdash
-launched_at=2026-09-25T00:00:00Z
