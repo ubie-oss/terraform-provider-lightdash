@@ -1,0 +1,8 @@
+---
+description: After Go edits, format the files you touched and run unit tests when behavior changed.
+globs: internal/**/*.go,go.mod,main.go
+alwaysApply: false
+---
+# Checks after Go edits
+
+Format with `make format`, or `gofmt` on the files you touched. When behavior changed, run `make test`. `go build -v ./` checks that the package compiles. `make build` also generates docs, tidies modules, and runs `gosec` and `deadcode`; that is the release check. `make lint` runs `trunk check --all` and pre-commit.
