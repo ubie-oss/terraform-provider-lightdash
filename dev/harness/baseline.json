@@ -1,8 +1,8 @@
 {
   "tokenizer": "tiktoken o200k_base",
   "per_request_usage_recorded": false,
-  "always_on_tokens": 2400,
-  "glob_attached_tokens": 7340,
+  "always_on_tokens": 2050,
+  "glob_attached_tokens": 7856,
   "on_demand_skill_tokens": 9345,
   "subagent_body_tokens": 492,
   "agent_requestable_tokens": 0,
@@ -216,6 +216,15 @@
       "description_tokens": 0
     },
     {
+      "path": ".cursor/rules/provider-docs.mdc",
+      "class": "glob_attached",
+      "tokens": 146,
+      "bytes": 646,
+      "always_apply": "false",
+      "globs": "internal/provider/docs/**,main.go",
+      "description_tokens": 14
+    },
+    {
       "path": ".cursor/rules/provider-implementation.mdc",
       "class": "glob_attached",
       "tokens": 5878,
@@ -225,10 +234,19 @@
       "description_tokens": 0
     },
     {
+      "path": ".cursor/rules/role-iam.mdc",
+      "class": "glob_attached",
+      "tokens": 370,
+      "bytes": 1661,
+      "always_apply": "false",
+      "globs": "internal/**/*role*,internal/**/*project_group_access*,integration_tests/**/*role*,integration_tests/**/*project_group_access*",
+      "description_tokens": 16
+    },
+    {
       "path": "AGENTS.md",
       "class": "always_on",
-      "tokens": 1827,
-      "bytes": 8664,
+      "tokens": 1477,
+      "bytes": 7104,
       "always_apply": "",
       "globs": "",
       "description_tokens": 0
@@ -249,44 +267,44 @@
     "models": {
       "grok-4.6": {
         "no_cache": {
-          "uncached_input_tokens": 19200.0,
+          "uncached_input_tokens": 16400.0,
           "cached_input_tokens": 0.0,
           "output_tokens": 0,
-          "usd": 0.0384
+          "usd": 0.0328
         },
         "full_cache_after_first_turn": {
-          "uncached_input_tokens": 2400.0,
-          "cached_input_tokens": 16800.0,
+          "uncached_input_tokens": 2050.0,
+          "cached_input_tokens": 14350.0,
           "output_tokens": 0,
-          "usd": 0.0132
+          "usd": 0.011275
         }
       },
       "claude-opus-4.7": {
         "no_cache": {
-          "uncached_input_tokens": 19200.0,
+          "uncached_input_tokens": 16400.0,
           "cached_input_tokens": 0.0,
           "output_tokens": 0,
-          "usd": 0.096
+          "usd": 0.082
         },
         "full_cache_after_first_turn": {
-          "uncached_input_tokens": 2400.0,
-          "cached_input_tokens": 16800.0,
+          "uncached_input_tokens": 2050.0,
+          "cached_input_tokens": 14350.0,
           "output_tokens": 0,
-          "usd": 0.0204
+          "usd": 0.017425
         }
       },
       "claude-opus-5.5": {
         "no_cache": {
-          "uncached_input_tokens": 19200.0,
+          "uncached_input_tokens": 16400.0,
           "cached_input_tokens": 0.0,
           "output_tokens": 0,
-          "usd": 0.0768
+          "usd": 0.0656
         },
         "full_cache_after_first_turn": {
-          "uncached_input_tokens": 2400.0,
-          "cached_input_tokens": 16800.0,
+          "uncached_input_tokens": 2050.0,
+          "cached_input_tokens": 14350.0,
           "output_tokens": 0,
-          "usd": 0.01296
+          "usd": 0.01107
         }
       },
       "gpt-5.6": {
@@ -301,44 +319,44 @@
     "models": {
       "grok-4.6": {
         "no_cache": {
-          "uncached_input_tokens": 67816.0,
+          "uncached_input_tokens": 65016.0,
           "cached_input_tokens": 0.0,
           "output_tokens": 0,
-          "usd": 0.135632
+          "usd": 0.130032
         },
         "full_cache_after_first_turn": {
-          "uncached_input_tokens": 8477.0,
-          "cached_input_tokens": 59339.0,
+          "uncached_input_tokens": 8127.0,
+          "cached_input_tokens": 56889.0,
           "output_tokens": 0,
-          "usd": 0.046623
+          "usd": 0.044699
         }
       },
       "claude-opus-4.7": {
         "no_cache": {
-          "uncached_input_tokens": 67816.0,
+          "uncached_input_tokens": 65016.0,
           "cached_input_tokens": 0.0,
           "output_tokens": 0,
-          "usd": 0.33908
+          "usd": 0.32508
         },
         "full_cache_after_first_turn": {
-          "uncached_input_tokens": 8477.0,
-          "cached_input_tokens": 59339.0,
+          "uncached_input_tokens": 8127.0,
+          "cached_input_tokens": 56889.0,
           "output_tokens": 0,
-          "usd": 0.072054
+          "usd": 0.06908
         }
       },
       "claude-opus-5.5": {
         "no_cache": {
-          "uncached_input_tokens": 67816.0,
+          "uncached_input_tokens": 65016.0,
           "cached_input_tokens": 0.0,
           "output_tokens": 0,
-          "usd": 0.271264
+          "usd": 0.260064
         },
         "full_cache_after_first_turn": {
-          "uncached_input_tokens": 8477.0,
-          "cached_input_tokens": 59339.0,
+          "uncached_input_tokens": 8127.0,
+          "cached_input_tokens": 56889.0,
           "output_tokens": 0,
-          "usd": 0.045776
+          "usd": 0.043886
         }
       },
       "gpt-5.6": {
