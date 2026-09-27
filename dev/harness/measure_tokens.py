@@ -10,7 +10,6 @@ Run with a Python that has tiktoken installed:
     python3 -m venv /tmp/harness-tok
     /tmp/harness-tok/bin/pip install tiktoken
     /tmp/harness-tok/bin/python dev/harness/measure_tokens.py
-    /tmp/harness-tok/bin/python dev/harness/measure_tokens.py --write-baseline
     /tmp/harness-tok/bin/python dev/harness/measure_tokens.py --check
 """
 
@@ -23,9 +22,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = Path(__file__).resolve().parent
-BASELINE_PATH = HARNESS / "baseline.json"
 PRICES_PATH = HARNESS / "prices.json"
 FLAGS_PATH = HARNESS / "flags.json"
+
+# Ratchet for the always-on prefix. Raise this only when a prompt edit is intentional.
+ALWAYS_ON_BUDGET = 2050
 
 # Files a rendered Cursor request included on every turn in the session that
 # produced this harness (observed 2026-09-28). Glob rules are not in this set.
@@ -246,18 +247,13 @@ def print_human(report: dict) -> None:
 
 
 def check_baseline(report: dict) -> int:
-    if not BASELINE_PATH.exists():
-        sys.stderr.write(f"missing {BASELINE_PATH}\n")
-        return 1
-    baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
     current = report["always_on_tokens"]
-    allowed = baseline["always_on_tokens"]
-    if current > allowed:
+    if current > ALWAYS_ON_BUDGET:
         sys.stderr.write(
-            f"always-on instructions grew: {current} tokens > baseline {allowed}\n"
+            f"always-on instructions grew: {current} tokens > budget {ALWAYS_ON_BUDGET}\n"
         )
         return 1
-    print(f"always-on tokens {current} <= baseline {allowed}")
+    print(f"always-on tokens {current} <= budget {ALWAYS_ON_BUDGET}")
     return 0
 
 
@@ -285,7 +281,6 @@ def compare_variants(encoder) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--write-baseline", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--variants", action="store_true")
     parser.add_argument("--json", action="store_true")
@@ -294,9 +289,6 @@ def main() -> int:
     if args.variants:
         return compare_variants(encoder)
     report = measure(encoder)
-    if args.write_baseline:
-        BASELINE_PATH.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-        print(f"wrote {BASELINE_PATH.relative_to(ROOT)}")
     if args.json:
         print(json.dumps(report, indent=2))
     else:

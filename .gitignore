@@ -69,3 +69,6 @@ vendor/
 
 # Local / CI Trivy CycloneDX SBOM output
 provider.cdx.json
+
+# Generated token snapshot from dev/harness/measure_tokens.py
+dev/harness/baseline.json
