@@ -1,0 +1,350 @@
+{
+  "tokenizer": "tiktoken o200k_base",
+  "per_request_usage_recorded": false,
+  "always_on_tokens": 2400,
+  "glob_attached_tokens": 7340,
+  "on_demand_skill_tokens": 9345,
+  "subagent_body_tokens": 492,
+  "agent_requestable_tokens": 0,
+  "manual_only_tokens": 547,
+  "files": [
+    {
+      "path": ".claude/agents/terraform-lightdash-orchestrator.md",
+      "class": "subagent_body",
+      "tokens": 492,
+      "bytes": 2366,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 26
+    },
+    {
+      "path": ".claude/skills/implement-terraform-provider-resource/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 980,
+      "bytes": 4340,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 15
+    },
+    {
+      "path": ".claude/skills/implement-terraform-provider-resource/assets/data_source_boilerplate.go",
+      "class": "on_demand_skill",
+      "tokens": 490,
+      "bytes": 2096,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-terraform-provider-resource/assets/resource_boilerplate.go",
+      "class": "on_demand_skill",
+      "tokens": 910,
+      "bytes": 3956,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-terraform-provider-resource/assets/test_boilerplate.go",
+      "class": "on_demand_skill",
+      "tokens": 227,
+      "bytes": 889,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-terraform-provider-resource/references/testing_setup.md",
+      "class": "on_demand_skill",
+      "tokens": 258,
+      "bytes": 1184,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-verified-lightdash-api-client/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 1009,
+      "bytes": 4165,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 14
+    },
+    {
+      "path": ".claude/skills/implement-verified-lightdash-api-client/assets/api_boilerplate.go",
+      "class": "on_demand_skill",
+      "tokens": 253,
+      "bytes": 935,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-verified-lightdash-api-client/assets/api_test_boilerplate.go",
+      "class": "on_demand_skill",
+      "tokens": 232,
+      "bytes": 831,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-verified-lightdash-api-client/assets/model_boilerplate.go",
+      "class": "on_demand_skill",
+      "tokens": 33,
+      "bytes": 123,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-verified-lightdash-api-client/references/api_client_structure.md",
+      "class": "on_demand_skill",
+      "tokens": 263,
+      "bytes": 1152,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/implement-verified-lightdash-api-client/references/response_envelope.md",
+      "class": "on_demand_skill",
+      "tokens": 298,
+      "bytes": 1244,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/investigate-deprecated-apis/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 440,
+      "bytes": 2054,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 39
+    },
+    {
+      "path": ".claude/skills/investigate-deprecated-apis/references/migration-strategies.md",
+      "class": "on_demand_skill",
+      "tokens": 1293,
+      "bytes": 6567,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".claude/skills/research-lightdash-api/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 776,
+      "bytes": 3281,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 16
+    },
+    {
+      "path": ".claude/skills/run-acceptance-tests/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 634,
+      "bytes": 2727,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 20
+    },
+    {
+      "path": ".claude/skills/security-review/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 507,
+      "bytes": 2183,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 24
+    },
+    {
+      "path": ".claude/skills/verify-and-fix/SKILL.md",
+      "class": "on_demand_skill",
+      "tokens": 742,
+      "bytes": 3055,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 17
+    },
+    {
+      "path": ".cursor/rules/code-quality.mdc",
+      "class": "glob_attached",
+      "tokens": 199,
+      "bytes": 931,
+      "always_apply": "false",
+      "globs": "internal/**/*.go,go.mod,main.go",
+      "description_tokens": 0
+    },
+    {
+      "path": ".cursor/rules/enhance_markdown_docs.mdc",
+      "class": "manual_only",
+      "tokens": 547,
+      "bytes": 2785,
+      "always_apply": "false",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".cursor/rules/examples.mdc",
+      "class": "glob_attached",
+      "tokens": 117,
+      "bytes": 563,
+      "always_apply": "false",
+      "globs": "examples/**/*.tf,examples/**/*.sh",
+      "description_tokens": 0
+    },
+    {
+      "path": ".cursor/rules/lightdash-client.mdc",
+      "class": "glob_attached",
+      "tokens": 1146,
+      "bytes": 5526,
+      "always_apply": "false",
+      "globs": "internal/lightdash/**/*.go",
+      "description_tokens": 0
+    },
+    {
+      "path": ".cursor/rules/project-structure.mdc",
+      "class": "always_on",
+      "tokens": 339,
+      "bytes": 1431,
+      "always_apply": "true",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": ".cursor/rules/provider-implementation.mdc",
+      "class": "glob_attached",
+      "tokens": 5878,
+      "bytes": 27675,
+      "always_apply": "false",
+      "globs": "internal/provider/**/*.go",
+      "description_tokens": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "class": "always_on",
+      "tokens": 1827,
+      "bytes": 8664,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    },
+    {
+      "path": "CLAUDE.md",
+      "class": "always_on",
+      "tokens": 234,
+      "bytes": 929,
+      "always_apply": "",
+      "globs": "",
+      "description_tokens": 0
+    }
+  ],
+  "illustrative_always_on_cost": {
+    "turns_per_task": 8,
+    "note": "Not measured. No production traces exist in this repo. Used only to turn a token count into a per-task dollar range for the repo-controlled prefix.",
+    "models": {
+      "grok-4.6": {
+        "no_cache": {
+          "uncached_input_tokens": 19200.0,
+          "cached_input_tokens": 0.0,
+          "output_tokens": 0,
+          "usd": 0.0384
+        },
+        "full_cache_after_first_turn": {
+          "uncached_input_tokens": 2400.0,
+          "cached_input_tokens": 16800.0,
+          "output_tokens": 0,
+          "usd": 0.0132
+        }
+      },
+      "claude-opus-4.7": {
+        "no_cache": {
+          "uncached_input_tokens": 19200.0,
+          "cached_input_tokens": 0.0,
+          "output_tokens": 0,
+          "usd": 0.096
+        },
+        "full_cache_after_first_turn": {
+          "uncached_input_tokens": 2400.0,
+          "cached_input_tokens": 16800.0,
+          "output_tokens": 0,
+          "usd": 0.0204
+        }
+      },
+      "claude-opus-5.5": {
+        "no_cache": {
+          "uncached_input_tokens": 19200.0,
+          "cached_input_tokens": 0.0,
+          "output_tokens": 0,
+          "usd": 0.0768
+        },
+        "full_cache_after_first_turn": {
+          "uncached_input_tokens": 2400.0,
+          "cached_input_tokens": 16800.0,
+          "output_tokens": 0,
+          "usd": 0.01296
+        }
+      },
+      "gpt-5.6": {
+        "no_cache": null,
+        "full_cache_after_first_turn": null
+      }
+    }
+  },
+  "illustrative_provider_task_prefix_cost": {
+    "turns_per_task": 8,
+    "note": "Not measured. No production traces exist in this repo. Used only to turn a token count into a per-task dollar range for the repo-controlled prefix.",
+    "models": {
+      "grok-4.6": {
+        "no_cache": {
+          "uncached_input_tokens": 67816.0,
+          "cached_input_tokens": 0.0,
+          "output_tokens": 0,
+          "usd": 0.135632
+        },
+        "full_cache_after_first_turn": {
+          "uncached_input_tokens": 8477.0,
+          "cached_input_tokens": 59339.0,
+          "output_tokens": 0,
+          "usd": 0.046623
+        }
+      },
+      "claude-opus-4.7": {
+        "no_cache": {
+          "uncached_input_tokens": 67816.0,
+          "cached_input_tokens": 0.0,
+          "output_tokens": 0,
+          "usd": 0.33908
+        },
+        "full_cache_after_first_turn": {
+          "uncached_input_tokens": 8477.0,
+          "cached_input_tokens": 59339.0,
+          "output_tokens": 0,
+          "usd": 0.072054
+        }
+      },
+      "claude-opus-5.5": {
+        "no_cache": {
+          "uncached_input_tokens": 67816.0,
+          "cached_input_tokens": 0.0,
+          "output_tokens": 0,
+          "usd": 0.271264
+        },
+        "full_cache_after_first_turn": {
+          "uncached_input_tokens": 8477.0,
+          "cached_input_tokens": 59339.0,
+          "output_tokens": 0,
+          "usd": 0.045776
+        }
+      },
+      "gpt-5.6": {
+        "no_cache": null,
+        "full_cache_after_first_turn": null
+      }
+    }
+  }
+}

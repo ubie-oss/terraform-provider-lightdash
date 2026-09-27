@@ -1,0 +1,74 @@
+{
+  "measured_on": "2026-09-28",
+  "tokenizer": "tiktoken o200k_base",
+  "tokenizer_note": "Proxy count. This repo does not call a provider API, so these are not Grok, Claude, or GPT usage fields.",
+  "models": {
+    "grok-4.6": {
+      "note": "The public xAI price card lists grok-4.6 and does not list grok-4.7. This session's model is Grok 4.7; dollar figures use the nearest published card.",
+      "input_per_mtok": 2.0,
+      "cached_input_per_mtok": 0.5,
+      "output_per_mtok": 6.0,
+      "cache_write_per_mtok": null,
+      "min_cacheable_tokens": null,
+      "cache": "Automatic prefix match from the start of the messages array. No explicit breakpoints on the pages fetched. x-grok-conv-id is recommended so requests stick to one server. Minimum cacheable length is not published there.",
+      "source": "https://docs.x.ai/developers/pricing"
+    },
+    "claude-opus-4.7": {
+      "input_per_mtok": 5.0,
+      "cached_input_per_mtok": 0.5,
+      "output_per_mtok": 25.0,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.0,
+      "min_cacheable_tokens": 2048,
+      "cache": "Explicit cache_control breakpoints (max 4) or one top-level automatic breakpoint. Default TTL 5 minutes, optional 1 hour. Writes cost 1.25x (5m) or 2x (1h). Reads cost 0.1x.",
+      "source": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching"
+    },
+    "claude-opus-5.5": {
+      "input_per_mtok": 4.0,
+      "cached_input_per_mtok": 0.2,
+      "output_per_mtok": 20.0,
+      "cache_write_5m_per_mtok": 5.0,
+      "cache_write_1h_per_mtok": 8.0,
+      "min_cacheable_tokens": 512,
+      "cache": "Same breakpoint model as other current Claude models. Cache reads are 0.05x base input.",
+      "source": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching"
+    },
+    "gpt-5.6": {
+      "input_per_mtok": null,
+      "cached_input_multiplier": 0.1,
+      "cache_write_multiplier": 1.25,
+      "output_per_mtok": null,
+      "min_cacheable_tokens": 1024,
+      "cache": "Automatic prefix caching. Explicit breakpoints exist. Cache writes are 1.25x uncached input; reads are 0.1x. TTL at least 30 minutes. Base dollar rates were not on the page fetched.",
+      "source": "https://developers.openai.com/api/docs/guides/prompt-caching"
+    }
+  },
+  "per_request_usage": {
+    "recorded": false,
+    "reason": "Nothing in this repo assembles model requests or reads API usage fields.",
+    "fields_to_record_when_a_client_exists": {
+      "xai": [
+        "usage.prompt_tokens",
+        "usage.completion_tokens",
+        "usage.prompt_tokens_details.cached_tokens"
+      ],
+      "anthropic": [
+        "usage.input_tokens",
+        "usage.output_tokens",
+        "usage.cache_creation_input_tokens",
+        "usage.cache_read_input_tokens"
+      ],
+      "openai": [
+        "usage.input_tokens",
+        "usage.output_tokens",
+        "usage.input_tokens_details.cached_tokens",
+        "usage.input_tokens_details.cache_write_tokens"
+      ]
+    }
+  },
+  "illustrative_scenario": {
+    "note": "Not measured. No production traces exist in this repo. Used only to turn a token count into a per-task dollar range for the repo-controlled prefix.",
+    "turns_per_task": 8,
+    "cache_hit_rate_after_first_turn": [0.0, 1.0]
+  }
+}
