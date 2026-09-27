@@ -6,7 +6,7 @@
   "on_demand_skill_tokens": 9345,
   "subagent_body_tokens": 492,
   "agent_requestable_tokens": 0,
-  "manual_only_tokens": 547,
+  "manual_only_tokens": 546,
   "files": [
     {
       "path": ".claude/agents/terraform-lightdash-orchestrator.md",
@@ -182,8 +182,8 @@
     {
       "path": ".cursor/rules/enhance_markdown_docs.mdc",
       "class": "manual_only",
-      "tokens": 547,
-      "bytes": 2785,
+      "tokens": 546,
+      "bytes": 2782,
       "always_apply": "false",
       "globs": "",
       "description_tokens": 0
@@ -228,7 +228,7 @@
       "path": ".cursor/rules/provider-implementation.mdc",
       "class": "glob_attached",
       "tokens": 5878,
-      "bytes": 27675,
+      "bytes": 27718,
       "always_apply": "false",
       "globs": "internal/provider/**/*.go",
       "description_tokens": 0
