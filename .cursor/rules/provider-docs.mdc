@@ -1,0 +1,9 @@
+---
+description: Constraints for embedded provider docs and the tfplugindocs provider name.
+globs: internal/provider/docs/**,main.go
+alwaysApply: false
+---
+# Provider docs
+
+- In git worktrees, `tfplugindocs` may infer the provider name from the directory basename (e.g. `gv41`); keep `--provider-name lightdash` on the `main.go` `go:generate` line or `make gen-docs` fails template rendering.
+- Embedded markdown under `internal/provider/docs/` should be plain descriptive prose only—do not paste generated schema bullet lists; schema-like embedded content corrupts registry docs (nested frontmatter, trailing-whitespace `make lint` failures).

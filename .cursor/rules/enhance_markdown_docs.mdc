@@ -38,4 +38,4 @@ Markdown descriptions are currently embedded directly within Go code using multi
 
 -   For `internal/provider/resource_example.go`, the doc file is `internal/provider/docs/resources/resource_example.md`.
 -   For `internal/provider/data_source_example.go`, the doc file is `internal/provider/docs/data_sources/data_source_example.md`.
--   For `internal/provider/function_example.go`, the doc file is `internal/provider/docs/data_sources/function_example.md`.
+-   For `internal/provider/function_example.go`, the doc file is `internal/provider/docs/functions/function_example.md`.
