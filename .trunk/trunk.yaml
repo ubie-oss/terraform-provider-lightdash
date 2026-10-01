@@ -6,7 +6,7 @@ cli:
 plugins:
   sources:
     - id: trunk
-      ref: v1.10.2
+      ref: v1.11.0
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
@@ -38,13 +38,13 @@ lint:
       paths:
         - mise.toml
   enabled:
-    - osv-scanner@2.4.0
-    - ruff@0.16.1
-    - golangci-lint2@2.12.2
-    - renovate@44.5.2
+    - osv-scanner@2.6.0
+    - ruff@0.16.9
+    - golangci-lint2@2.14.0
+    - renovate@44.126.0
     - taplo@0.10.0
     - terraform@1.14.0
-    - semgrep@1.172.0
+    - semgrep@1.178.0
     - gitleaks@8.30.1
     - goimports@0.9.1
     - bandit@1.9.4
@@ -52,9 +52,9 @@ lint:
     - git-diff-check
     - gofmt@1.20.4
     - markdownlint@0.49.1
-    - prettier@3.9.6
+    - prettier@3.9.9
     - shellcheck@0.11.0
-    - shfmt@3.6.0
+    - shfmt@3.14.1
     - tflint@0.64.0
     - yamllint@1.38.0
   disabled:
