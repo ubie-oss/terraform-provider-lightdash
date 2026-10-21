@@ -236,16 +236,14 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 	errors = append(errors, r.validateSpaceVisibilityConfig(ctx, config)...)
 
 	// Validate configuration for nested spaces
-	for _, error := range r.validateNestedSpaceConfig(ctx, config) {
-		errors = append(errors, error)
-	}
+	errors = append(errors, r.validateNestedSpaceConfig(ctx, config)...)
 
 	// TODO validate MemberAccessList and GroupAccessList
 	// NOTE WE don't understand how to instantiate the elements of the set in ValidateConfig
 
 	// Add errors to the response
-	for _, error := range errors {
-		resp.Diagnostics.AddError("Error during space creation", error.Error())
+	for _, validationErr := range errors {
+		resp.Diagnostics.AddError("Error during space creation", validationErr.Error())
 	}
 }
 
