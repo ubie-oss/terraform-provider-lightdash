@@ -266,3 +266,17 @@ func stringSliceToStringList(ctx context.Context, values []string) (types.List, 
 	}
 	return types.ListValueFrom(ctx, types.StringType, elems)
 }
+
+func stringListToStringSlice(ctx context.Context, list types.List) ([]string, diag.Diagnostics) {
+	var values []types.String
+	diags := list.ElementsAs(ctx, &values, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	result := make([]string, len(values))
+	for i, value := range values {
+		result[i] = value.ValueString()
+	}
+	return result, diags
+}

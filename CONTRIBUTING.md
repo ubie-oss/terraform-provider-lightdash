@@ -168,6 +168,8 @@ To run the acceptance tests, follow these steps:
 
 Note: Acceptance tests require a Lightdash instance and may take longer to complete.
 
+AI provider credential acceptance tests require an organization with **AI organization settings** enabled (BYOK / Amazon Bedrock credentials). Test credentials use the label prefix `test (Acceptance Test -` and a dummy `api_key`. Before and after each test, the provider calls `DELETE /api/v1/ai/provider-credentials/{uuid}` (via `t.Cleanup`) to remove any credentials with that prefix and clears acc-test project bindings on `LIGHTDASH_PROJECT`. Terraform `destroy` is still exercised where possible; API purge is the safety net when tests fail or `deletion_protection` blocks destroy. Prefer a dedicated test org with at least one non-test credential if you need a stable org default. After import tests, apply configuration once more so `deletion_protection` in state matches config before destroy.
+
 #### Implementing Acceptance Tests
 
 Please refer to the following documentation for basic information on how to implement the acceptance tests:
