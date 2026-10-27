@@ -16,7 +16,7 @@ terraform {
   required_providers {
     lightdash = {
       source  = "ubie-oss/lightdash"
-      version = "0.16.1"
+      version = "0.16.3"
     }
   }
 }
