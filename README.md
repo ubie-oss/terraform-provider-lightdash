@@ -52,7 +52,7 @@ resource "lightdash_project_role_member" "test" {
 
 ### Prerequisites
 
-- Terraform version 1.1 or higher
+- Terraform version 1.13 or higher
 - Go version 1.19 or higher
 
 ### Building the Provider
