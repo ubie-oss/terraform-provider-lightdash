@@ -59,6 +59,7 @@ jobs:
           branch: chore/go-dependency-upgrade
           base: main
           delete-branch: true
+          sign-commits: true
           labels: |
             dependencies
             golang
