@@ -16,6 +16,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -29,6 +30,10 @@ var (
 	roleServiceInstance *RoleService
 	roleServiceOnce     sync.Once
 )
+
+// ErrRoleAssignmentNotFound is returned, wrapped, when a role assignment is not in the list.
+// Callers use errors.Is to tell "removed outside Terraform" from a failed API call.
+var ErrRoleAssignmentNotFound = errors.New("role assignment not found")
 
 type RoleService struct {
 	client     *api.Client
@@ -129,7 +134,7 @@ func findAssignment(assignments []models.RoleAssignment, assigneeType string, as
 			return assignment, nil
 		}
 	}
-	return nil, fmt.Errorf("%s", notFoundMsg)
+	return nil, fmt.Errorf("%s: %w", notFoundMsg, ErrRoleAssignmentNotFound)
 }
 
 func filterAssignmentsByType(assignments []models.RoleAssignment, assigneeType string) []models.RoleAssignment {

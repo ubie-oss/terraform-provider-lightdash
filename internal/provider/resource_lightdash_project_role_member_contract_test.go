@@ -70,6 +70,12 @@ func (f *fakeLightdash) assign(projectUUID, userUUID, roleID string) {
 	f.assignments[projectUUID+"/"+userUUID] = roleID
 }
 
+func (f *fakeLightdash) unassign(projectUUID, userUUID string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.assignments, projectUUID+"/"+userUUID)
+}
+
 func (f *fakeLightdash) roleOf(projectUUID, userUUID string) (string, bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -266,6 +272,29 @@ func TestContractProjectRoleMemberImport(t *testing.T) {
 				ImportStateId:           "projects/" + contractProjectUUID + "/access/" + contractUserUUID,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"send_email", "last_updated"},
+			},
+		},
+	})
+}
+
+// TestContractProjectRoleMemberRecreatesRemovedMember checks that a member removed
+// outside Terraform is granted again by the next apply, instead of staying in state.
+func TestContractProjectRoleMemberRecreatesRemovedMember(t *testing.T) {
+	f := contractFake()
+	f.reset()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             f.checkNotAssigned(contractProjectUUID, contractUserUUID),
+		Steps: []resource.TestStep{
+			{
+				Config: contractConfig(f, "editor"),
+				Check:  f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
+			},
+			{
+				PreConfig: func() { f.unassign(contractProjectUUID, contractUserUUID) },
+				Config:    contractConfig(f, "editor"),
+				Check:     f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
 			},
 		},
 	})

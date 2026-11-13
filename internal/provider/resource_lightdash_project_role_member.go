@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -198,6 +199,11 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 	userUUID := state.UserUUID.ValueString()
 
 	assignment, err := r.roleService.GetProjectUserAssignment(ctx, projectUUID, userUUID)
+	if errors.Is(err, services.ErrRoleAssignmentNotFound) {
+		// The member was removed outside Terraform. Dropping the state makes the next plan create it again.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading project role assignment",
