@@ -53,13 +53,13 @@ type projectRoleMemberResource struct {
 
 // projectMemberResourceModel describes the resource data model.
 type projectMemberResourceModel struct {
-	ID          types.String             `tfsdk:"id"`
-	ProjectUUID types.String             `tfsdk:"project_uuid"`
-	UserUUID    types.String             `tfsdk:"user_uuid"`
-	Email       types.String             `tfsdk:"email"`
-	ProjectRole models.ProjectMemberRole `tfsdk:"role"`
-	SendEmail   types.Bool               `tfsdk:"send_email"`
-	LastUpdated types.String             `tfsdk:"last_updated"`
+	ID          types.String `tfsdk:"id"`
+	ProjectUUID types.String `tfsdk:"project_uuid"`
+	UserUUID    types.String `tfsdk:"user_uuid"`
+	Email       types.String `tfsdk:"email"`
+	ProjectRole types.String `tfsdk:"role"`
+	SendEmail   types.Bool   `tfsdk:"send_email"`
+	LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 func (r *projectRoleMemberResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -165,7 +165,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 	projectUUID := plan.ProjectUUID.ValueString()
 	projectRole, err := r.assignProjectUserRole(
 		ctx, orgMember.OrganizationUUID, projectUUID, userUUID,
-		plan.ProjectRole.String(),
+		plan.ProjectRole.ValueString(),
 		plan.SendEmail.ValueBool(),
 	)
 	if err != nil {
@@ -176,7 +176,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	plan.ProjectRole = projectRole
+	plan.ProjectRole = types.StringValue(projectRole.String())
 	plan.UserUUID = types.StringValue(orgMember.UserUUID)
 	plan.Email = types.StringValue(orgMember.Email)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -223,7 +223,7 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 
 	state.UserUUID = types.StringValue(orgMember.UserUUID)
 	state.Email = types.StringValue(orgMember.Email)
-	state.ProjectRole = projectRole
+	state.ProjectRole = types.StringValue(projectRole.String())
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -246,7 +246,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 	projectUUID := plan.ProjectUUID.ValueString()
 	userUUID := plan.UserUUID.ValueString()
 	// Update must not send notification emails; only Create honors send_email (AGENTS.md).
-	projectRole, err := r.assignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.String(), false)
+	projectRole, err := r.assignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.ValueString(), false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project member's role",
@@ -255,7 +255,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	plan.ProjectRole = projectRole
+	plan.ProjectRole = types.StringValue(projectRole.String())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -295,6 +295,7 @@ func (r *projectRoleMemberResource) ImportState(ctx context.Context, req resourc
 	projectUUID := extractedStrings[0]
 	userUUID := extractedStrings[1]
 
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), getProjectRoleMemberResourceId(projectUUID, userUUID))...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), userUUID)...)
 }

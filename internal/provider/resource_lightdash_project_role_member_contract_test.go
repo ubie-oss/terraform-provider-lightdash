@@ -248,15 +248,7 @@ func TestContractProjectRoleMemberLifecycle(t *testing.T) {
 
 // TestContractProjectRoleMemberImport checks that importing by
 // "projects/{project}/access/{user}" rebuilds state that matches the managed state.
-//
-// Skipped on purpose: it fails on the current code. Import sets only project_uuid
-// and user_uuid, so Read decodes a null "role" into models.ProjectMemberRole
-// (resource_lightdash_project_role_member.go, projectMemberResourceModel.ProjectRole),
-// which the framework rejects with "Received null value". Remove the skip once the
-// product code is fixed.
 func TestContractProjectRoleMemberImport(t *testing.T) {
-	t.Skip("known defect: import fails with a null-value conversion error on role; see comment above")
-
 	f := contractFake()
 	f.reset()
 
