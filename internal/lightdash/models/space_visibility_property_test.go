@@ -74,7 +74,7 @@ func TestTerraformIsPrivateFromAPIForNestedSpace_invariants(t *testing.T) {
 				switch {
 				case !inherit && !got:
 					t.Errorf("inherit=false parent=%v root=%v: got public, want private", parentPrivate, isRoot)
-				case inherit && isRoot && got != false:
+				case inherit && isRoot && got:
 					t.Errorf("inherit=true root=true: got private, want public")
 				case inherit && !isRoot && got != parentPrivate:
 					t.Errorf("inherit=true nested parent=%v: got %v, want parent's visibility", parentPrivate, got)

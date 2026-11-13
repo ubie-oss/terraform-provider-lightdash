@@ -55,9 +55,8 @@ func TestResourceIDCodecs_roundTripValidSegments(t *testing.T) {
 }
 
 // checkCodecSafety asserts the parser's safety rules for one (a, b) pair:
-// valid segments (non-empty, slash-free) must parse, and whenever parsing
-// succeeds it must return exactly (a, b). Invalid segments are covered by
-// TestResourceIDCodecs_emptySegmentRejected.
+// it must succeed exactly when both segments are non-empty and slash-free, and
+// whenever it succeeds it must return exactly (a, b).
 func checkCodecSafety(t *testing.T, codec resourceIDCodec, a, b string) {
 	t.Helper()
 	id := codec.format(a, b)
@@ -67,6 +66,9 @@ func checkCodecSafety(t *testing.T, codec resourceIDCodec, a, b string) {
 	if valid && err != nil {
 		t.Errorf("%s: extract(%q) failed for valid segments (%q, %q): %v", codec.name, id, a, b, err)
 		return
+	}
+	if !valid && err == nil {
+		t.Errorf("%s: extract(%q) succeeded for invalid segments (%q, %q)", codec.name, id, a, b)
 	}
 	if err == nil && (len(got) != 2 || got[0] != a || got[1] != b) {
 		t.Errorf("%s: extract(%q) = %v without error, want [%s %s]", codec.name, id, got, a, b)
@@ -96,19 +98,6 @@ func TestResourceIDCodecs_exhaustiveSmallAlphabet(t *testing.T) {
 			for _, b := range segments {
 				checkCodecSafety(t, codec, a, b)
 			}
-		}
-	}
-}
-
-// TestResourceIDCodecs_emptySegmentRejected documents that an empty segment
-// produces an ID the parser refuses, rather than a silently wrong parse.
-func TestResourceIDCodecs_emptySegmentRejected(t *testing.T) {
-	for _, codec := range resourceIDCodecs {
-		if _, err := codec.extract(codec.format("", "x")); err == nil {
-			t.Errorf("%s: extract of empty first segment succeeded, want error", codec.name)
-		}
-		if _, err := codec.extract(codec.format("x", "")); err == nil {
-			t.Errorf("%s: extract of empty second segment succeeded, want error", codec.name)
 		}
 	}
 }

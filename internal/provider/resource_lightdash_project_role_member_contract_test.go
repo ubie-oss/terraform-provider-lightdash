@@ -208,9 +208,20 @@ resource "lightdash_project_role_member" "test" {
 `, f.url, contractProjectUUID, contractUserUUID, role)
 }
 
+// skipInAcceptanceMode keeps these tests out of the TF_ACC run. Acceptance tests in
+// the same process bind the shared role service to a live instance, so these tests
+// would otherwise send their requests to real Lightdash.
+func skipInAcceptanceMode(t *testing.T) {
+	t.Helper()
+	if isIntegrationTestMode() {
+		t.Skip("offline contract test; runs only without TF_ACC")
+	}
+}
+
 // TestContractProjectRoleMemberLifecycle checks create and update against the fake
 // API, and that destroy removes the assignment.
 func TestContractProjectRoleMemberLifecycle(t *testing.T) {
+	skipInAcceptanceMode(t)
 	f := contractFake()
 	f.reset()
 
@@ -239,6 +250,7 @@ func TestContractProjectRoleMemberLifecycle(t *testing.T) {
 // TestContractProjectRoleMemberImport checks that importing by
 // "projects/{project}/access/{user}" rebuilds state that matches the managed state.
 func TestContractProjectRoleMemberImport(t *testing.T) {
+	skipInAcceptanceMode(t)
 	f := contractFake()
 	f.reset()
 
@@ -255,7 +267,12 @@ func TestContractProjectRoleMemberImport(t *testing.T) {
 				ImportState:             true,
 				ImportStateId:           "projects/" + contractProjectUUID + "/access/" + contractUserUUID,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"send_email", "last_updated"},
+				ImportStateVerifyIgnore: []string{"last_updated"},
+			},
+			{
+				// The first plan after import must be empty, or the member is updated for no reason.
+				Config:   contractConfig(f, "editor"),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -264,6 +281,7 @@ func TestContractProjectRoleMemberImport(t *testing.T) {
 // TestContractProjectRoleMemberRecreatesRemovedMember checks that a member removed
 // outside Terraform is granted again by the next apply, instead of staying in state.
 func TestContractProjectRoleMemberRecreatesRemovedMember(t *testing.T) {
+	skipInAcceptanceMode(t)
 	f := contractFake()
 	f.reset()
 
@@ -287,6 +305,7 @@ func TestContractProjectRoleMemberRecreatesRemovedMember(t *testing.T) {
 // TestContractProjectRoleMemberDetectsDrift checks that a role changed outside
 // Terraform shows up as a planned change.
 func TestContractProjectRoleMemberDetectsDrift(t *testing.T) {
+	skipInAcceptanceMode(t)
 	f := contractFake()
 	f.reset()
 

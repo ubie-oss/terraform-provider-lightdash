@@ -304,6 +304,8 @@ func (r *projectRoleMemberResource) ImportState(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), getProjectRoleMemberResourceId(projectUUID, userUUID))...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), userUUID)...)
+	// The API does not return send_email, so use its schema default. Otherwise the first plan after import shows a null-to-false change.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("send_email"), false)...)
 }
 
 func getProjectRoleMemberResourceId(project_uuid string, user_uuid string) string {
