@@ -97,7 +97,7 @@ func (s *RoleService) GetOrgUserAssignment(ctx context.Context, orgUUID string, 
 		return nil, fmt.Errorf("failed to list organization role assignments: %w", err)
 	}
 
-	return findAssignment(assignments, models.AssigneeTypeUser, userUUID, fmt.Sprintf("organization role assignment not found for user %s", userUUID))
+	return findAssignment(assignments, models.AssigneeTypeUser, userUUID, "organization")
 }
 
 func (s *RoleService) GetProjectUserAssignment(ctx context.Context, projectUUID string, userUUID string) (*models.RoleAssignment, error) {
@@ -106,7 +106,7 @@ func (s *RoleService) GetProjectUserAssignment(ctx context.Context, projectUUID 
 		return nil, fmt.Errorf("failed to list project role assignments: %w", err)
 	}
 
-	return findAssignment(assignments, models.AssigneeTypeUser, userUUID, fmt.Sprintf("project role assignment not found for user %s", userUUID))
+	return findAssignment(assignments, models.AssigneeTypeUser, userUUID, "project")
 }
 
 func (s *RoleService) ListProjectGroupAssignments(ctx context.Context, projectUUID string) ([]models.RoleAssignment, error) {
@@ -124,17 +124,17 @@ func (s *RoleService) GetProjectGroupAssignment(ctx context.Context, projectUUID
 		return nil, err
 	}
 
-	return findAssignment(assignments, models.AssigneeTypeGroup, groupUUID, fmt.Sprintf("project role assignment not found for group %s", groupUUID))
+	return findAssignment(assignments, models.AssigneeTypeGroup, groupUUID, "project")
 }
 
-func findAssignment(assignments []models.RoleAssignment, assigneeType string, assigneeID string, notFoundMsg string) (*models.RoleAssignment, error) {
+func findAssignment(assignments []models.RoleAssignment, assigneeType string, assigneeID string, scope string) (*models.RoleAssignment, error) {
 	for i := range assignments {
 		assignment := &assignments[i]
 		if assignment.AssigneeType == assigneeType && assignment.AssigneeID == assigneeID {
 			return assignment, nil
 		}
 	}
-	return nil, fmt.Errorf("%s: %w", notFoundMsg, ErrRoleAssignmentNotFound)
+	return nil, fmt.Errorf("%s role assignment for %s %s: %w", scope, assigneeType, assigneeID, ErrRoleAssignmentNotFound)
 }
 
 func filterAssignmentsByType(assignments []models.RoleAssignment, assigneeType string) []models.RoleAssignment {
@@ -219,50 +219,26 @@ func (s *RoleService) RemoveProjectGroupRole(ctx context.Context, projectUUID st
 
 // TerraformProjectRoleFromAssignment maps a v2 assignment to a Terraform project role string.
 func TerraformProjectRoleFromAssignment(assignment *models.RoleAssignment) (models.ProjectMemberRole, error) {
-	return terraformRoleFromAssignment(
-		assignment,
-		func(role string) bool { return models.ProjectMemberRole(role).IsValid() },
-		func(role string) models.ProjectMemberRole { return models.ProjectMemberRole(role) },
-		"project",
-	)
+	return terraformRoleFromAssignment(assignment, models.ProjectMemberRole.IsValid, "project")
 }
 
 // TerraformOrganizationRoleFromAssignment maps a v2 assignment to a Terraform organization role string.
 func TerraformOrganizationRoleFromAssignment(assignment *models.RoleAssignment) (models.OrganizationMemberRole, error) {
-	return terraformRoleFromAssignment(
-		assignment,
-		func(role string) bool { return models.OrganizationMemberRole(role).IsValid() },
-		func(role string) models.OrganizationMemberRole { return models.OrganizationMemberRole(role) },
-		"organization",
-	)
+	return terraformRoleFromAssignment(assignment, models.OrganizationMemberRole.IsValid, "organization")
 }
 
-func terraformRoleFromAssignment[T ~string](
-	assignment *models.RoleAssignment,
-	isValid func(string) bool,
-	toRole func(string) T,
-	scope string,
-) (T, error) {
-	var zero T
+// terraformRoleFromAssignment returns the first of the assignment's role name or ID that is a valid role
+// once normalized. Valid role names contain no spaces, so normalizing first accepts the same inputs.
+func terraformRoleFromAssignment[T ~string](assignment *models.RoleAssignment, isValid func(T) bool, scope string) (T, error) {
 	if assignment == nil {
-		return zero, fmt.Errorf("%s role assignment is nil", scope)
+		return "", fmt.Errorf("%s role assignment is nil", scope)
 	}
-
-	for _, candidate := range []string{assignment.RoleName, assignment.RoleID} {
-		candidate = strings.ToLower(strings.TrimSpace(candidate))
-		if candidate == "" {
-			continue
-		}
-		if isValid(candidate) {
-			return toRole(candidate), nil
-		}
-		normalized := normalizeRoleName(candidate)
-		if isValid(normalized) {
-			return toRole(normalized), nil
+	for _, raw := range []string{assignment.RoleName, assignment.RoleID} {
+		if candidate := T(normalizeRoleName(raw)); isValid(candidate) {
+			return candidate, nil
 		}
 	}
-
-	return zero, fmt.Errorf("unknown %s role from assignment: roleId=%q roleName=%q", scope, assignment.RoleID, assignment.RoleName)
+	return "", fmt.Errorf("unknown %s role from assignment: roleId=%q roleName=%q", scope, assignment.RoleID, assignment.RoleName)
 }
 
 func normalizeRoleName(name string) string {

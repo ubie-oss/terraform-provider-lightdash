@@ -57,10 +57,6 @@ func TestInheritUpdatePointerIfChanged_alwaysReachesDesiredVisibility(t *testing
 				t.Errorf("is_private=%v current=%v: effective inherit=%v, want %v",
 					*tfIsPrivate, currentInherit, effective, want)
 			}
-			if update == nil && (currentInherit != !*tfIsPrivate) {
-				t.Errorf("is_private=%v current=%v: no update sent although the value differs",
-					*tfIsPrivate, currentInherit)
-			}
 		}
 	}
 }

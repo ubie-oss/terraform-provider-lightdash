@@ -141,11 +141,11 @@ func TestFindAssignment_missingUserWrapsNotFound(t *testing.T) {
 		{AssigneeType: models.AssigneeTypeUser, AssigneeID: "user-1", RoleID: "viewer"},
 	}
 
-	if _, err := findAssignment(assignments, models.AssigneeTypeUser, "user-2", "not found for user-2"); !errors.Is(err, ErrRoleAssignmentNotFound) {
+	if _, err := findAssignment(assignments, models.AssigneeTypeUser, "user-2", "project"); !errors.Is(err, ErrRoleAssignmentNotFound) {
 		t.Fatalf("missing user: error = %v, want ErrRoleAssignmentNotFound", err)
 	}
 
-	got, err := findAssignment(assignments, models.AssigneeTypeUser, "user-1", "not found for user-1")
+	got, err := findAssignment(assignments, models.AssigneeTypeUser, "user-1", "project")
 	if err != nil {
 		t.Fatalf("present user: unexpected error: %v", err)
 	}

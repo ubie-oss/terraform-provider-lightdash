@@ -55,8 +55,9 @@ func TestResourceIDCodecs_roundTripValidSegments(t *testing.T) {
 }
 
 // checkCodecSafety asserts the parser's safety rules for one (a, b) pair:
-// it must succeed exactly when both segments are non-empty and slash-free, and
-// whenever it succeeds it must return exactly (a, b).
+// valid segments (non-empty, slash-free) must parse, and whenever parsing
+// succeeds it must return exactly (a, b). Invalid segments are covered by
+// TestResourceIDCodecs_emptySegmentRejected.
 func checkCodecSafety(t *testing.T, codec resourceIDCodec, a, b string) {
 	t.Helper()
 	id := codec.format(a, b)

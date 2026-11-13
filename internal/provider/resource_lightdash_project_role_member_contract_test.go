@@ -39,21 +39,28 @@ const (
 	contractResourceRef = "lightdash_project_role_member.test"
 )
 
-var contractSystemRoles = []string{"viewer", "interactive_viewer", "editor", "developer", "admin"}
+// contractSystemRoles maps each system role slug to its display name.
+var contractSystemRoles = map[string]string{
+	"viewer":             "Viewer",
+	"interactive_viewer": "Interactive Viewer",
+	"editor":             "Editor",
+	"developer":          "Developer",
+	"admin":              "Admin",
+}
 
-// fakeLightdash holds project role assignments in memory. It is the only mutable
-// state the contract tests rely on, so tests reset it before running.
+// fakeLightdash holds the one project role assignment the contract tests use.
+// It is the only mutable state they rely on, so tests reset it before running.
 type fakeLightdash struct {
-	mu          sync.Mutex
-	url         string
-	assignments map[string]string // "projectUUID/userUUID" -> roleID
+	mu     sync.Mutex
+	url    string
+	roleID string // "" when the member has no project role
 }
 
 // contractFake starts one shared fake server for the test process. The provider's
 // role catalog is cached in a process-wide singleton bound to the first server
 // it sees, so every test must reuse this one.
 var contractFake = sync.OnceValue(func() *fakeLightdash {
-	f := &fakeLightdash{assignments: map[string]string{}}
+	f := &fakeLightdash{}
 	f.url = httptest.NewServer(f).URL
 	return f
 })
@@ -61,33 +68,29 @@ var contractFake = sync.OnceValue(func() *fakeLightdash {
 func (f *fakeLightdash) reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.assignments = map[string]string{}
+	f.roleID = ""
 }
 
 func (f *fakeLightdash) assign(roleID string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.assignments[contractProjectUUID+"/"+contractUserUUID] = roleID
+	f.roleID = roleID
 }
 
 func (f *fakeLightdash) unassign() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	delete(f.assignments, contractProjectUUID+"/"+contractUserUUID)
+	f.assign("")
 }
 
-func (f *fakeLightdash) roleOf() (string, bool) {
+func (f *fakeLightdash) currentRole() string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	role, ok := f.assignments[contractProjectUUID+"/"+contractUserUUID]
-	return role, ok
+	return f.roleID
 }
 
 func (f *fakeLightdash) checkAssigned(roleID string) resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		got, ok := f.roleOf()
-		if !ok || got != roleID {
-			return fmt.Errorf("API role for user %s = %q (assigned=%v), want %q", contractUserUUID, got, ok, roleID)
+		if got := f.currentRole(); got != roleID {
+			return fmt.Errorf("API role for user %s = %q, want %q", contractUserUUID, got, roleID)
 		}
 		return nil
 	}
@@ -95,7 +98,7 @@ func (f *fakeLightdash) checkAssigned(roleID string) resource.TestCheckFunc {
 
 func (f *fakeLightdash) checkNotAssigned() resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		if got, ok := f.roleOf(); ok {
+		if got := f.currentRole(); got != "" {
 			return fmt.Errorf("user %s still has API role %q after destroy", contractUserUUID, got)
 		}
 		return nil
@@ -125,15 +128,15 @@ func (f *fakeLightdash) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	case r.Method == http.MethodGet && r.URL.Path == "/api/v2/orgs/"+contractOrgUUID+"/roles":
 		roles := make([]map[string]any, 0, len(contractSystemRoles))
-		for _, slug := range contractSystemRoles {
-			roles = append(roles, map[string]any{"roleUuid": slug, "name": contractRoleDisplayName(slug), "ownerType": "system"})
+		for slug, name := range contractSystemRoles {
+			roles = append(roles, map[string]any{"roleUuid": slug, "name": name, "ownerType": "system"})
 		}
 		writeContractOK(w, roles)
 
 	case r.Method == http.MethodGet && r.URL.Path == "/api/v2/projects/"+contractProjectUUID+"/roles/assignments":
 		assignments := []map[string]any{}
-		if roleID, ok := f.assignments[contractProjectUUID+"/"+contractUserUUID]; ok {
-			assignments = append(assignments, contractAssignment(roleID))
+		if f.roleID != "" {
+			assignments = append(assignments, contractAssignment(f.roleID))
 		}
 		writeContractOK(w, assignments)
 
@@ -141,45 +144,26 @@ func (f *fakeLightdash) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			RoleID string `json:"roleId"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || !isContractRole(body.RoleID) {
+		err := json.NewDecoder(r.Body).Decode(&body)
+		_, known := contractSystemRoles[body.RoleID]
+		if err != nil || !known {
 			writeContractError(w, http.StatusBadRequest, "unknown role")
 			return
 		}
-		f.assignments[contractProjectUUID+"/"+contractUserUUID] = body.RoleID
+		f.roleID = body.RoleID
 		writeContractOK(w, contractAssignment(body.RoleID))
 
 	case r.Method == http.MethodDelete && r.URL.Path == assignPath:
-		key := contractProjectUUID + "/" + contractUserUUID
-		if _, ok := f.assignments[key]; !ok {
+		if f.roleID == "" {
 			writeContractError(w, http.StatusNotFound, "assignment not found")
 			return
 		}
-		delete(f.assignments, key)
+		f.roleID = ""
 		writeContractOK(w, map[string]any{})
 
 	default:
 		writeContractError(w, http.StatusNotFound, "API endpoint not found")
 	}
-}
-
-func contractRoleDisplayName(slug string) string {
-	names := map[string]string{
-		"viewer":             "Viewer",
-		"interactive_viewer": "Interactive Viewer",
-		"editor":             "Editor",
-		"developer":          "Developer",
-		"admin":              "Admin",
-	}
-	return names[slug]
-}
-
-func isContractRole(roleID string) bool {
-	for _, slug := range contractSystemRoles {
-		if slug == roleID {
-			return true
-		}
-	}
-	return false
 }
 
 func contractAssignment(roleID string) map[string]any {
