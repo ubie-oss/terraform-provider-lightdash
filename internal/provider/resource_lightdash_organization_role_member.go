@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -186,6 +187,11 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 	}
 
 	assignment, err := r.roleService.GetOrgUserAssignment(ctx, organizationUUID, userUUID)
+	if errors.Is(err, services.ErrRoleAssignmentNotFound) {
+		// The member was removed outside Terraform. Dropping the state makes the next plan create it again.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading organization member",

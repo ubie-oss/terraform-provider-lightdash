@@ -15,6 +15,7 @@
 package services
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -132,5 +133,23 @@ func TestFilterAssignmentsByType(t *testing.T) {
 	}
 	if got[0].AssigneeID != "group-1" || got[1].AssigneeID != "group-2" {
 		t.Errorf("got group IDs %q and %q", got[0].AssigneeID, got[1].AssigneeID)
+	}
+}
+
+func TestFindAssignment_missingUserWrapsNotFound(t *testing.T) {
+	assignments := []models.RoleAssignment{
+		{AssigneeType: models.AssigneeTypeUser, AssigneeID: "user-1", RoleID: "viewer"},
+	}
+
+	if _, err := findAssignment(assignments, models.AssigneeTypeUser, "user-2", "project"); !errors.Is(err, ErrRoleAssignmentNotFound) {
+		t.Fatalf("missing user: error = %v, want ErrRoleAssignmentNotFound", err)
+	}
+
+	got, err := findAssignment(assignments, models.AssigneeTypeUser, "user-1", "project")
+	if err != nil {
+		t.Fatalf("present user: unexpected error: %v", err)
+	}
+	if got.RoleID != "viewer" {
+		t.Errorf("RoleID = %q, want viewer", got.RoleID)
 	}
 }
