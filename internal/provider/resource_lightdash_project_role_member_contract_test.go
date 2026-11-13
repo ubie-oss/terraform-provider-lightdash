@@ -64,39 +64,39 @@ func (f *fakeLightdash) reset() {
 	f.assignments = map[string]string{}
 }
 
-func (f *fakeLightdash) assign(projectUUID, userUUID, roleID string) {
+func (f *fakeLightdash) assign(roleID string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.assignments[projectUUID+"/"+userUUID] = roleID
+	f.assignments[contractProjectUUID+"/"+contractUserUUID] = roleID
 }
 
-func (f *fakeLightdash) unassign(projectUUID, userUUID string) {
+func (f *fakeLightdash) unassign() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	delete(f.assignments, projectUUID+"/"+userUUID)
+	delete(f.assignments, contractProjectUUID+"/"+contractUserUUID)
 }
 
-func (f *fakeLightdash) roleOf(projectUUID, userUUID string) (string, bool) {
+func (f *fakeLightdash) roleOf() (string, bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	role, ok := f.assignments[projectUUID+"/"+userUUID]
+	role, ok := f.assignments[contractProjectUUID+"/"+contractUserUUID]
 	return role, ok
 }
 
-func (f *fakeLightdash) checkAssigned(projectUUID, userUUID, roleID string) resource.TestCheckFunc {
+func (f *fakeLightdash) checkAssigned(roleID string) resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		got, ok := f.roleOf(projectUUID, userUUID)
+		got, ok := f.roleOf()
 		if !ok || got != roleID {
-			return fmt.Errorf("API role for user %s = %q (assigned=%v), want %q", userUUID, got, ok, roleID)
+			return fmt.Errorf("API role for user %s = %q (assigned=%v), want %q", contractUserUUID, got, ok, roleID)
 		}
 		return nil
 	}
 }
 
-func (f *fakeLightdash) checkNotAssigned(projectUUID, userUUID string) resource.TestCheckFunc {
+func (f *fakeLightdash) checkNotAssigned() resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		if got, ok := f.roleOf(projectUUID, userUUID); ok {
-			return fmt.Errorf("user %s still has API role %q after destroy", userUUID, got)
+		if got, ok := f.roleOf(); ok {
+			return fmt.Errorf("user %s still has API role %q after destroy", contractUserUUID, got)
 		}
 		return nil
 	}
@@ -232,20 +232,20 @@ func TestContractProjectRoleMemberLifecycle(t *testing.T) {
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             f.checkNotAssigned(contractProjectUUID, contractUserUUID),
+		CheckDestroy:             f.checkNotAssigned(),
 		Steps: []resource.TestStep{
 			{
 				Config: contractConfig(f, "editor"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(contractResourceRef, "role", "editor"),
-					f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
+					f.checkAssigned("editor"),
 				),
 			},
 			{
 				Config: contractConfig(f, "viewer"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(contractResourceRef, "role", "viewer"),
-					f.checkAssigned(contractProjectUUID, contractUserUUID, "viewer"),
+					f.checkAssigned("viewer"),
 				),
 			},
 		},
@@ -260,11 +260,11 @@ func TestContractProjectRoleMemberImport(t *testing.T) {
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             f.checkNotAssigned(contractProjectUUID, contractUserUUID),
+		CheckDestroy:             f.checkNotAssigned(),
 		Steps: []resource.TestStep{
 			{
 				Config: contractConfig(f, "editor"),
-				Check:  f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
+				Check:  f.checkAssigned("editor"),
 			},
 			{
 				ResourceName:            contractResourceRef,
@@ -285,16 +285,16 @@ func TestContractProjectRoleMemberRecreatesRemovedMember(t *testing.T) {
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             f.checkNotAssigned(contractProjectUUID, contractUserUUID),
+		CheckDestroy:             f.checkNotAssigned(),
 		Steps: []resource.TestStep{
 			{
 				Config: contractConfig(f, "editor"),
-				Check:  f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
+				Check:  f.checkAssigned("editor"),
 			},
 			{
-				PreConfig: func() { f.unassign(contractProjectUUID, contractUserUUID) },
+				PreConfig: func() { f.unassign() },
 				Config:    contractConfig(f, "editor"),
-				Check:     f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
+				Check:     f.checkAssigned("editor"),
 			},
 		},
 	})
@@ -311,10 +311,10 @@ func TestContractProjectRoleMemberDetectsDrift(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: contractConfig(f, "editor"),
-				Check:  f.checkAssigned(contractProjectUUID, contractUserUUID, "editor"),
+				Check:  f.checkAssigned("editor"),
 			},
 			{
-				PreConfig:          func() { f.assign(contractProjectUUID, contractUserUUID, "admin") },
+				PreConfig:          func() { f.assign("admin") },
 				Config:             contractConfig(f, "editor"),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: true,
