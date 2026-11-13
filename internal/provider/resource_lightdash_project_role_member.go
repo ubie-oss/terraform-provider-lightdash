@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
@@ -106,6 +107,9 @@ func (r *projectRoleMemberResource) Schema(ctx context.Context, req resource.Sch
 			"role": schema.StringAttribute{
 				MarkdownDescription: "Lightdash user's role.",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateProjectMemberRole{},
+				},
 			},
 			"send_email": schema.BoolAttribute{
 				MarkdownDescription: "Send email to the user.",
@@ -280,6 +284,10 @@ func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.Del
 	userUUID := state.UserUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Revoking project role of %s", userUUID))
 	err := r.roleService.RemoveProjectUserRole(ctx, projectUUID, userUUID)
+	if errors.Is(err, api.ErrNotFound) {
+		// Already removed, for example between refresh and apply. Nothing left to revoke.
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Revoking project role",

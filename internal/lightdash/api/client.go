@@ -15,12 +15,16 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
 )
+
+// ErrNotFound is wrapped by errors returned for HTTP 404 responses. Callers use errors.Is.
+var ErrNotFound = errors.New("not found")
 
 type Client struct {
 	HTTPClient *http.Client
@@ -100,5 +104,8 @@ func (c *Client) DoRequest(req *http.Request) ([]byte, error) {
 	}
 
 	// Error response codes
+	if res.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("unexpected status code: %d, body: %s: %w", res.StatusCode, body, ErrNotFound)
+	}
 	return nil, fmt.Errorf("unexpected status code: %d, body: %s", res.StatusCode, body)
 }
