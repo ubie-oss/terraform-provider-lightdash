@@ -262,12 +262,11 @@ func TestAccProjectResource_deletionProtection(t *testing.T) {
 				),
 			},
 			{
+				// Destroy step checks see state from before the destroy, so this only
+				// confirms the Lightdash project itself was not deleted.
 				Config:  providerConfig + allowDestroyConfig,
 				Destroy: true,
-				Check: func(state *terraform.State) error {
-					if _, ok := state.RootModule().Resources["lightdash_project.test"]; ok {
-						return fmt.Errorf("lightdash_project.test is still in state")
-					}
+				Check: func(*terraform.State) error {
 					return projectStillExists(projectUUID)
 				},
 			},
@@ -275,7 +274,7 @@ func TestAccProjectResource_deletionProtection(t *testing.T) {
 	})
 }
 
-// projectStillExists confirms destroy removed state only. The project must remain in Lightdash.
+// projectStillExists confirms the project remains in Lightdash after destroy.
 func projectStillExists(projectUUID string) error {
 	host, err := getLightdashUrl()
 	if err != nil {
