@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -100,6 +101,9 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 			"role": schema.StringAttribute{
 				MarkdownDescription: "The organization role assigned to the user.",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateOrganizationMemberRole{},
+				},
 			},
 			"last_updated": schema.StringAttribute{
 				MarkdownDescription: "The timestamp of the last Terraform update applied to the organization role member.",
@@ -174,11 +178,6 @@ func (r *organizationRoleMemberResource) Create(ctx context.Context, req resourc
 }
 
 func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var organizationUUID string
-	var userUUID string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("organization_uuid"), &organizationUUID)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("user_uuid"), &userUUID)...)
-
 	var state organizationRoleMemberResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -186,7 +185,8 @@ func (r *organizationRoleMemberResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	assignment, err := r.roleService.GetOrgUserAssignment(ctx, organizationUUID, userUUID)
+	userUUID := state.UserUUID.ValueString()
+	assignment, err := r.roleService.GetOrgUserAssignment(ctx, state.OrganizationUUID.ValueString(), userUUID)
 	if errors.Is(err, services.ErrRoleAssignmentNotFound) {
 		// The member was removed outside Terraform. Dropping the state makes the next plan create it again.
 		resp.State.RemoveResource(ctx)

@@ -55,13 +55,15 @@ var contractRoles = map[string]string{
 
 // contractCatalogRoles is what GET /api/v2/orgs/{org}/roles returns. It matches the live shape
 // reported in issue #461: no org-level "member", so resolving names through it fails.
-var contractCatalogRoles = map[string]string{
-	"viewer":             "Viewer",
-	"interactive_viewer": "Interactive Viewer",
-	"editor":             "Editor",
-	"developer":          "Developer",
-	"admin":              "Admin",
-}
+var contractCatalogRoles = func() map[string]string {
+	catalog := make(map[string]string, len(contractRoles))
+	for slug, name := range contractRoles {
+		if slug != "member" {
+			catalog[slug] = name
+		}
+	}
+	return catalog
+}()
 
 // contractRef identifies one role assignment: its scope (org or project UUID),
 // assignee type, and assignee UUID.
@@ -233,9 +235,11 @@ func (f *fakeLightdash) assignRole(ref contractRef) http.HandlerFunc {
 		var body struct {
 			RoleID string `json:"roleId"`
 		}
-		err := json.NewDecoder(r.Body).Decode(&body)
-		_, known := contractRoles[body.RoleID]
-		if err != nil || !known {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeContractError(w, http.StatusBadRequest, "malformed request body")
+			return
+		}
+		if _, known := contractRoles[body.RoleID]; !known {
 			writeContractError(w, http.StatusBadRequest, "unknown role")
 			return
 		}

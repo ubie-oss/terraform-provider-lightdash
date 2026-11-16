@@ -38,12 +38,26 @@ ensure_jar() {
 	fi
 }
 
+# Prints one method of organizationRoleMemberResource: its func line up to the next top-level func.
+method_body() {
+	awk -v name="$1" '
+		/^func / { inside = index($0, "organizationRoleMemberResource) " name "(") > 0 }
+		inside
+	' "${RESOURCE}"
+}
+
+# Each method is matched on its own body, so a call in one method cannot satisfy another.
+# The body is captured first: `rg -q` on a pipe would close it early and fail under pipefail.
 check_conformance() {
-	rg -U -q 'func \(r \*organizationRoleMemberResource\) Create\([\s\S]*?AssignOrgUserRole\(ctx, orgUUID, userUUID, role\.String\(\)\)' "${RESOURCE}" ||
+	local body
+	body="$(method_body Create)"
+	rg -q -F 'AssignOrgUserRole(ctx, orgUUID, userUUID, role.String())' <<<"${body}" ||
 		drift "Create no longer assigns the planned role through AssignOrgUserRole"
-	rg -U -q 'func \(r \*organizationRoleMemberResource\) Update\([\s\S]*?AssignOrgUserRole\(ctx, orgUUID, userUUID, role\.String\(\)\)' "${RESOURCE}" ||
+	body="$(method_body Update)"
+	rg -q -F 'AssignOrgUserRole(ctx, orgUUID, userUUID, role.String())' <<<"${body}" ||
 		drift "Update no longer assigns the planned role through AssignOrgUserRole"
-	rg -U -q 'func \(r \*organizationRoleMemberResource\) Delete\([\s\S]*?AssignOrgUserRole\(ctx, orgUUID, userUUID, models\.ORGANIZATION_MEMBER_ROLE\.String\(\)\)' "${RESOURCE}" ||
+	body="$(method_body Delete)"
+	rg -q -F 'AssignOrgUserRole(ctx, orgUUID, userUUID, models.ORGANIZATION_MEMBER_ROLE.String())' <<<"${body}" ||
 		drift "Delete no longer resets the user to the default role member"
 }
 

@@ -166,7 +166,7 @@ func (s *RoleService) AssignOrgUserRole(ctx context.Context, orgUUID string, use
 
 // organizationRoleID returns the v2 role ID for a built-in organization role.
 func organizationRoleID(roleName string) (string, error) {
-	role := models.OrganizationMemberRole(strings.ToLower(strings.TrimSpace(roleName)))
+	role := models.OrganizationMemberRole(normalizeRoleName(roleName))
 	if !role.IsValid() {
 		return "", fmt.Errorf("unknown organization role %q", roleName)
 	}

@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	apiv2 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v2"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/services"
 )
@@ -32,8 +33,6 @@ import (
 // orgRoleMemberTestEmailEnvVar names a DEDICATED test user in the organization. Never point it at a
 // real employee: this test changes that user's organization role (member -> viewer -> member).
 const orgRoleMemberTestEmailEnvVar = "LIGHTDASH_TEST_ORG_MEMBER_EMAIL"
-
-// Using the shared testAccPreCheck and testAccProtoV6ProviderFactories from provider_test.go
 
 func TestAccOrganizationRoleMemberResource_member(t *testing.T) {
 	if !isIntegrationTestMode() {
@@ -116,17 +115,29 @@ func resolveOrgRoleMemberTestTarget(t *testing.T, email string) orgRoleMemberTes
 	}
 	member, err := services.GetOrganizationMembersService(client).GetOrganizationMemberByEmail(ctx, email)
 	if err != nil {
-		t.Fatalf("no organization member matches %s (email not printed)", orgRoleMemberTestEmailEnvVar)
+		// Keep the real error (auth, network) but scrub the email from it.
+		t.Fatalf("failed to look up the test member from %s: %s", orgRoleMemberTestEmailEnvVar, strings.ReplaceAll(err.Error(), email, "<redacted>"))
 	}
 	return orgRoleMemberTestTarget{client: client, orgUUID: orgUUID, userUUID: member.UserUUID}
 }
 
 // checkOrgRoleMemberDefaultAfterDestroy checks the Delete path: the user must be back on "member".
+// It calls the API with target.client. services.GetRoleService is a singleton that ignores its argument.
 func checkOrgRoleMemberDefaultAfterDestroy(target orgRoleMemberTestTarget) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		assignment, err := services.GetRoleService(target.client).GetOrgUserAssignment(context.Background(), target.orgUUID, target.userUUID)
+		assignments, err := apiv2.ListOrganizationRoleAssignmentsV2(target.client, target.orgUUID)
 		if err != nil {
-			return fmt.Errorf("failed to read organization role after destroy: %w", err)
+			return fmt.Errorf("failed to list organization role assignments after destroy: %w", err)
+		}
+		var assignment *models.RoleAssignment
+		for i := range assignments {
+			if assignments[i].AssigneeType == models.AssigneeTypeUser && assignments[i].AssigneeID == target.userUUID {
+				assignment = &assignments[i]
+				break
+			}
+		}
+		if assignment == nil {
+			return fmt.Errorf("no organization role assignment for the test user after destroy")
 		}
 		role, err := services.TerraformOrganizationRoleFromAssignment(assignment)
 		if err != nil {

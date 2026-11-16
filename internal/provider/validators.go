@@ -88,3 +88,34 @@ func (v ValidateProjectMemberRole) ValidateString(ctx context.Context, req valid
 		)
 	}
 }
+
+// ValidateOrganizationMemberRole accepts only the lowercase organization role slugs, for the same
+// reason as ValidateProjectMemberRole: a spelling such as "Viewer" would fail the apply with an
+// inconsistent result.
+type ValidateOrganizationMemberRole struct{}
+
+const organizationMemberRoleDescription = "must be one of: member, viewer, interactive_viewer, editor, developer, admin"
+
+// Description returns a plain text description of the validator's behavior.
+func (v ValidateOrganizationMemberRole) Description(ctx context.Context) string {
+	return organizationMemberRoleDescription
+}
+
+// MarkdownDescription returns a markdown formatted description of the validator's behavior.
+func (v ValidateOrganizationMemberRole) MarkdownDescription(ctx context.Context) string {
+	return organizationMemberRoleDescription
+}
+
+// ValidateString performs the validation.
+func (v ValidateOrganizationMemberRole) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	if !models.OrganizationMemberRole(req.ConfigValue.ValueString()).IsValid() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Organization Role",
+			fmt.Sprintf("%s. Got: %q", organizationMemberRoleDescription, req.ConfigValue.ValueString()),
+		)
+	}
+}
