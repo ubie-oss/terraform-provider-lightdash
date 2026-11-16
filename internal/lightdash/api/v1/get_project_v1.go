@@ -22,13 +22,22 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
+// ProjectDbtConnectionV1 is the dbt connection object returned with a project.
+// Extra connection fields are ignored; this resource only needs the type.
+type ProjectDbtConnectionV1 struct {
+	Type string `json:"type"`
+}
+
 type GetProjectV1Results struct {
-	OrganizationUUID    string  `json:"organizationUuid"`
-	ProjectUUID         string  `json:"projectUuid"`
-	ProjectName         string  `json:"name"`
-	ProjectType         string  `json:"type"`
-	SchedulerTimezone   string  `json:"schedulerTimezone"`
-	UpstreamProjectUUID *string `json:"upstreamProjectUuid,omitempty"`
+	OrganizationUUID    string                  `json:"organizationUuid"`
+	ProjectUUID         string                  `json:"projectUuid"`
+	ProjectName         string                  `json:"name"`
+	ProjectType         string                  `json:"type"`
+	Slug                string                  `json:"slug,omitempty"`
+	DbtVersion          string                  `json:"dbtVersion,omitempty"`
+	DbtConnection       *ProjectDbtConnectionV1 `json:"dbtConnection,omitempty"`
+	SchedulerTimezone   string                  `json:"schedulerTimezone"`
+	UpstreamProjectUUID *string                 `json:"upstreamProjectUuid,omitempty"`
 }
 
 type GetProjectV1Response struct {
