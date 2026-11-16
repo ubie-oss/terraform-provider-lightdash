@@ -42,9 +42,20 @@ const (
 	contractMemberEmail = "contract.user@example.com"
 )
 
-// contractRoles maps each role slug to its display name. "member" is the org default role.
+// contractRoles maps each role slug to its display name. Every built-in role can be assigned,
+// including the org default "member".
 var contractRoles = map[string]string{
 	"member":             "Member",
+	"viewer":             "Viewer",
+	"interactive_viewer": "Interactive Viewer",
+	"editor":             "Editor",
+	"developer":          "Developer",
+	"admin":              "Admin",
+}
+
+// contractCatalogRoles is what GET /api/v2/orgs/{org}/roles returns. It matches the live shape
+// reported in issue #461: no org-level "member", so resolving names through it fails.
+var contractCatalogRoles = map[string]string{
 	"viewer":             "Viewer",
 	"interactive_viewer": "Interactive Viewer",
 	"editor":             "Editor",
@@ -194,8 +205,8 @@ func fixedResult(results any) http.HandlerFunc {
 }
 
 func (f *fakeLightdash) listRoles(w http.ResponseWriter, r *http.Request) {
-	roles := make([]map[string]any, 0, len(contractRoles))
-	for slug, name := range contractRoles {
+	roles := make([]map[string]any, 0, len(contractCatalogRoles))
+	for slug, name := range contractCatalogRoles {
 		roles = append(roles, map[string]any{"roleUuid": slug, "name": name, "ownerType": "system"})
 	}
 	writeContractOK(w, roles)

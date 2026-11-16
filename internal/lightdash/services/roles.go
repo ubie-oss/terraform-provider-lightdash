@@ -147,8 +147,11 @@ func filterAssignmentsByType(assignments []models.RoleAssignment, assigneeType s
 	return filtered
 }
 
+// AssignOrgUserRole assigns a built-in organization role to a user.
+// Built-in organization roles are sent by slug. The organization role catalog does not
+// list the org-level "member" role, so resolving names against it fails (issue #461).
 func (s *RoleService) AssignOrgUserRole(ctx context.Context, orgUUID string, userUUID string, roleName string) (*models.RoleAssignment, error) {
-	roleID, err := s.ResolveRoleID(ctx, orgUUID, roleName)
+	roleID, err := organizationRoleID(roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +162,15 @@ func (s *RoleService) AssignOrgUserRole(ctx context.Context, orgUUID string, use
 	}
 
 	return assignment, nil
+}
+
+// organizationRoleID returns the v2 role ID for a built-in organization role.
+func organizationRoleID(roleName string) (string, error) {
+	role := models.OrganizationMemberRole(strings.ToLower(strings.TrimSpace(roleName)))
+	if !role.IsValid() {
+		return "", fmt.Errorf("unknown organization role %q", roleName)
+	}
+	return role.String(), nil
 }
 
 func (s *RoleService) AssignProjectUserRole(ctx context.Context, orgUUID string, projectUUID string, userUUID string, roleName string, sendEmail bool) (*models.RoleAssignment, error) {
