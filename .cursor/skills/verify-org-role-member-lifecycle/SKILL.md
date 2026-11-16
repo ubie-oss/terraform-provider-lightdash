@@ -35,10 +35,11 @@ Catalog contents in `live.cfg` come from issue #461: project-level slugs and cus
 org-level `member`. `fixture.cfg` uses the catalog that the unit and contract tests assume,
 which includes `member`.
 
-**Sync commit: `991b386`.** At this commit, `AssignOrgUserRole` calls `ResolveRoleID`, which
-matches `live.cfg`. Move this commit forward only after `dev/formal/org-role-member/check.sh`
-exits 0 or 1 with the same findings on the new commit, and you have confirmed that the table
-above still describes the code.
+**Sync commit: `f45af77`.** At this commit, `AssignOrgUserRole` sends built-in org role slugs
+without a catalog lookup, which matches `slug.cfg`. The pre-fix commit `991b386` called
+`ResolveRoleID` and matched `live.cfg`. Move this commit forward only after
+`dev/formal/org-role-member/check.sh` exits 0 or 1 with the same findings on the new commit, and
+you have confirmed that the table above still describes the code.
 
 ## Run
 
