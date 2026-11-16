@@ -22,8 +22,11 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
+// DbtConnectionTypeNone is the dbt connection this provider creates. It needs no repository and no token.
+const DbtConnectionTypeNone = "none"
+
 // ProjectDbtConnectionV1 is the dbt connection object returned with a project.
-// Extra connection fields are ignored; this resource only needs the type.
+// Extra connection fields are ignored; callers only need the type.
 type ProjectDbtConnectionV1 struct {
 	Type string `json:"type"`
 }

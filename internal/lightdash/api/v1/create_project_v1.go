@@ -24,12 +24,8 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 )
 
-// dbtConnectionTypeNone is the only dbt connection this client creates.
-// It needs no repository and no token.
-const dbtConnectionTypeNone = "none"
-
 // CreateProjectV1Request is the body for POST /api/v1/org/projects.
-// dbtConnection is always type "none". Warehouse credentials are not sent.
+// dbtConnection is always type none. Warehouse credentials are not sent.
 type CreateProjectV1Request struct {
 	Name          string                 `json:"name"`
 	Type          string                 `json:"type"`
@@ -37,20 +33,9 @@ type CreateProjectV1Request struct {
 	DbtConnection ProjectDbtConnectionV1 `json:"dbtConnection"`
 }
 
-// CreateProjectV1Project is the project object nested under results.project.
-type CreateProjectV1Project struct {
-	OrganizationUUID string                 `json:"organizationUuid"`
-	ProjectUUID      string                 `json:"projectUuid"`
-	Slug             string                 `json:"slug"`
-	Name             string                 `json:"name"`
-	Type             string                 `json:"type"`
-	DbtVersion       string                 `json:"dbtVersion"`
-	DbtConnection    ProjectDbtConnectionV1 `json:"dbtConnection"`
-}
-
 type CreateProjectV1Results struct {
-	HasContentCopy bool                   `json:"hasContentCopy"`
-	Project        CreateProjectV1Project `json:"project"`
+	HasContentCopy bool                `json:"hasContentCopy"`
+	Project        GetProjectV1Results `json:"project"`
 }
 
 type CreateProjectV1Response struct {
@@ -60,7 +45,7 @@ type CreateProjectV1Response struct {
 
 // CreateProjectV1 creates a project with a dbt connection of type none.
 // The Lightdash API has no project delete endpoint; callers must not assume this can be undone.
-func CreateProjectV1(c *api.Client, name, projectType, dbtVersion string) (*CreateProjectV1Project, error) {
+func CreateProjectV1(c *api.Client, name, projectType, dbtVersion string) (*GetProjectV1Results, error) {
 	if strings.TrimSpace(name) == "" {
 		return nil, fmt.Errorf("project name is empty")
 	}
@@ -76,7 +61,7 @@ func CreateProjectV1(c *api.Client, name, projectType, dbtVersion string) (*Crea
 		Type:       projectType,
 		DbtVersion: dbtVersion,
 		DbtConnection: ProjectDbtConnectionV1{
-			Type: dbtConnectionTypeNone,
+			Type: DbtConnectionTypeNone,
 		},
 	}
 

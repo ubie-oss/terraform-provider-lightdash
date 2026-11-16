@@ -32,10 +32,6 @@ import (
 	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
 )
 
-const projectDbtConnectionTypeNone = "none"
-
-var projectTypes = []string{"DEFAULT", "PREVIEW", "TRAINING"}
-
 var (
 	_ resource.Resource                = &projectResource{}
 	_ resource.ResourceWithConfigure   = &projectResource{}
@@ -138,7 +134,7 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					oneOfStringValidator{values: projectTypes},
+					ValidateProjectType{},
 				},
 			},
 			"dbt_version": schema.StringAttribute{
@@ -191,12 +187,11 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	plan.ID = types.StringValue(created.ProjectUUID)
-	plan.ProjectUUID = types.StringValue(created.ProjectUUID)
-	plan.Slug = types.StringValue(created.Slug)
-	plan.Name = types.StringValue(created.Name)
-	plan.ProjectType = types.StringValue(created.Type)
-	plan.DbtVersion = types.StringValue(created.DbtVersion)
+	if diags := projectDbtConnectionDiagnostics(created); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	applyProjectToModel(&plan, created)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -227,12 +222,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	state.ID = types.StringValue(project.ProjectUUID)
-	state.ProjectUUID = types.StringValue(project.ProjectUUID)
-	state.Slug = types.StringValue(project.Slug)
-	state.Name = types.StringValue(project.ProjectName)
-	state.ProjectType = types.StringValue(project.ProjectType)
-	state.DbtVersion = types.StringValue(project.DbtVersion)
+	applyProjectToModel(&state, project)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -286,20 +276,22 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	state := projectResourceModel{
-		ID:               types.StringValue(project.ProjectUUID),
-		ProjectUUID:      types.StringValue(project.ProjectUUID),
-		Slug:             types.StringValue(project.Slug),
-		Name:             types.StringValue(project.ProjectName),
-		ProjectType:      types.StringValue(project.ProjectType),
-		DbtVersion:       types.StringValue(project.DbtVersion),
-		DeleteProtection: types.BoolValue(true),
-	}
+	state := projectResourceModel{DeleteProtection: types.BoolValue(true)}
+	applyProjectToModel(&state, project)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
+func applyProjectToModel(model *projectResourceModel, project *apiv1.GetProjectV1Results) {
+	model.ID = types.StringValue(project.ProjectUUID)
+	model.ProjectUUID = types.StringValue(project.ProjectUUID)
+	model.Slug = types.StringValue(project.Slug)
+	model.Name = types.StringValue(project.ProjectName)
+	model.ProjectType = types.StringValue(project.ProjectType)
+	model.DbtVersion = types.StringValue(project.DbtVersion)
+}
+
 func projectDbtConnectionDiagnostics(project *apiv1.GetProjectV1Results) diag.Diagnostics {
-	if project.DbtConnection != nil && project.DbtConnection.Type == projectDbtConnectionTypeNone {
+	if project.DbtConnection != nil && project.DbtConnection.Type == apiv1.DbtConnectionTypeNone {
 		return nil
 	}
 	got := "<missing>"
@@ -309,37 +301,7 @@ func projectDbtConnectionDiagnostics(project *apiv1.GetProjectV1Results) diag.Di
 	return diag.Diagnostics{
 		diag.NewErrorDiagnostic(
 			"Unsupported dbt connection",
-			fmt.Sprintf("Project %s has dbt connection type %q. This resource only manages projects whose dbt connection type is %q.", project.ProjectUUID, got, projectDbtConnectionTypeNone),
+			fmt.Sprintf("Project %s has dbt connection type %q. This resource only manages projects whose dbt connection type is %q.", project.ProjectUUID, got, apiv1.DbtConnectionTypeNone),
 		),
 	}
-}
-
-// oneOfStringValidator rejects values outside an allowed set.
-type oneOfStringValidator struct {
-	values []string
-}
-
-func (v oneOfStringValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("value must be one of: %s", strings.Join(v.values, ", "))
-}
-
-func (v oneOfStringValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v oneOfStringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-	value := req.ConfigValue.ValueString()
-	for _, allowed := range v.values {
-		if value == allowed {
-			return
-		}
-	}
-	resp.Diagnostics.AddAttributeError(
-		req.Path,
-		"Invalid value",
-		v.Description(ctx),
-	)
 }

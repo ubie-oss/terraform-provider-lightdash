@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -61,6 +62,51 @@ func TestDeleteDecision(t *testing.T) {
 			}
 			if got.Detail == "" {
 				t.Fatal("Detail is empty")
+			}
+		})
+	}
+}
+
+const (
+	lightdashTestSandboxURLEnvVar      = "LIGHTDASH_TEST_SANDBOX_URL"
+	lightdashTestAllowProductionEnvVar = "LIGHTDASH_TEST_ALLOW_PRODUCTION"
+)
+
+// projectAcceptanceAllowed reports whether these acceptance tests may run against the configured host.
+// They create a real project that destroy does not delete.
+func projectAcceptanceAllowed(url, sandboxURL, allowProduction string) bool {
+	if strings.TrimSpace(allowProduction) == "1" {
+		return true
+	}
+	url = strings.TrimSpace(url)
+	sandboxURL = strings.TrimSpace(sandboxURL)
+	return url != "" && sandboxURL != "" && url == sandboxURL
+}
+
+func TestProjectAcceptanceAllowed(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		url             string
+		sandboxURL      string
+		allowProduction string
+		want            bool
+	}{
+		{name: "sandbox match", url: "https://sandbox.example", sandboxURL: "https://sandbox.example", want: true},
+		{name: "sandbox match with space", url: " https://sandbox.example ", sandboxURL: "https://sandbox.example", want: true},
+		{name: "different host", url: "https://prod.example", sandboxURL: "https://sandbox.example", want: false},
+		{name: "sandbox unset", url: "https://prod.example", want: false},
+		{name: "both empty", want: false},
+		{name: "production opt-in", url: "https://prod.example", allowProduction: "1", want: true},
+		{name: "production flag not exactly 1", url: "https://prod.example", allowProduction: "true", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := projectAcceptanceAllowed(tt.url, tt.sandboxURL, tt.allowProduction); got != tt.want {
+				t.Fatalf("projectAcceptanceAllowed() = %v, want %v", got, tt.want)
 			}
 		})
 	}

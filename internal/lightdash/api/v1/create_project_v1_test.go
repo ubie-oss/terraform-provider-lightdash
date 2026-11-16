@@ -25,7 +25,7 @@ func TestCreateProjectV1Request_JSON_noneConnection(t *testing.T) {
 		Type:       "DEFAULT",
 		DbtVersion: "latest",
 		DbtConnection: ProjectDbtConnectionV1{
-			Type: dbtConnectionTypeNone,
+			Type: DbtConnectionTypeNone,
 		},
 	}
 	body, err := json.Marshal(data)
@@ -67,10 +67,10 @@ func TestCreateProjectV1Response_JSON(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	project := response.Results.Project
-	if project.ProjectUUID != "proj-1" || project.Slug != "api-create-verify" || project.Name != "api-create-verify" {
+	if project.ProjectUUID != "proj-1" || project.Slug != "api-create-verify" || project.ProjectName != "api-create-verify" {
 		t.Fatalf("project = %#v", project)
 	}
-	if project.Type != "DEFAULT" || project.DbtVersion != "latest" || project.DbtConnection.Type != "none" {
+	if project.ProjectType != "DEFAULT" || project.DbtVersion != "latest" || project.DbtConnection == nil || project.DbtConnection.Type != DbtConnectionTypeNone {
 		t.Fatalf("project connection = %#v", project)
 	}
 	if response.Results.HasContentCopy {

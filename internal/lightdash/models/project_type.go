@@ -18,6 +18,15 @@ type ProjectType string
 
 // List of ProjectType
 const (
-	DEFAULT_PROJECT_TYPE ProjectType = "DEFAULT"
-	PREVIEW_PROJECT_TYPE ProjectType = "PREVIEW"
+	DEFAULT_PROJECT_TYPE  ProjectType = "DEFAULT"
+	PREVIEW_PROJECT_TYPE  ProjectType = "PREVIEW"
+	TRAINING_PROJECT_TYPE ProjectType = "TRAINING"
 )
+
+func (t ProjectType) IsValid() bool {
+	switch t {
+	case DEFAULT_PROJECT_TYPE, PREVIEW_PROJECT_TYPE, TRAINING_PROJECT_TYPE:
+		return true
+	}
+	return false
+}

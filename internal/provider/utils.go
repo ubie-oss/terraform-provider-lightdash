@@ -36,25 +36,11 @@ import (
 var embeddedDocs embed.FS
 
 const (
-	integrationTestModeEnvVar          = "TF_ACC"
-	lightdashApiKeyEnvVar              = "LIGHTDASH_API_KEY" // #nosec G101
-	lightdashProjectUuidEnvVar         = "LIGHTDASH_PROJECT" // #nosec G101
-	lightdashUrlEnvVar                 = "LIGHTDASH_URL"
-	lightdashTestSandboxURLEnvVar      = "LIGHTDASH_TEST_SANDBOX_URL"
-	lightdashTestAllowProductionEnvVar = "LIGHTDASH_TEST_ALLOW_PRODUCTION"
+	integrationTestModeEnvVar  = "TF_ACC"
+	lightdashApiKeyEnvVar      = "LIGHTDASH_API_KEY" // #nosec G101
+	lightdashProjectUuidEnvVar = "LIGHTDASH_PROJECT" // #nosec G101
+	lightdashUrlEnvVar         = "LIGHTDASH_URL"
 )
-
-// projectAcceptanceAllowed reports whether lightdash_project acceptance tests may run
-// against the configured host. They create a real project that destroy does not delete.
-// The host must be the sandbox URL, unless production is explicitly allowed.
-func projectAcceptanceAllowed(url, sandboxURL, allowProduction string) bool {
-	if strings.TrimSpace(allowProduction) == "1" {
-		return true
-	}
-	url = strings.TrimSpace(url)
-	sandboxURL = strings.TrimSpace(sandboxURL)
-	return url != "" && sandboxURL != "" && url == sandboxURL
-}
 
 func isIntegrationTestMode() bool {
 	// If the environment variable is set to 1, then we are in test mode
