@@ -89,6 +89,31 @@ func (v ValidateProjectMemberRole) ValidateString(ctx context.Context, req valid
 	}
 }
 
+type ValidateProjectType struct{}
+
+const projectTypeDescription = "must be one of: DEFAULT, PREVIEW, TRAINING"
+
+func (v ValidateProjectType) Description(ctx context.Context) string {
+	return projectTypeDescription
+}
+
+func (v ValidateProjectType) MarkdownDescription(ctx context.Context) string {
+	return projectTypeDescription
+}
+
+func (v ValidateProjectType) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	if !models.ProjectType(req.ConfigValue.ValueString()).IsValid() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid project type",
+			fmt.Sprintf("%s. Got: %q", projectTypeDescription, req.ConfigValue.ValueString()),
+		)
+	}
+}
+
 // ValidateOrganizationMemberRole accepts only the lowercase organization role slugs, for the same
 // reason as ValidateProjectMemberRole: a spelling such as "Viewer" would fail the apply with an
 // inconsistent result.
