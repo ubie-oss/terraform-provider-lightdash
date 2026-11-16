@@ -99,7 +99,7 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 				Computed:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "The organization role assigned to the user.",
+				MarkdownDescription: "The organization role assigned to the user. Must be one of: `member`, `viewer`, `interactive_viewer`, `editor`, `developer`, `admin`.",
 				Required:            true,
 				Validators: []validator.String{
 					ValidateOrganizationMemberRole{},
