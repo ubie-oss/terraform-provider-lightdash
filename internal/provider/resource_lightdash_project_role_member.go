@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
@@ -53,13 +55,13 @@ type projectRoleMemberResource struct {
 
 // projectMemberResourceModel describes the resource data model.
 type projectMemberResourceModel struct {
-	ID          types.String             `tfsdk:"id"`
-	ProjectUUID types.String             `tfsdk:"project_uuid"`
-	UserUUID    types.String             `tfsdk:"user_uuid"`
-	Email       types.String             `tfsdk:"email"`
-	ProjectRole models.ProjectMemberRole `tfsdk:"role"`
-	SendEmail   types.Bool               `tfsdk:"send_email"`
-	LastUpdated types.String             `tfsdk:"last_updated"`
+	ID          types.String `tfsdk:"id"`
+	ProjectUUID types.String `tfsdk:"project_uuid"`
+	UserUUID    types.String `tfsdk:"user_uuid"`
+	Email       types.String `tfsdk:"email"`
+	ProjectRole types.String `tfsdk:"role"`
+	SendEmail   types.Bool   `tfsdk:"send_email"`
+	LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 func (r *projectRoleMemberResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -105,6 +107,9 @@ func (r *projectRoleMemberResource) Schema(ctx context.Context, req resource.Sch
 			"role": schema.StringAttribute{
 				MarkdownDescription: "Lightdash user's role.",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateProjectMemberRole{},
+				},
 			},
 			"send_email": schema.BoolAttribute{
 				MarkdownDescription: "Send email to the user.",
@@ -165,7 +170,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 	projectUUID := plan.ProjectUUID.ValueString()
 	projectRole, err := r.assignProjectUserRole(
 		ctx, orgMember.OrganizationUUID, projectUUID, userUUID,
-		plan.ProjectRole.String(),
+		plan.ProjectRole.ValueString(),
 		plan.SendEmail.ValueBool(),
 	)
 	if err != nil {
@@ -176,7 +181,7 @@ func (r *projectRoleMemberResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	plan.ProjectRole = projectRole
+	plan.ProjectRole = types.StringValue(projectRole.String())
 	plan.UserUUID = types.StringValue(orgMember.UserUUID)
 	plan.Email = types.StringValue(orgMember.Email)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -198,6 +203,11 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 	userUUID := state.UserUUID.ValueString()
 
 	assignment, err := r.roleService.GetProjectUserAssignment(ctx, projectUUID, userUUID)
+	if errors.Is(err, services.ErrRoleAssignmentNotFound) {
+		// The member was removed outside Terraform. Dropping the state makes the next plan create it again.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddWarning(
 			"Warning Reading project role assignment",
@@ -223,7 +233,7 @@ func (r *projectRoleMemberResource) Read(ctx context.Context, req resource.ReadR
 
 	state.UserUUID = types.StringValue(orgMember.UserUUID)
 	state.Email = types.StringValue(orgMember.Email)
-	state.ProjectRole = projectRole
+	state.ProjectRole = types.StringValue(projectRole.String())
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -246,7 +256,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 	projectUUID := plan.ProjectUUID.ValueString()
 	userUUID := plan.UserUUID.ValueString()
 	// Update must not send notification emails; only Create honors send_email (AGENTS.md).
-	projectRole, err := r.assignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.String(), false)
+	projectRole, err := r.assignProjectUserRole(ctx, orgUUID, projectUUID, userUUID, plan.ProjectRole.ValueString(), false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating project member's role",
@@ -255,7 +265,7 @@ func (r *projectRoleMemberResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	plan.ProjectRole = projectRole
+	plan.ProjectRole = types.StringValue(projectRole.String())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -274,6 +284,10 @@ func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.Del
 	userUUID := state.UserUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Revoking project role of %s", userUUID))
 	err := r.roleService.RemoveProjectUserRole(ctx, projectUUID, userUUID)
+	if errors.Is(err, api.ErrNotFound) {
+		// Already removed, for example between refresh and apply. Nothing left to revoke.
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Revoking project role",
@@ -295,8 +309,11 @@ func (r *projectRoleMemberResource) ImportState(ctx context.Context, req resourc
 	projectUUID := extractedStrings[0]
 	userUUID := extractedStrings[1]
 
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), getProjectRoleMemberResourceId(projectUUID, userUUID))...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), projectUUID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_uuid"), userUUID)...)
+	// The API does not return send_email, so use its schema default. Otherwise the first plan after import shows a null-to-false change.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("send_email"), false)...)
 }
 
 func getProjectRoleMemberResourceId(project_uuid string, user_uuid string) string {

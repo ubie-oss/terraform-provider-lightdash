@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
 // ValidateNonEmptyString validates that a string attribute is not empty or null.
@@ -54,5 +55,67 @@ func (v ValidateNonEmptyString) ValidateString(ctx context.Context, req validato
 			fmt.Sprintf("String cannot be empty. Got: %q", req.ConfigValue.ValueString()),
 		)
 		return
+	}
+}
+
+// ValidateProjectMemberRole accepts only the lowercase project role slugs. The provider
+// stores the slug it gets back from the API, so a spelling such as "Editor" would fail
+// the apply with an inconsistent result.
+type ValidateProjectMemberRole struct{}
+
+const projectMemberRoleDescription = "must be one of: viewer, interactive_viewer, editor, developer, admin"
+
+// Description returns a plain text description of the validator's behavior.
+func (v ValidateProjectMemberRole) Description(ctx context.Context) string {
+	return projectMemberRoleDescription
+}
+
+// MarkdownDescription returns a markdown formatted description of the validator's behavior.
+func (v ValidateProjectMemberRole) MarkdownDescription(ctx context.Context) string {
+	return projectMemberRoleDescription
+}
+
+// ValidateString performs the validation.
+func (v ValidateProjectMemberRole) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	if !models.ProjectMemberRole(req.ConfigValue.ValueString()).IsValid() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Project Role",
+			fmt.Sprintf("%s. Got: %q", projectMemberRoleDescription, req.ConfigValue.ValueString()),
+		)
+	}
+}
+
+// ValidateOrganizationMemberRole accepts only the lowercase organization role slugs, for the same
+// reason as ValidateProjectMemberRole: a spelling such as "Viewer" would fail the apply with an
+// inconsistent result.
+type ValidateOrganizationMemberRole struct{}
+
+const organizationMemberRoleDescription = "must be one of: member, viewer, interactive_viewer, editor, developer, admin"
+
+// Description returns a plain text description of the validator's behavior.
+func (v ValidateOrganizationMemberRole) Description(ctx context.Context) string {
+	return organizationMemberRoleDescription
+}
+
+// MarkdownDescription returns a markdown formatted description of the validator's behavior.
+func (v ValidateOrganizationMemberRole) MarkdownDescription(ctx context.Context) string {
+	return organizationMemberRoleDescription
+}
+
+// ValidateString performs the validation.
+func (v ValidateOrganizationMemberRole) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	if !models.OrganizationMemberRole(req.ConfigValue.ValueString()).IsValid() {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Organization Role",
+			fmt.Sprintf("%s. Got: %q", organizationMemberRoleDescription, req.ConfigValue.ValueString()),
+		)
 	}
 }

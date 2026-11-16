@@ -14,7 +14,14 @@
 
 package v2
 
-import "testing"
+import (
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+)
 
 func TestRemoveProjectRoleFromUserV2_requireNonEmpty(t *testing.T) {
 	if err := requireNonEmpty("", "project UUID"); err == nil {
@@ -22,5 +29,25 @@ func TestRemoveProjectRoleFromUserV2_requireNonEmpty(t *testing.T) {
 	}
 	if err := requireNonEmpty("", "user UUID"); err == nil {
 		t.Fatal("expected error for empty user UUID")
+	}
+}
+
+// A 404 from the API must wrap api.ErrNotFound, so Delete can treat it as already removed.
+func TestRemoveProjectRoleFromUserV2_notFoundWrapsErrNotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"status":"error"}`))
+	}))
+	defer server.Close()
+
+	host, token := server.URL, "test-token"
+	client, err := api.NewClient(&host, &token, nil)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	err = RemoveProjectRoleFromUserV2(client, "project-uuid", "user-uuid")
+	if !errors.Is(err, api.ErrNotFound) {
+		t.Fatalf("expected error wrapping api.ErrNotFound, got %v", err)
 	}
 }

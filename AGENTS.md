@@ -55,7 +55,8 @@ More setup and acceptance-test detail: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - When implementing an attached plan, do not edit the plan file; use existing todos instead of recreating them.
 - For high-impact credentials (e.g. OAuth clients), prefer `deletion_protection` matching `lightdash_space`: Terraform-only delete guard with import default `true`.
-- Do not add acceptance tests for `lightdash_project_role_member` or `lightdash_organization_role_member`; they mutate real user org/project access and are unsafe on production-like instances.
+- Do not add acceptance tests for `lightdash_project_role_member`; they mutate real user org/project access and are unsafe on production-like instances.
+- Acceptance tests for `lightdash_organization_role_member` change one user's org role. They run only when `TF_ACC=1` and `LIGHTDASH_TEST_ORG_MEMBER_EMAIL` name a dedicated test user, never a real employee. Keep their Terraform config under `internal/provider/acc_tests/resources/lightdash_organization_role_member/`.
 - Avoid unit or integration tests that call live APIs in ways that mutate existing org/project access; prefer offline JSON fixtures and pure service logic tests.
 
 ## Learned Workspace Facts

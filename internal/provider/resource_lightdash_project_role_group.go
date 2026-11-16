@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -186,6 +187,11 @@ func (r *projectRoleGroupResource) Read(ctx context.Context, req resource.ReadRe
 
 	groupUUID := state.GroupUUID.ValueString()
 	assignment, err := r.roleService.GetProjectGroupAssignment(ctx, projectUUID, groupUUID)
+	if errors.Is(err, services.ErrRoleAssignmentNotFound) {
+		// The group was removed outside Terraform. Dropping the state makes the next plan create it again.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading group",

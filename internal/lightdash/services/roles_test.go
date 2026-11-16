@@ -15,6 +15,7 @@
 package services
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -118,6 +119,39 @@ func TestTerraformOrganizationRoleFromAssignment(t *testing.T) {
 	}
 }
 
+func TestOrganizationRoleID(t *testing.T) {
+	tests := []struct {
+		name    string
+		role    string
+		want    string
+		wantErr bool
+	}{
+		{name: "member is sent as slug", role: "member", want: "member"},
+		{name: "admin is sent as slug", role: "admin", want: "admin"},
+		{name: "interactive viewer with spaces and case", role: "  Interactive_Viewer ", want: "interactive_viewer"},
+		{name: "unknown role", role: "superadmin", wantErr: true},
+		{name: "empty", role: "  ", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := organizationRoleID(tt.role)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for role %q", tt.role)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFilterAssignmentsByType(t *testing.T) {
 	assignments := []models.RoleAssignment{
 		{AssigneeType: models.AssigneeTypeUser, AssigneeID: "user-1", RoleID: "viewer"},
@@ -132,5 +166,23 @@ func TestFilterAssignmentsByType(t *testing.T) {
 	}
 	if got[0].AssigneeID != "group-1" || got[1].AssigneeID != "group-2" {
 		t.Errorf("got group IDs %q and %q", got[0].AssigneeID, got[1].AssigneeID)
+	}
+}
+
+func TestFindAssignment_missingUserWrapsNotFound(t *testing.T) {
+	assignments := []models.RoleAssignment{
+		{AssigneeType: models.AssigneeTypeUser, AssigneeID: "user-1", RoleID: "viewer"},
+	}
+
+	if _, err := findAssignment(assignments, models.AssigneeTypeUser, "user-2", "project"); !errors.Is(err, ErrRoleAssignmentNotFound) {
+		t.Fatalf("missing user: error = %v, want ErrRoleAssignmentNotFound", err)
+	}
+
+	got, err := findAssignment(assignments, models.AssigneeTypeUser, "user-1", "project")
+	if err != nil {
+		t.Fatalf("present user: unexpected error: %v", err)
+	}
+	if got.RoleID != "viewer" {
+		t.Errorf("RoleID = %q, want viewer", got.RoleID)
 	}
 }
