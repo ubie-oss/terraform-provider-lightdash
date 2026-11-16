@@ -21,11 +21,39 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	apiv1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
 )
+
+func TestProjectReplacementBlocked(t *testing.T) {
+	t.Parallel()
+
+	protected := projectResourceModel{
+		Name:             types.StringValue("old"),
+		ProjectType:      types.StringValue("DEFAULT"),
+		DbtVersion:       types.StringValue("latest"),
+		DeleteProtection: types.BoolValue(true),
+	}
+	if projectReplacementBlocked(protected, protected) {
+		t.Fatal("same values should not block")
+	}
+
+	renamed := protected
+	renamed.Name = types.StringValue("new")
+	if !projectReplacementBlocked(protected, renamed) {
+		t.Fatal("rename while protected should block")
+	}
+
+	unprotected := protected
+	unprotected.DeleteProtection = types.BoolValue(false)
+	renamed.DeleteProtection = types.BoolValue(false)
+	if projectReplacementBlocked(unprotected, renamed) {
+		t.Fatal("rename while unprotected should not block")
+	}
+}
 
 func TestDeleteDecision(t *testing.T) {
 	t.Parallel()

@@ -4,4 +4,6 @@ The Lightdash API has no endpoint that deletes a project. When `deletion_protect
 
 To drop a project from state without running destroy, replace the resource with a `removed` block and set `lifecycle { destroy = false }`. The `removed` block requires Terraform 1.7 or later.
 
-Changing `name`, `type`, or `dbt_version` replaces the Terraform resource. The previous Lightdash project is left in place.
+Changing `name`, `type`, or `dbt_version` replaces the Terraform resource. The previous Lightdash project is left in place. Turn `deletion_protection` off in its own apply before changing one of those values. Replacement uses the protection value already stored in state.
+
+If the project later uses another dbt connection, refresh warns and keeps it in state. Import of that project is rejected. A `removed` block with `lifecycle { destroy = false }`, or `terraform state rm`, stops managing it.

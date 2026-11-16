@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -36,6 +35,7 @@ var (
 	_ resource.Resource                = &projectResource{}
 	_ resource.ResourceWithConfigure   = &projectResource{}
 	_ resource.ResourceWithImportState = &projectResource{}
+	_ resource.ResourceWithModifyPlan  = &projectResource{}
 )
 
 func NewProjectResource() resource.Resource {
@@ -116,6 +116,9 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"slug": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The URL slug of the project.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
@@ -187,8 +190,8 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if diags := projectDbtConnectionDiagnostics(created); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	if detail, unsupported := unsupportedDbtConnection(created); unsupported {
+		resp.Diagnostics.AddError("Unsupported dbt connection", detail)
 		return
 	}
 	applyProjectToModel(&plan, created)
@@ -217,14 +220,34 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	if diags := projectDbtConnectionDiagnostics(project); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
+	if detail, unsupported := unsupportedDbtConnection(project); unsupported {
+		resp.Diagnostics.AddWarning(
+			"Unsupported dbt connection",
+			detail+" The project stays in state so it can be removed from Terraform.",
+		)
 	}
 
 	applyProjectToModel(&state, project)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+
+	var plan, state projectResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() || !projectReplacementBlocked(state, plan) {
+		return
+	}
+
+	resp.Diagnostics.AddError(
+		"Deletion Protection Enabled",
+		"Turn deletion_protection off and apply that change before replacing the project. Replacement uses the protection value already stored in state.",
+	)
 }
 
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -271,8 +294,8 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 		return
 	}
-	if diags := projectDbtConnectionDiagnostics(project); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	if detail, unsupported := unsupportedDbtConnection(project); unsupported {
+		resp.Diagnostics.AddError("Unsupported dbt connection", detail)
 		return
 	}
 
@@ -290,18 +313,20 @@ func applyProjectToModel(model *projectResourceModel, project *apiv1.GetProjectV
 	model.DbtVersion = types.StringValue(project.DbtVersion)
 }
 
-func projectDbtConnectionDiagnostics(project *apiv1.GetProjectV1Results) diag.Diagnostics {
+func projectReplacementBlocked(state, plan projectResourceModel) bool {
+	if !state.DeleteProtection.ValueBool() {
+		return false
+	}
+	return !plan.Name.Equal(state.Name) || !plan.ProjectType.Equal(state.ProjectType) || !plan.DbtVersion.Equal(state.DbtVersion)
+}
+
+func unsupportedDbtConnection(project *apiv1.GetProjectV1Results) (string, bool) {
 	if project.DbtConnection != nil && project.DbtConnection.Type == apiv1.DbtConnectionTypeNone {
-		return nil
+		return "", false
 	}
 	got := "<missing>"
 	if project.DbtConnection != nil {
 		got = project.DbtConnection.Type
 	}
-	return diag.Diagnostics{
-		diag.NewErrorDiagnostic(
-			"Unsupported dbt connection",
-			fmt.Sprintf("Project %s has dbt connection type %q. This resource only manages projects whose dbt connection type is %q.", project.ProjectUUID, got, apiv1.DbtConnectionTypeNone),
-		),
-	}
+	return fmt.Sprintf("Project %s has dbt connection type %q. This resource only manages projects whose dbt connection type is %q.", project.ProjectUUID, got, apiv1.DbtConnectionTypeNone), true
 }
