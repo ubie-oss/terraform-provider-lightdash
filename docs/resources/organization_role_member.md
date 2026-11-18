@@ -3,12 +3,15 @@
 page_title: "lightdash_organization_role_member Resource - lightdash"
 subcategory: ""
 description: |-
-  Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., member, admin). This resource is essential for managing user access at the organization scope.
+  Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role. This resource is essential for managing user access at the organization scope.
+  Destroying this resource does not remove the user from the organization. It resets the user's organization role to member.
 ---
 
 # lightdash_organization_role_member (Resource)
 
-Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role (e.g., `member`, `admin`). This resource is essential for managing user access at the organization scope.
+Manages the assignment of a Lightdash organization role to a specific member. This resource allows you to control the organization-level permissions for a user within Lightdash. You need to specify the organization UUID, the user UUID, and the desired organization role. This resource is essential for managing user access at the organization scope.
+
+Destroying this resource does not remove the user from the organization. It resets the user's organization role to `member`.
 
 ## Example Usage
 
@@ -26,7 +29,7 @@ resource "lightdash_organization_role_member" "test" {
 ### Required
 
 - `organization_uuid` (String) The UUID of the Lightdash organization.
-- `role` (String) The organization role assigned to the user.
+- `role` (String) The organization role assigned to the user. Must be one of: `member`, `viewer`, `interactive_viewer`, `editor`, `developer`, `admin`.
 - `user_uuid` (String) The UUID of the Lightdash user.
 
 ### Read-Only
@@ -43,5 +46,5 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Organization role members can be imported by specifying the resource identifier.
-terraform import lightdash_organization_role_member.example "organizations/${organization_uuid}/users/${space-uuid}"
+terraform import lightdash_organization_role_member.example "organizations/${organization_uuid}/users/${user_uuid}"
 ```
