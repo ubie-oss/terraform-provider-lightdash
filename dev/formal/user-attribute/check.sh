@@ -21,6 +21,9 @@ TLC_SHA256="936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
 SERVICE="${REPO}/internal/lightdash/services/user_attributes.go"
 RESOURCE="${REPO}/internal/provider/resource_lightdash_user_attribute.go"
 
+# Set by run_tlc: "pass" when TLC finds no error, "violated" when an invariant breaks.
+RESULT=""
+
 drift() {
 	echo "DRIFT: $*" >&2
 	exit 2
@@ -87,47 +90,48 @@ check_conformance() {
 		drift "the resource Update no longer calls the service Update"
 }
 
-# Runs TLC on one config. Prints the counterexample on a violation.
-# Returns 0 when the invariant holds, 1 when TLC reports a violation, and exits 2 otherwise.
+# Runs TLC on one config and sets RESULT. Prints the counterexample on a violation.
+# Exits 2 when TLC stops for another reason.
 run_tlc() {
-	local cfg="$1" meta out status=0
+	local cfg="$1" meta out
 	meta="$(mktemp -d)"
 	out="${meta}/tlc.out"
+	RESULT=""
+	# TLC exits non-zero on a violation, so its status is not checked here. The output decides.
 	java -XX:+UseParallelGC -cp "${JAR}" tlc2.TLC -workers 1 -metadir "${meta}" \
-		-config "${HERE}/${cfg}" "${HERE}/UserAttributeUpdate.tla" >"${out}" 2>&1 || status=$?
+		-config "${HERE}/${cfg}" "${HERE}/UserAttributeUpdate.tla" >"${out}" 2>&1 || true
 	if grep -q "No error has been found" "${out}"; then
+		RESULT="pass"
 		echo "PASS ${cfg}"
 		return 0
 	fi
 	if grep -q "is violated" "${out}"; then
+		RESULT="violated"
 		grep -E 'is violated|^State [0-9]+|^/\\|^Error: The behavior' "${out}" | head -40
 		echo "VIOLATED ${cfg} (TLC output: ${out})"
-		return 1
+		return 0
 	fi
 	cat "${out}" >&2
-	drift "TLC did not finish for ${cfg} (exit ${status})"
+	drift "TLC did not finish for ${cfg}"
 }
 
 ensure_jar
 check_conformance
 echo "conformance: Update reads, copies the users, then writes"
 
-status=0
-run_tlc sequential.cfg || status=$?
-if [[ ${status} -ne 0 ]]; then
+run_tlc sequential.cfg
+if [[ ${RESULT} != "pass" ]]; then
 	drift "sequential.cfg fails: a user value is lost without any UI edit during an apply"
 fi
 
-status=0
-run_tlc keep-users-removed.cfg || status=$?
-if [[ ${status} -ne 1 ]]; then
+run_tlc keep-users-removed.cfg
+if [[ ${RESULT} != "violated" ]]; then
 	drift "keep-users-removed.cfg passes: the invariant cannot see a regression that drops the users"
 fi
 echo "self-test: the invariant catches a regression that drops the users"
 
-status=0
-run_tlc race.cfg || status=$?
-if [[ ${status} -eq 1 ]]; then
+run_tlc race.cfg
+if [[ ${RESULT} == "violated" ]]; then
 	echo "FINDING: a UI edit between Get and Put is lost (race.cfg counterexample above)"
 	exit 1
 fi
