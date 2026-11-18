@@ -19,6 +19,9 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestIsIntegrationTestMode(t *testing.T) {
@@ -195,5 +198,46 @@ func TestReadMarkdownDescriptionEmbedded(t *testing.T) {
 				t.Errorf("readMarkdownDescription() returned empty content for %s", tt.filename)
 			}
 		})
+	}
+}
+
+func TestIsKnownEmptySet(t *testing.T) {
+	empty := types.SetValueMust(types.StringType, []attr.Value{})
+	if !isKnownEmptySet(empty) {
+		t.Fatal("expected an empty set to be known and empty")
+	}
+	if isKnownEmptySet(types.SetNull(types.StringType)) || isKnownEmptySet(types.SetUnknown(types.StringType)) {
+		t.Fatal("null and unknown sets are not known empty sets")
+	}
+	populated := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("us")})
+	if isKnownEmptySet(populated) {
+		t.Fatal("expected a populated set not to be empty")
+	}
+}
+
+func TestHasNullElement(t *testing.T) {
+	withNull := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("us"), types.StringNull()})
+	if !hasNullElement(withNull) {
+		t.Fatal("expected a null element")
+	}
+	if hasNullElement(types.SetNull(types.StringType)) || hasNullElement(types.SetUnknown(types.StringType)) {
+		t.Fatal("null and unknown sets have no known null element")
+	}
+}
+
+func TestFindDuplicateStrings(t *testing.T) {
+	got := findDuplicateStrings([]string{"a", "b", "a", "c", "b"})
+	if !reflect.DeepEqual(got, []string{"a", "b"}) {
+		t.Fatalf("unexpected duplicates: %+v", got)
+	}
+	if got := findDuplicateStrings([]string{"a"}); len(got) != 0 {
+		t.Fatalf("expected no duplicates, got %+v", got)
+	}
+}
+
+func TestUniqueStrings(t *testing.T) {
+	got := uniqueStrings([]string{"b", "a", "b", "a"})
+	if !reflect.DeepEqual(got, []string{"b", "a"}) {
+		t.Fatalf("unexpected unique values: %+v", got)
 	}
 }

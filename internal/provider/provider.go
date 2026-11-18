@@ -141,6 +141,7 @@ func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectAgentEvaluationsResource,
 		NewOAuthApplicationResource,
 		NewProjectResource,
+		NewUserAttributeResource,
 	}
 }
 
@@ -166,6 +167,7 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 		NewOrganizationAgentsDataSource,
 		NewOAuthApplicationDataSource,
 		NewOAuthApplicationsDataSource,
+		NewUserAttributeDataSource,
 	}
 }
 
