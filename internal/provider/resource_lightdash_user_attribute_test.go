@@ -251,7 +251,11 @@ func TestAccUserAttributeResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get updateConfig: %v", err)
 	}
-	removeConfig, err := ReadAccTestResource([]string{"resources", "lightdash_user_attribute", "create", "030_remove.tf"})
+	clearConfig, err := ReadAccTestResource([]string{"resources", "lightdash_user_attribute", "create", "030_clear.tf"})
+	if err != nil {
+		t.Fatalf("Failed to get clearConfig: %v", err)
+	}
+	removeConfig, err := ReadAccTestResource([]string{"resources", "lightdash_user_attribute", "create", "040_remove.tf"})
 	if err != nil {
 		t.Fatalf("Failed to get removeConfig: %v", err)
 	}
@@ -291,6 +295,15 @@ func TestAccUserAttributeResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.lightdash_user_attribute.check", "groups.#", "2"),
 					resource.TestCheckTypeSetElemAttr("data.lightdash_user_attribute.check", "groups.*.values.*", "eu"),
 					resource.TestCheckTypeSetElemAttr("data.lightdash_user_attribute.check", "groups.*.values.*", "jp"),
+				),
+			},
+			{
+				Config: providerConfig + clearConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("lightdash_user_attribute.test", "name", "zzz_acc_test_user_attribute_update"),
+					resource.TestCheckResourceAttr("lightdash_user_attribute.test", "attribute_defaults.#", "0"),
+					resource.TestCheckResourceAttr("lightdash_user_attribute.test", "groups.#", "0"),
+					resource.TestCheckResourceAttr("data.lightdash_user_attribute.check", "groups.#", "0"),
 				),
 			},
 			{
