@@ -97,6 +97,9 @@ func (s *UserAttributesService) Create(ctx context.Context, attribute models.Use
 
 // Update replaces the attribute and keeps the user values that are already stored.
 // The API replaces the whole attribute, so omitting users would delete values assigned in the Lightdash UI.
+//
+// The user values are read and then written in two requests. A user value that is changed in
+// the Lightdash UI between the two is overwritten. Lightdash has no compare-and-set for it.
 func (s *UserAttributesService) Update(ctx context.Context, organizationUUID string, attribute models.UserAttribute) (*models.UserAttribute, error) {
 	current, err := s.GetByUUID(ctx, organizationUUID, attribute.UserAttributeUUID)
 	if err != nil {
