@@ -215,18 +215,38 @@ func (s *RoleService) UpdateProjectGroupRole(ctx context.Context, orgUUID string
 	return assignment, nil
 }
 
+// RemoveProjectUserRole removes a user's project role. A 404 counts as removed only when the
+// assignment is no longer listed, because a 404 also comes from a wrong project or user UUID.
 func (s *RoleService) RemoveProjectUserRole(ctx context.Context, projectUUID string, userUUID string) error {
-	if err := apiv2.RemoveProjectRoleFromUserV2(s.client, projectUUID, userUUID); err != nil {
+	err := apiv2.RemoveProjectRoleFromUserV2(s.client, projectUUID, userUUID)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, api.ErrNotFound) {
 		return fmt.Errorf("failed to remove project role from user: %w", err)
 	}
-	return nil
+	_, lookupErr := s.GetProjectUserAssignment(ctx, projectUUID, userUUID)
+	if errors.Is(lookupErr, ErrRoleAssignmentNotFound) {
+		return nil
+	}
+	return fmt.Errorf("failed to remove project role from user: %w", err)
 }
 
+// RemoveProjectGroupRole removes a group's project role. A 404 counts as removed only when the
+// assignment is no longer listed, because a 404 also comes from a wrong project or group UUID.
 func (s *RoleService) RemoveProjectGroupRole(ctx context.Context, projectUUID string, groupUUID string) error {
-	if err := apiv2.RemoveProjectRoleFromGroupV2(s.client, projectUUID, groupUUID); err != nil {
+	err := apiv2.RemoveProjectRoleFromGroupV2(s.client, projectUUID, groupUUID)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, api.ErrNotFound) {
 		return fmt.Errorf("failed to remove project role from group: %w", err)
 	}
-	return nil
+	_, lookupErr := s.GetProjectGroupAssignment(ctx, projectUUID, groupUUID)
+	if errors.Is(lookupErr, ErrRoleAssignmentNotFound) {
+		return nil
+	}
+	return fmt.Errorf("failed to remove project role from group: %w", err)
 }
 
 // TerraformProjectRoleFromAssignment maps a v2 assignment to a Terraform project role string.

@@ -160,3 +160,29 @@ func TestContractProjectRoleMemberRejectsMixedCaseRole(t *testing.T) {
 		},
 	})
 }
+
+// TestContractProjectRoleMemberDestroyAfterExternalRemoval runs destroy without a refresh, as
+// terraform destroy does when the state is stale. The role was removed outside Terraform after
+// the apply, and destroy must still succeed.
+func TestContractProjectRoleMemberDestroyAfterExternalRemoval(t *testing.T) {
+	skipInAcceptanceMode(t)
+	f := contractFake()
+	f.reset()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		AdditionalCLIOptions:     &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy:             f.checkNoRole(contractProjectUserRef),
+		Steps: []resource.TestStep{
+			{
+				Config: contractProjectMemberConfig(f, "editor"),
+				Check:  f.checkRole(contractProjectUserRef, "editor"),
+			},
+			{
+				PreConfig: func() { f.clear(contractProjectUserRef) },
+				Config:    contractProjectMemberConfig(f, "editor"),
+				Destroy:   true,
+			},
+		},
+	})
+}
