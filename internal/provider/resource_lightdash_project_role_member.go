@@ -284,10 +284,6 @@ func (r *projectRoleMemberResource) Delete(ctx context.Context, req resource.Del
 	userUUID := state.UserUUID.ValueString()
 	tflog.Info(ctx, fmt.Sprintf("Revoking project role of %s", userUUID))
 	err := r.roleService.RemoveProjectUserRole(ctx, projectUUID, userUUID)
-	if errors.Is(err, api.ErrNotFound) {
-		// Already removed, for example between refresh and apply. Nothing left to revoke.
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Revoking project role",

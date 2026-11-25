@@ -85,3 +85,29 @@ func TestContractProjectRoleGroupRecreatesRemovedGroup(t *testing.T) {
 		},
 	})
 }
+
+// TestContractProjectRoleGroupDestroyAfterExternalRemoval runs destroy without a refresh, as
+// terraform destroy does when the state is stale. The role was removed outside Terraform after
+// the apply, and destroy must still succeed.
+func TestContractProjectRoleGroupDestroyAfterExternalRemoval(t *testing.T) {
+	skipInAcceptanceMode(t)
+	f := contractFake()
+	f.reset()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		AdditionalCLIOptions:     &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy:             f.checkNoRole(contractProjectGroupRef),
+		Steps: []resource.TestStep{
+			{
+				Config: contractProjectGroupConfig(f, "editor"),
+				Check:  f.checkRole(contractProjectGroupRef, "editor"),
+			},
+			{
+				PreConfig: func() { f.clear(contractProjectGroupRef) },
+				Config:    contractProjectGroupConfig(f, "editor"),
+				Destroy:   true,
+			},
+		},
+	})
+}
